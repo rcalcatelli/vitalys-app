@@ -10,8 +10,8 @@ Aplicación web para la gestión integral de un centro de salud híbrido que com
 
 | Nombre | Legajo | GitHub |
 |---|---|---|
-| Renzo Calcatelli | _completar_ | [@usuario](https://github.com/usuario) |
-| Pablo Basualdo Arcati | _completar_ | [@usuario](https://github.com/usuario) |
+| Renzo Calcatelli | _100960_ | [@rcalcatelli](https://github.com/rcalcatelli) |
+| Pablo Basualdo Arcati | _100153_ | [@pbasualdoarcati](https://github.com/pbasualdoarcati) |
 
 **Tutora:** Sofía Raia
 

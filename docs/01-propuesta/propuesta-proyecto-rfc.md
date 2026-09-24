@@ -5,7 +5,7 @@
 | **RFC**      | 0001                                     |
 | **Autores**  | Renzo Calcatelli · Pablo Basualdo Arcati |
 | **Revisora** | Sofía Raia (tutora)                      |
-| **Estado**   | 🟡 Borrador                              |
+| **Estado**   | ✅ Aprobada (30/08/2026)                              |
 | **Creado**   | agosto 2026                              |
 
 ---

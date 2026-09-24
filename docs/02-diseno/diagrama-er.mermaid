@@ -1,0 +1,103 @@
+---
+title: Vitalys App — Diagrama Entidad-Relación
+---
+erDiagram
+
+    usuarios {
+        bigint      id              PK
+        varchar     email           UK
+        varchar     password_hash
+        enum        rol             "SOCIO_PACIENTE | PROFESIONAL | ADMIN"
+        boolean     activo
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    personas {
+        bigint      id              PK
+        bigint      usuario_id      FK  UK
+        varchar     nombre
+        varchar     apellido
+        varchar     dni             UK
+        varchar     telefono
+        date        fecha_nacimiento
+        enum        estado          "ACTIVO | INACTIVO"
+        boolean     es_socio_gym
+        date        fecha_alta
+        date        fecha_baja
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    profesionales {
+        bigint      id              PK
+        bigint      usuario_id      FK  UK
+        varchar     nombre
+        varchar     apellido
+        enum        especialidad    "NUTRICION | PSICOLOGIA | KINESIOLOGIA"
+        int         duracion_turno_minutos
+        boolean     activo
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    disponibilidad_profesional {
+        bigint      id              PK
+        bigint      profesional_id  FK
+        smallint    dia_semana      "0=Dom … 6=Sáb"
+        time        hora_inicio
+        time        hora_fin
+        boolean     activo
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    turnos {
+        bigint      id                      PK
+        bigint      persona_id              FK
+        bigint      profesional_id          FK
+        timestamptz inicio
+        timestamptz fin
+        enum        estado                  "RESERVADO | COMPLETADO | CANCELADO_EN_TIEMPO | CANCELADO_TARDE"
+        timestamptz cancelado_en
+        bigint      cancelado_por_usuario   FK  "NULL si lo canceló el propio paciente"
+        text        motivo_cancelacion
+        timestamptz creado_en
+        timestamptz actualizado_en
+    }
+
+    pagos {
+        bigint      id                      PK
+        bigint      persona_id              FK
+        enum        concepto                "CUOTA_MENSUAL | SESION_CONSULTORIO"
+        numeric     monto
+        date        periodo                 "Mes de la cuota (solo CUOTA_MENSUAL)"
+        bigint      turno_id                FK  "Solo SESION_CONSULTORIO"
+        bigint      registrado_por_usuario  FK
+        timestamptz fecha_pago
+        timestamptz creado_en
+    }
+
+    notificaciones {
+        bigint      id              PK
+        bigint      persona_id      FK
+        bigint      turno_id        FK
+        varchar     tipo            "CONFIRMACION_TURNO | RECORDATORIO"
+        timestamptz enviado_en
+        varchar     email_destino
+        boolean     exitoso
+        text        detalle_error
+    }
+
+    %% Relaciones
+    usuarios                    ||--o|    personas                    : "tiene perfil"
+    usuarios                    ||--o|    profesionales               : "tiene perfil"
+    personas                    ||--o{    turnos                      : "reserva"
+    profesionales               ||--o{    turnos                      : "atiende"
+    profesionales               ||--o{    disponibilidad_profesional  : "define"
+    personas                    ||--o{    pagos                       : "realiza"
+    turnos                      ||--o|    pagos                       : "genera pago sesión"
+    usuarios                    ||--o{    turnos                      : "cancela (admin)"
+    usuarios                    ||--o{    pagos                       : "registra (admin)"
+    personas                    ||--o{    notificaciones              : "recibe"
+    turnos                      ||--o{    notificaciones              : "origina"

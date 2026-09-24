@@ -112,14 +112,18 @@ Esta estrategia mezcla ambos conceptos deliberadamente, lo cual es exactamente l
 
 ---
 
-## 6. Decisión propuesta
+## 6. Decisión
 
-> **⚠️ Este apartado queda en blanco hasta recibir aprobación de la tutora.**
-> La decisión final se completará aquí y el esquema definitivo (DDL o colecciones) se subirá al repositorio una vez aprobada.
+**✅ APROBADA — 21/09/2026 · Revisora: Sofía Raia**
 
-**Opciones disponibles:**
-- [ ] Mantener **PostgreSQL** (stack original aprobado, mayor integridad, menor riesgo técnico)
-- [ ] Migrar a **MongoDB** (mayor valor académico en modelado NoSQL, requiere aprobación explícita de cambio de stack)
+- [x] Mantener **PostgreSQL** (stack original aprobado, mayor integridad, menor riesgo técnico)
+- [ ] ~~Migrar a MongoDB~~
+
+**Fundamento de la tutora:** De los 6 casos de uso críticos comparados en la sección 4, cinco favorecen claramente a PostgreSQL — incluyendo las dos reglas de negocio más sensibles del sistema (validación de deuda gym y solapamiento de turnos), que con MongoDB requieren reimplementarse en la capa de aplicación. Esto contradice el driver #1 del equipo (integridad de las reglas de negocio).
+
+**Valor académico de modelado NoSQL:** El equipo incorporará en el informe final la estrategia de embedding/referencing documentada en la sección 5, explicando cómo se modelaría en MongoDB y por qué no se eligió. Esto demuestra comprensión de ambos paradigmas sin riesgo técnico adicional.
+
+**Consecuencia directa:** El DDL generado (`db/ddl/vitalys_ddl.sql`) queda como esquema definitivo. Spring Data JPA y Supabase se mantienen como stack de datos.
 
 ---
 

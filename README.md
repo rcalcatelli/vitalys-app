@@ -124,3 +124,11 @@ npm run dev
 - [x] **2.ª entrega** — Esquema de BD y módulos (27/09)
 - [ ] **Entrega final** — Informe, video y despliegue (14/11)
 - [ ] Defensa oral
+
+---
+
+## 📋 Minutas de reuniones
+
+| Fecha      | Participantes         | Tema                                  | Resumen                                                                                                                                                                                                                                               |
+| ---------- | --------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 21/09/2026 | Renzo · Pablo · Sofía | Revisión del RFC-002 y diseño de BD   | Tutora aprueba PostgreSQL (Opción A) y el DDL existente. Solicita ajustes: tipos ENUM faltantes, estado AUSENTE, constraint de cancelación, diccionario de datos, requerimientos y diagramas. Correcciones aplicadas en #6 y #7. |

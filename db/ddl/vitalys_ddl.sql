@@ -111,21 +111,21 @@ CREATE TABLE turnos (
     fin                     TIMESTAMPTZ     NOT NULL,
     estado                  estado_turno    NOT NULL DEFAULT 'RESERVADO',
     cancelado_en            TIMESTAMPTZ,
-    cancelado_por_usuario   BIGINT          REFERENCES usuarios(id),
+    cancelado_por_usuario   BIGINT          REFERENCES usuarios(id)  NOT NULL,
     motivo_cancelacion      TEXT,
     creado_en               TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     actualizado_en          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_turno_fin        CHECK (fin > inicio),
     CONSTRAINT chk_cancelacion_info CHECK (
-        (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE') AND cancelado_en IS NOT NULL)
+        (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE') AND cancelado_en IS NOT NULL AND cancelado_por_usuario IS NOT NULL)
         OR estado NOT IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE')
     )
 );
 
 COMMENT ON TABLE  turnos                        IS 'Turnos reservados en los consultorios.';
 COMMENT ON COLUMN turnos.estado                 IS 'CANCELADO_EN_TIEMPO: aviso ≥24h. CANCELADO_TARDE: aviso <24h.';
-COMMENT ON COLUMN turnos.cancelado_por_usuario  IS 'NULL si canceló el propio socio/paciente; ID si lo canceló un admin.';
+COMMENT ON COLUMN turnos.cancelado_por_usuario  IS 'NOT NULL cuando estado en CANCELADO_*. Registra quién ejecutó la cancelación (el propio socio o un admin).';
 
 -- Índice para detectar solapamientos por profesional (validado también en la API)
 CREATE INDEX idx_turnos_profesional_inicio ON turnos (profesional_id, inicio)
@@ -146,7 +146,7 @@ CREATE TABLE pagos (
     monto                   NUMERIC(10,2)   NOT NULL,
     periodo                 DATE,           -- Para CUOTA_MENSUAL: primer día del mes
     turno_id                BIGINT          REFERENCES turnos(id),  -- Para SESION_CONSULTORIO
-    registrado_por_usuario  BIGINT          REFERENCES usuarios(id),
+    registrado_por_usuario  BIGINT          NOT NULL REFERENCES usuarios(id),
     fecha_pago              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     creado_en               TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
@@ -160,7 +160,7 @@ CREATE TABLE pagos (
 COMMENT ON TABLE  pagos                         IS 'Historial de pagos de cuotas y sesiones.';
 COMMENT ON COLUMN pagos.periodo                 IS 'Mes al que corresponde la cuota (CUOTA_MENSUAL). Null para sesiones.';
 COMMENT ON COLUMN pagos.turno_id                IS 'Turno asociado (SESION_CONSULTORIO). Null para cuotas.';
-COMMENT ON COLUMN pagos.registrado_por_usuario  IS 'NULL si el sistema lo auto-registra; ID del admin si lo cargó manualmente.';
+COMMENT ON COLUMN pagos.registrado_por_usuario  IS 'NOT NULL. En el MVP no existe registro automático: todos los pagos son ingresados por el ADMIN.';
 
 -- Índice para consultar estado de cuenta de una persona
 CREATE INDEX idx_pagos_persona ON pagos (persona_id, concepto, fecha_pago DESC);
@@ -205,6 +205,29 @@ CREATE TRIGGER trg_personas_updated
 CREATE TRIGGER trg_profesionales_updated
     BEFORE UPDATE ON profesionales
     FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();
+
+-- Función: rechaza franjas horarias superpuestas para el mismo profesional y día
+CREATE OR REPLACE FUNCTION fn_check_disponibilidad_overlap()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM disponibilidad_profesional
+        WHERE  profesional_id = NEW.profesional_id
+          AND  dia_semana     = NEW.dia_semana
+          AND  activo         = TRUE
+          AND  id            <> COALESCE(NEW.id, -1)
+          AND  hora_inicio    < NEW.hora_fin
+          AND  hora_fin       > NEW.hora_inicio
+    ) THEN
+        RAISE EXCEPTION 'Solapamiento de disponibilidad: el profesional ya tiene una franja activa en ese día y horario.';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_disponibilidad_overlap
+    BEFORE INSERT OR UPDATE ON disponibilidad_profesional
+    FOR EACH ROW EXECUTE FUNCTION fn_check_disponibilidad_overlap();
 
 CREATE TRIGGER trg_disponibilidad_updated
     BEFORE UPDATE ON disponibilidad_profesional

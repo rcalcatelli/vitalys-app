@@ -231,6 +231,12 @@ _Fundamento:_ los pagos parciales introducen saldos, imputación y estados inter
 **7. Baja de socios.** La baja es lógica en todos los casos: la persona conserva su registro con estado `INACTIVO` y fecha de baja. No se contempla borrado físico.
 _Fundamento:_ el historial de pagos y turnos debe sobrevivir a la baja por trazabilidad, y una persona dada de baja suele volver. El borrado físico rompería las referencias de pagos y turnos históricos. Decisión con impacto directo en el esquema del Sprint 1.
 
+**8. Identidad única y roles múltiples.** El modelo de autenticación asigna un único rol por usuario. Un profesional que también sea socio del gimnasio requiere dos cuentas con emails distintos. Esta situación no se contempla en el MVP y se documenta como **limitación de diseño conocida**: la complejidad de un sistema multi-rol por usuario (selección de rol activo, contextos de permisos combinados) excede el alcance académico del proyecto. Si el caso de uso se volviera frecuente, el RFC correspondiente debería evaluar una tabla de relación `usuario_roles` y un mecanismo de cambio de contexto en el frontend.
+_Fundamento:_ en el relevamiento, los profesionales no figuran como socios de gimnasio. La regla simple de un rol por usuario simplifica la implementación de Spring Security y reduce la superficie de errores en Sprint 2.
+
+**9. Cierre de sesión con JWT.** El endpoint de logout no invalida el token en el servidor. La sesión se cierra descartando el token del lado del cliente (localStorage). El token permanece técnicamente válido hasta su TTL. Esta es una **limitación documentada del MVP**: la implementación de una lista negra de tokens (Redis u otra solución) introduce una dependencia de infraestructura adicional y no está en el alcance académico. El TTL corto (configurado en 24 h) acota la ventana de riesgo.
+_Fundamento:_ todos los endpoints están protegidos por HTTPS. El riesgo residual es aceptable para un contexto académico con datos no sensibles en producción (los datos de prueba son ficticios).
+
 > Si no se recibe devolución antes del 30/08, el equipo adopta estas decisiones como cerradas para poder iniciar el Sprint 1 en fecha. Cualquier corrección posterior se procesa como cambio de alcance mediante Pull Request sobre este RFC.
 
 ---

@@ -40,7 +40,8 @@ Los factores que condicionan esta elección son, en orden de importancia:
 - La validación de solapamiento de turnos es un `SELECT` con `BETWEEN` sobre un índice parcial ya definido (`WHERE estado = 'RESERVADO'`). Eficiente y declarativo.
 - Los `CHECK CONSTRAINTS` del DDL ya generado garantizan coherencia a nivel de motor: no puede existir un pago de tipo `CUOTA_MENSUAL` sin `periodo`, ni un turno cancelado sin `cancelado_en`. En MongoDB esa validación recae enteramente en la aplicación.
 - `ENUM` types (rol_usuario, estado_turno, concepto_pago) son validados por el motor. En MongoDB son strings sin restricción nativa.
-- Spring Data JPA está más maduro y documentado para PostgreSQL. Las queries derivadas y los repositorios funcionan sin configuración extra.
+- Spring Data JPA está más maduro y documentado para PostgreSQL. Las queries derivadas y los repositorios funcionan de forma directa.
+- **Corrección técnica (punto 2.12):** Hibernate requiere mapeo explícito para los tipos `ENUM` nativos de PostgreSQL. Cada campo enumerado en la entidad JPA debe anotarse con `@Enumerated(EnumType.STRING)` y, para los ENUMs definidos en la base, es necesario registrar un `UserType` o un `@Column(columnDefinition = "tipo_enum")`. Esto se considera un riesgo técnico de implementación (ver [Riesgos](#riesgos)) y no un defecto de diseño: el esquema es correcto; la configuración del ORM debe acompañarlo.
 - Supabase ofrece dashboard visual de datos, lo cual es útil para demos ante el comité.
 
 **Debilidades para Vitalys:**

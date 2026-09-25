@@ -8,9 +8,9 @@ Aplicación web para la gestión integral de un centro de salud híbrido que com
 
 ## 👥 Integrantes
 
-| Nombre | Legajo | GitHub |
-|---|---|---|
-| Renzo Calcatelli | _100960_ | [@rcalcatelli](https://github.com/rcalcatelli) |
+| Nombre                | Legajo   | GitHub                                                 |
+| --------------------- | -------- | ------------------------------------------------------ |
+| Renzo Calcatelli      | _100960_ | [@rcalcatelli](https://github.com/rcalcatelli)         |
 | Pablo Basualdo Arcati | _100153_ | [@pbasualdoarcati](https://github.com/pbasualdoarcati) |
 
 **Tutora:** Sofía Raia
@@ -24,27 +24,30 @@ Los centros de salud híbridos gestionan socios de gimnasio y pacientes de consu
 ### Módulos (MVP)
 
 1. 🔐 **Autenticación y roles** — socio/paciente, profesional y administración
-2. 👤 **Gestión de socios y pacientes** — alta, baja, modificación y consulta
-3. 📅 **Agenda de turnos** — disponibilidad por profesional, reserva y cancelación
-4. 💳 **Registro de pagos** — cuotas de gimnasio y sesiones de consultorio
-5. 📧 **Notificaciones** — confirmaciones y recordatorios por email
+2. 👤 **Gestión de personas** — alta, baja lógica, modificación y consulta (identidad unificada socio/paciente)
+3. 🩺 **Gestión de profesionales** — ABM y disponibilidad horaria por especialidad
+4. 📅 **Agenda de turnos** — reserva y cancelación con reglas de negocio (24 h, deuda gym)
+5. 💳 **Registro de pagos** — cuotas de gimnasio y sesiones de consultorio
+6. 📧 **Notificaciones** — confirmaciones y recordatorios por email
 
 ### Fuera de alcance (versión futura)
 
 - Ficha clínica digital
+- Reserva de clases grupales con cupos
+- Pasarela de pagos online
 - Publicación en tiendas móviles (App Store / Play Store)
 
 ---
 
 ## 🛠️ Stack tecnológico
 
-| Capa | Tecnología |
-|---|---|
-| Backend | Java 17 · Spring Boot · Spring Data JPA |
-| Frontend | React · TypeScript |
-| Base de datos | PostgreSQL (Supabase) |
-| Despliegue | Vercel (frontend) · Render (backend) |
-| Versionado | Git · GitHub |
+| Capa          | Tecnología                              |
+| ------------- | --------------------------------------- |
+| Backend       | Java 17 · Spring Boot · Spring Data JPA |
+| Frontend      | React · TypeScript                      |
+| Base de datos | PostgreSQL (Supabase)                   |
+| Despliegue    | Vercel (frontend) · Render (backend)    |
+| Versionado    | Git · GitHub                            |
 
 ---
 
@@ -52,16 +55,39 @@ Los centros de salud híbridos gestionan socios de gimnasio y pacientes de consu
 
 ```
 vitalys-app/
-├── backend/     → API REST (Spring Boot)
-├── frontend/    → Cliente web (React + TypeScript)
+├── backend/          → API REST (Spring Boot)
+├── frontend/         → Cliente web (React + TypeScript)
 ├── db/
-│   ├── ddl/     → Scripts de creación de esquema
-│   └── dml/     → Datos de prueba
+│   ├── ddl/
+│   │   └── vitalys_ddl.sql   → Script de creación del esquema PostgreSQL
+│   └── dml/          → Datos de prueba (próximamente)
 └── docs/
-    ├── 01-propuesta/   → Propuesta de proyecto (1.ª entrega)
-    ├── 02-diseno/      → Esquema de BD y módulos (2.ª entrega)
-    └── metodologia/    → Planificación (Scrum, riesgos, pruebas)
+    ├── 01-propuesta/
+    │   └── propuesta-proyecto-rfc.md   → Propuesta de proyecto (1.ª entrega)
+    ├── 02-diseno/
+    │   ├── diagrama-er.mermaid         → Diagrama entidad-relación (2.ª entrega)
+    │   └── modulos.md                  → Listado de módulos y endpoints (2.ª entrega)
+    └── metodologia/  → Planificación Scrum, riesgos y pruebas
 ```
+
+---
+
+## 🗄️ Base de datos
+
+El esquema usa **PostgreSQL** con las siguientes tablas principales:
+
+| Tabla                        | Descripción                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| `usuarios`                   | Credenciales y rol de acceso al sistema               |
+| `personas`                   | Identidad única socio/paciente (soft-delete)          |
+| `profesionales`              | Profesionales con especialidad y duración de turno    |
+| `disponibilidad_profesional` | Franjas horarias semanales por profesional            |
+| `turnos`                     | Reservas con ciclo de vida y auditoría de cancelación |
+| `pagos`                      | Cuotas de gym y sesiones de consultorio               |
+| `notificaciones`             | Log de emails enviados                                |
+
+Ver script completo: [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql)  
+Ver diagrama ER: [`docs/02-diseno/diagrama-er.mermaid`](docs/02-diseno/diagrama-er.mermaid)
 
 ---
 
@@ -84,17 +110,17 @@ npm run dev
 
 ## 🌐 Despliegue
 
-| Servicio | URL | Estado |
-|---|---|---|
-| Frontend | _pendiente_ | 🔜 |
-| Backend | _pendiente_ | 🔜 |
+| Servicio | URL         | Estado |
+| -------- | ----------- | ------ |
+| Frontend | _pendiente_ | 🔜     |
+| Backend  | _pendiente_ | 🔜     |
 
 ---
 
 ## 📅 Hoja de ruta
 
 - [x] Conformación del equipo y elección de tutora
-- [ ] **1.ª entrega** — Propuesta y repositorio (30/08)
-- [ ] **2.ª entrega** — Esquema de BD y módulos (27/09)
+- [x] **1.ª entrega** — Propuesta y repositorio (30/08)
+- [x] **2.ª entrega** — Esquema de BD y módulos (27/09)
 - [ ] **Entrega final** — Informe, video y despliegue (14/11)
 - [ ] Defensa oral

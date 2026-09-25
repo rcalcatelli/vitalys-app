@@ -1,0 +1,215 @@
+-- =============================================================================
+-- Vitalys App — Esquema de Base de Datos (DDL)
+-- PostgreSQL 15+
+-- 2.ª Entrega — Trabajo Final Integrador (UTN TUP 2026)
+-- Integrantes: Renzo Calcatelli · Pablo Basualdo Arcati
+-- =============================================================================
+
+-- Tipos enumerados
+CREATE TYPE rol_usuario     AS ENUM ('SOCIO_PACIENTE', 'PROFESIONAL', 'ADMIN');
+CREATE TYPE estado_persona  AS ENUM ('ACTIVO', 'INACTIVO');
+CREATE TYPE especialidad    AS ENUM ('NUTRICION', 'PSICOLOGIA', 'KINESIOLOGIA');
+CREATE TYPE estado_turno    AS ENUM ('RESERVADO', 'COMPLETADO', 'CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE');
+CREATE TYPE concepto_pago   AS ENUM ('CUOTA_MENSUAL', 'SESION_CONSULTORIO');
+
+-- =============================================================================
+-- TABLA: usuarios
+-- Credenciales de acceso al sistema. Toda persona o profesional tiene un usuario.
+-- =============================================================================
+CREATE TABLE usuarios (
+    id              BIGSERIAL       PRIMARY KEY,
+    email           VARCHAR(255)    NOT NULL UNIQUE,
+    password_hash   VARCHAR(255)    NOT NULL,
+    rol             rol_usuario     NOT NULL,
+    activo          BOOLEAN         NOT NULL DEFAULT TRUE,
+    creado_en       TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    actualizado_en  TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  usuarios              IS 'Credenciales y rol de acceso al sistema.';
+COMMENT ON COLUMN usuarios.rol          IS 'SOCIO_PACIENTE, PROFESIONAL o ADMIN.';
+COMMENT ON COLUMN usuarios.activo       IS 'FALSE equivale a cuenta deshabilitada (soft-disable).';
+
+-- =============================================================================
+-- TABLA: personas
+-- Identidad única socio-paciente: una sola fila por persona real,
+-- independientemente de si usa el gym, los consultorios, o ambos.
+-- =============================================================================
+CREATE TABLE personas (
+    id                  BIGSERIAL       PRIMARY KEY,
+    usuario_id          BIGINT          NOT NULL UNIQUE REFERENCES usuarios(id),
+    nombre              VARCHAR(100)    NOT NULL,
+    apellido            VARCHAR(100)    NOT NULL,
+    dni                 VARCHAR(20)     NOT NULL UNIQUE,
+    telefono            VARCHAR(30),
+    fecha_nacimiento    DATE,
+    estado              estado_persona  NOT NULL DEFAULT 'ACTIVO',
+    es_socio_gym        BOOLEAN         NOT NULL DEFAULT FALSE,
+    fecha_alta          DATE            NOT NULL DEFAULT CURRENT_DATE,
+    fecha_baja          DATE,
+    creado_en           TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    actualizado_en      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_fecha_baja CHECK (fecha_baja IS NULL OR fecha_baja >= fecha_alta)
+);
+
+COMMENT ON TABLE  personas                  IS 'Identidad única socio/paciente del centro.';
+COMMENT ON COLUMN personas.es_socio_gym     IS 'TRUE si tiene membresía activa de gimnasio.';
+COMMENT ON COLUMN personas.estado           IS 'INACTIVO = soft delete; conserva historial.';
+
+-- =============================================================================
+-- TABLA: profesionales
+-- Un profesional tiene usuario propio y datos específicos de su especialidad.
+-- =============================================================================
+CREATE TABLE profesionales (
+    id                          BIGSERIAL       PRIMARY KEY,
+    usuario_id                  BIGINT          NOT NULL UNIQUE REFERENCES usuarios(id),
+    nombre                      VARCHAR(100)    NOT NULL,
+    apellido                    VARCHAR(100)    NOT NULL,
+    especialidad                especialidad    NOT NULL,
+    duracion_turno_minutos      INT             NOT NULL,
+    activo                      BOOLEAN         NOT NULL DEFAULT TRUE,
+    creado_en                   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    actualizado_en              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_duracion_turno CHECK (duracion_turno_minutos > 0)
+);
+
+COMMENT ON TABLE  profesionales                         IS 'Profesionales del centro (Nutrición, Psicología, Kinesiología).';
+COMMENT ON COLUMN profesionales.duracion_turno_minutos  IS 'Minutos por turno: 30 Nutrición, 50 Psicología, 45 Kinesiología (configurable).';
+
+-- =============================================================================
+-- TABLA: disponibilidad_profesional
+-- Franjas horarias recurrentes en las que cada profesional atiende.
+-- =============================================================================
+CREATE TABLE disponibilidad_profesional (
+    id                  BIGSERIAL   PRIMARY KEY,
+    profesional_id      BIGINT      NOT NULL REFERENCES profesionales(id),
+    dia_semana          SMALLINT    NOT NULL,   -- 0=Domingo … 6=Sábado (ISO: 1=Lunes…7=Domingo)
+    hora_inicio         TIME        NOT NULL,
+    hora_fin            TIME        NOT NULL,
+    activo              BOOLEAN     NOT NULL DEFAULT TRUE,
+    creado_en           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actualizado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_dia_semana   CHECK (dia_semana BETWEEN 0 AND 6),
+    CONSTRAINT chk_horas        CHECK (hora_fin > hora_inicio),
+    CONSTRAINT uq_disp          UNIQUE (profesional_id, dia_semana, hora_inicio)
+);
+
+COMMENT ON TABLE disponibilidad_profesional IS 'Franjas horarias semanales en que el profesional está disponible.';
+
+-- =============================================================================
+-- TABLA: turnos
+-- Reserva de un slot entre una persona y un profesional.
+-- =============================================================================
+CREATE TABLE turnos (
+    id                      BIGSERIAL       PRIMARY KEY,
+    persona_id              BIGINT          NOT NULL REFERENCES personas(id),
+    profesional_id          BIGINT          NOT NULL REFERENCES profesionales(id),
+    inicio                  TIMESTAMPTZ     NOT NULL,
+    fin                     TIMESTAMPTZ     NOT NULL,
+    estado                  estado_turno    NOT NULL DEFAULT 'RESERVADO',
+    cancelado_en            TIMESTAMPTZ,
+    cancelado_por_usuario   BIGINT          REFERENCES usuarios(id),
+    motivo_cancelacion      TEXT,
+    creado_en               TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    actualizado_en          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_turno_fin        CHECK (fin > inicio),
+    CONSTRAINT chk_cancelacion_info CHECK (
+        (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE') AND cancelado_en IS NOT NULL)
+        OR estado NOT IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE')
+    )
+);
+
+COMMENT ON TABLE  turnos                        IS 'Turnos reservados en los consultorios.';
+COMMENT ON COLUMN turnos.estado                 IS 'CANCELADO_EN_TIEMPO: aviso ≥24h. CANCELADO_TARDE: aviso <24h.';
+COMMENT ON COLUMN turnos.cancelado_por_usuario  IS 'NULL si canceló el propio socio/paciente; ID si lo canceló un admin.';
+
+-- Índice para detectar solapamientos por profesional (validado también en la API)
+CREATE INDEX idx_turnos_profesional_inicio ON turnos (profesional_id, inicio)
+    WHERE estado = 'RESERVADO';
+
+-- Índice para consultas por persona
+CREATE INDEX idx_turnos_persona ON turnos (persona_id);
+
+-- =============================================================================
+-- TABLA: pagos
+-- Registro de pagos: cuotas mensuales de gym o sesiones de consultorio.
+-- Pago completo únicamente (sin parciales en MVP).
+-- =============================================================================
+CREATE TABLE pagos (
+    id                      BIGSERIAL       PRIMARY KEY,
+    persona_id              BIGINT          NOT NULL REFERENCES personas(id),
+    concepto                concepto_pago   NOT NULL,
+    monto                   NUMERIC(10,2)   NOT NULL,
+    periodo                 DATE,           -- Para CUOTA_MENSUAL: primer día del mes
+    turno_id                BIGINT          REFERENCES turnos(id),  -- Para SESION_CONSULTORIO
+    registrado_por_usuario  BIGINT          REFERENCES usuarios(id),
+    fecha_pago              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    creado_en               TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_monto_positivo   CHECK (monto > 0),
+    CONSTRAINT chk_concepto_datos   CHECK (
+        (concepto = 'CUOTA_MENSUAL'        AND periodo IS NOT NULL) OR
+        (concepto = 'SESION_CONSULTORIO'   AND turno_id IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE  pagos                         IS 'Historial de pagos de cuotas y sesiones.';
+COMMENT ON COLUMN pagos.periodo                 IS 'Mes al que corresponde la cuota (CUOTA_MENSUAL). Null para sesiones.';
+COMMENT ON COLUMN pagos.turno_id                IS 'Turno asociado (SESION_CONSULTORIO). Null para cuotas.';
+COMMENT ON COLUMN pagos.registrado_por_usuario  IS 'NULL si el sistema lo auto-registra; ID del admin si lo cargó manualmente.';
+
+-- Índice para consultar estado de cuenta de una persona
+CREATE INDEX idx_pagos_persona ON pagos (persona_id, concepto, fecha_pago DESC);
+
+-- =============================================================================
+-- TABLA: notificaciones
+-- Registro de emails enviados (confirmaciones, recordatorios).
+-- =============================================================================
+CREATE TABLE notificaciones (
+    id              BIGSERIAL       PRIMARY KEY,
+    persona_id      BIGINT          NOT NULL REFERENCES personas(id),
+    turno_id        BIGINT          REFERENCES turnos(id),
+    tipo            VARCHAR(50)     NOT NULL,   -- 'CONFIRMACION_TURNO', 'RECORDATORIO', etc.
+    enviado_en      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    email_destino   VARCHAR(255)    NOT NULL,
+    exitoso         BOOLEAN         NOT NULL DEFAULT TRUE,
+    detalle_error   TEXT
+);
+
+COMMENT ON TABLE notificaciones IS 'Log de notificaciones por email enviadas a socios/pacientes.';
+
+-- =============================================================================
+-- FUNCIÓN: actualizar timestamp 'actualizado_en'
+-- =============================================================================
+CREATE OR REPLACE FUNCTION fn_actualizar_timestamp()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.actualizado_en = NOW();
+    RETURN NEW;
+END;
+$$;
+
+-- Triggers de actualización automática
+CREATE TRIGGER trg_usuarios_updated
+    BEFORE UPDATE ON usuarios
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();
+
+CREATE TRIGGER trg_personas_updated
+    BEFORE UPDATE ON personas
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();
+
+CREATE TRIGGER trg_profesionales_updated
+    BEFORE UPDATE ON profesionales
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();
+
+CREATE TRIGGER trg_disponibilidad_updated
+    BEFORE UPDATE ON disponibilidad_profesional
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();
+
+CREATE TRIGGER trg_turnos_updated
+    BEFORE UPDATE ON turnos
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_timestamp();

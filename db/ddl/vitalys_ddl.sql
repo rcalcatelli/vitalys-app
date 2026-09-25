@@ -93,14 +93,14 @@ COMMENT ON COLUMN profesionales.duracion_turno_minutos  IS 'Minutos por turno: 3
 CREATE TABLE disponibilidad_profesional (
     id                  BIGSERIAL   PRIMARY KEY,
     profesional_id      BIGINT      NOT NULL REFERENCES profesionales(id),
-    dia_semana          SMALLINT    NOT NULL,   -- 0=Domingo … 6=Sábado (ISO: 1=Lunes…7=Domingo)
+    dia_semana          SMALLINT    NOT NULL,   -- 1=Lunes … 7=Domingo (Java DayOfWeek)
     hora_inicio         TIME        NOT NULL,
     hora_fin            TIME        NOT NULL,
     activo              BOOLEAN     NOT NULL DEFAULT TRUE,
     creado_en           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     actualizado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_dia_semana   CHECK (dia_semana BETWEEN 0 AND 6),
+    CONSTRAINT chk_dia_semana   CHECK (dia_semana BETWEEN 1 AND 7),
     CONSTRAINT chk_horas        CHECK (hora_fin > hora_inicio),
     CONSTRAINT uq_disp          UNIQUE (profesional_id, dia_semana, hora_inicio)
 );
@@ -128,7 +128,10 @@ CREATE TABLE turnos (
 
     CONSTRAINT chk_turno_fin        CHECK (fin > inicio),
     CONSTRAINT chk_cancelacion_info CHECK (
-        (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE') AND cancelado_en IS NOT NULL AND cancelado_por_usuario IS NOT NULL)
+        (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE')
+            AND cancelado_en IS NOT NULL
+            AND cancelado_por_usuario IS NOT NULL
+            AND motivo_cancelacion IS NOT NULL)
         OR estado NOT IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE')
     ),
     CONSTRAINT chk_gym_sin_profesional CHECK (

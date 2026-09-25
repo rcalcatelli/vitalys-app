@@ -5,12 +5,17 @@
 -- Integrantes: Renzo Calcatelli · Pablo Basualdo Arcati
 -- =============================================================================
 
+-- Extensión necesaria para EXCLUDE USING GIST con rangos de timestamp
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 -- Tipos enumerados
 CREATE TYPE rol_usuario     AS ENUM ('SOCIO_PACIENTE', 'PROFESIONAL', 'ADMIN');
 CREATE TYPE estado_persona  AS ENUM ('ACTIVO', 'INACTIVO');
 CREATE TYPE especialidad    AS ENUM ('NUTRICION', 'PSICOLOGIA', 'KINESIOLOGIA');
-CREATE TYPE estado_turno    AS ENUM ('RESERVADO', 'COMPLETADO', 'CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE');
-CREATE TYPE concepto_pago   AS ENUM ('CUOTA_MENSUAL', 'SESION_CONSULTORIO');
+CREATE TYPE estado_turno    AS ENUM ('RESERVADO', 'COMPLETADO', 'AUSENTE', 'CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE');
+CREATE TYPE concepto_pago      AS ENUM ('CUOTA_MENSUAL', 'SESION_CONSULTORIO');
+CREATE TYPE tipo_turno        AS ENUM ('CONSULTORIO', 'GYM');
+CREATE TYPE tipo_notificacion AS ENUM ('CONFIRMACION_TURNO', 'AVISO_CANCELACION', 'RECORDATORIO');
 
 -- =============================================================================
 -- TABLA: usuarios
@@ -106,12 +111,14 @@ COMMENT ON TABLE disponibilidad_profesional IS 'Franjas horarias semanales en qu
 CREATE TABLE turnos (
     id                      BIGSERIAL       PRIMARY KEY,
     persona_id              BIGINT          NOT NULL REFERENCES personas(id),
-    profesional_id          BIGINT          NOT NULL REFERENCES profesionales(id),
+    profesional_id          BIGINT          REFERENCES profesionales(id),  -- NULL si tipo_turno=GYM
+    tipo_turno              tipo_turno      NOT NULL DEFAULT 'CONSULTORIO',
+    reservado_por_usuario_id BIGINT         NOT NULL REFERENCES usuarios(id),
     inicio                  TIMESTAMPTZ     NOT NULL,
     fin                     TIMESTAMPTZ     NOT NULL,
     estado                  estado_turno    NOT NULL DEFAULT 'RESERVADO',
     cancelado_en            TIMESTAMPTZ,
-    cancelado_por_usuario   BIGINT          REFERENCES usuarios(id)  NOT NULL,
+    cancelado_por_usuario   BIGINT          REFERENCES usuarios(id),
     motivo_cancelacion      TEXT,
     creado_en               TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     actualizado_en          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
@@ -120,6 +127,10 @@ CREATE TABLE turnos (
     CONSTRAINT chk_cancelacion_info CHECK (
         (estado IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE') AND cancelado_en IS NOT NULL AND cancelado_por_usuario IS NOT NULL)
         OR estado NOT IN ('CANCELADO_EN_TIEMPO', 'CANCELADO_TARDE')
+    ),
+    CONSTRAINT chk_gym_sin_profesional CHECK (
+        (tipo_turno = 'GYM' AND profesional_id IS NULL)
+        OR (tipo_turno = 'CONSULTORIO' AND profesional_id IS NOT NULL)
     )
 );
 
@@ -127,7 +138,14 @@ COMMENT ON TABLE  turnos                        IS 'Turnos reservados en los con
 COMMENT ON COLUMN turnos.estado                 IS 'CANCELADO_EN_TIEMPO: aviso ≥24h. CANCELADO_TARDE: aviso <24h.';
 COMMENT ON COLUMN turnos.cancelado_por_usuario  IS 'NOT NULL cuando estado en CANCELADO_*. Registra quién ejecutó la cancelación (el propio socio o un admin).';
 
--- Índice para detectar solapamientos por profesional (validado también en la API)
+-- Restricción de solapamiento de turnos por profesional (solo turnos RESERVADOS y CONSULTORIO)
+ALTER TABLE turnos ADD CONSTRAINT excl_turnos_overlap
+    EXCLUDE USING GIST (
+        profesional_id          WITH =,
+        tstzrange(inicio, fin, '[)') WITH &&
+    ) WHERE (estado = 'RESERVADO' AND profesional_id IS NOT NULL);
+
+-- Índice auxiliar para consultas por profesional e inicio
 CREATE INDEX idx_turnos_profesional_inicio ON turnos (profesional_id, inicio)
     WHERE estado = 'RESERVADO';
 
@@ -173,7 +191,7 @@ CREATE TABLE notificaciones (
     id              BIGSERIAL       PRIMARY KEY,
     persona_id      BIGINT          NOT NULL REFERENCES personas(id),
     turno_id        BIGINT          REFERENCES turnos(id),
-    tipo            VARCHAR(50)     NOT NULL,   -- 'CONFIRMACION_TURNO', 'RECORDATORIO', etc.
+    tipo            tipo_notificacion NOT NULL,
     enviado_en      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     email_destino   VARCHAR(255)    NOT NULL,
     exitoso         BOOLEAN         NOT NULL DEFAULT TRUE,

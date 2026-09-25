@@ -55,7 +55,10 @@ CREATE TABLE personas (
     creado_en           TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     actualizado_en      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_fecha_baja CHECK (fecha_baja IS NULL OR fecha_baja >= fecha_alta)
+    CONSTRAINT chk_fecha_baja CHECK (
+        (estado = 'INACTIVO' AND fecha_baja IS NOT NULL AND fecha_baja >= fecha_alta)
+        OR (estado = 'ACTIVO' AND fecha_baja IS NULL)
+    )
 );
 
 COMMENT ON TABLE  personas                  IS 'Identidad única socio/paciente del centro.';
@@ -143,7 +146,7 @@ ALTER TABLE turnos ADD CONSTRAINT excl_turnos_overlap
     EXCLUDE USING GIST (
         profesional_id          WITH =,
         tstzrange(inicio, fin, '[)') WITH &&
-    ) WHERE (estado = 'RESERVADO' AND profesional_id IS NOT NULL);
+    ) WHERE (estado IN ('RESERVADO', 'CANCELADO_TARDE') AND profesional_id IS NOT NULL);
 
 -- Índice auxiliar para consultas por profesional e inicio
 CREATE INDEX idx_turnos_profesional_inicio ON turnos (profesional_id, inicio)
@@ -170,8 +173,10 @@ CREATE TABLE pagos (
 
     CONSTRAINT chk_monto_positivo   CHECK (monto > 0),
     CONSTRAINT chk_concepto_datos   CHECK (
-        (concepto = 'CUOTA_MENSUAL'        AND periodo IS NOT NULL) OR
-        (concepto = 'SESION_CONSULTORIO'   AND turno_id IS NOT NULL)
+        (concepto = 'CUOTA_MENSUAL'      AND periodo IS NOT NULL AND turno_id IS NULL
+                                         AND EXTRACT(DAY FROM periodo) = 1)
+        OR
+        (concepto = 'SESION_CONSULTORIO' AND turno_id IS NOT NULL AND periodo IS NULL)
     )
 );
 
@@ -182,6 +187,14 @@ COMMENT ON COLUMN pagos.registrado_por_usuario  IS 'NOT NULL. En el MVP no exist
 
 -- Índice para consultar estado de cuenta de una persona
 CREATE INDEX idx_pagos_persona ON pagos (persona_id, concepto, fecha_pago DESC);
+
+-- Un turno solo puede tener un pago asociado (SESION_CONSULTORIO)
+CREATE UNIQUE INDEX uq_pago_por_turno ON pagos (turno_id)
+    WHERE turno_id IS NOT NULL;
+
+-- Una persona solo puede tener una cuota por mes
+CREATE UNIQUE INDEX uq_cuota_mensual ON pagos (persona_id, periodo)
+    WHERE concepto = 'CUOTA_MENSUAL';
 
 -- =============================================================================
 -- TABLA: notificaciones

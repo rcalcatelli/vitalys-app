@@ -24,7 +24,7 @@ erDiagram
         enum        estado          "ACTIVO | INACTIVO"
         boolean     es_socio_gym
         date        fecha_alta
-        date        fecha_baja
+        date        fecha_baja      "NOT NULL si estado=INACTIVO"
         timestamptz creado_en
         timestamptz actualizado_en
     }
@@ -44,7 +44,7 @@ erDiagram
     disponibilidad_profesional {
         bigint      id              PK
         bigint      profesional_id  FK
-        smallint    dia_semana      "0=Dom … 6=Sáb"
+        smallint    dia_semana      "1=Lun 2=Mar 3=Mié 4=Jue 5=Vie 6=Sáb 7=Dom"
         time        hora_inicio
         time        hora_fin
         boolean     activo
@@ -53,17 +53,29 @@ erDiagram
     }
 
     turnos {
-        bigint      id                      PK
-        bigint      persona_id              FK
-        bigint      profesional_id          FK
+        bigint      id                          PK
+        bigint      persona_id                  FK
+        bigint      profesional_id              FK  "NULL si tipo_turno=GYM"
+        enum        tipo_turno                  "CONSULTORIO | GYM"
         timestamptz inicio
         timestamptz fin
-        enum        estado                  "RESERVADO | COMPLETADO | CANCELADO_EN_TIEMPO | CANCELADO_TARDE"
-        timestamptz cancelado_en
-        bigint      cancelado_por_usuario   FK  "NULL si lo canceló el propio paciente"
-        text        motivo_cancelacion
+        enum        estado                      "RESERVADO | COMPLETADO | AUSENTE | CANCELADO_EN_TIEMPO | CANCELADO_TARDE"
+        bigint      reservado_por_usuario_id    FK  "Persona o ADMIN que creó la reserva"
+        timestamptz cancelado_en                "NOT NULL si cancelado"
+        bigint      cancelado_por_usuario_id    FK  "NOT NULL si cancelado"
+        text        motivo_cancelacion          "NOT NULL si cancelado"
         timestamptz creado_en
         timestamptz actualizado_en
+    }
+
+    excepciones_morosidad {
+        bigint      id              PK
+        bigint      persona_id      FK
+        bigint      autorizado_por  FK  "FK usuarios (rol ADMIN)"
+        bigint      turno_id        FK  "NULL si excepción por período"
+        text        motivo
+        date        valida_hasta
+        timestamptz creado_en
     }
 
     pagos {
@@ -71,8 +83,8 @@ erDiagram
         bigint      persona_id              FK
         enum        concepto                "CUOTA_MENSUAL | SESION_CONSULTORIO"
         numeric     monto
-        date        periodo                 "Mes de la cuota (solo CUOTA_MENSUAL)"
-        bigint      turno_id                FK  "Solo SESION_CONSULTORIO"
+        date        periodo                 "1er día del mes. Solo CUOTA_MENSUAL"
+        bigint      turno_id                FK  "UK parcial. Solo SESION_CONSULTORIO"
         bigint      registrado_por_usuario  FK
         timestamptz fecha_pago
         timestamptz creado_en
@@ -82,7 +94,7 @@ erDiagram
         bigint      id              PK
         bigint      persona_id      FK
         bigint      turno_id        FK
-        varchar     tipo            "CONFIRMACION_TURNO | RECORDATORIO"
+        enum        tipo            "CONFIRMACION_TURNO | AVISO_CANCELACION | RECORDATORIO"
         timestamptz enviado_en
         varchar     email_destino
         boolean     exitoso
@@ -95,9 +107,11 @@ erDiagram
     personas                    ||--o{    turnos                      : "reserva"
     profesionales               ||--o{    turnos                      : "atiende"
     profesionales               ||--o{    disponibilidad_profesional  : "define"
+    personas                    ||--o{    excepciones_morosidad       : "beneficia"
+    usuarios                    ||--o{    excepciones_morosidad       : "autoriza"
     personas                    ||--o{    pagos                       : "realiza"
     turnos                      ||--o|    pagos                       : "genera pago sesión"
-    usuarios                    ||--o{    turnos                      : "cancela (admin)"
+    usuarios                    ||--o{    turnos                      : "reserva (trazabilidad)"
     usuarios                    ||--o{    pagos                       : "registra (admin)"
     personas                    ||--o{    notificaciones              : "recibe"
     turnos                      ||--o{    notificaciones              : "origina"

@@ -32,6 +32,7 @@
 | ------- | -------- | ------------------------------ | ---------------------------------- |
 | 0.1     | ago 2026 | Versión inicial en formato RFC | R. Calcatelli · P. Basualdo Arcati |
 | 0.2     | 10/08/2026 | Decisiones de dominio cerradas (antes preguntas abiertas), tratamiento de datos personales, división de responsabilidades y ajustes de consistencia | P. Basualdo Arcati |
+| 0.3     | 25/09/2026 | Alcance ampliado a 6 módulos MVP (se incorporan Profesionales/Disponibilidad y Notificaciones). Sprint plan actualizado. Minutas de aprobación de tutora incorporadas. | R. Calcatelli |
 
 ---
 
@@ -46,8 +47,6 @@ Vitalys App es una aplicación web responsive para la gestión integral de un ce
 ## Motivación
 
 ### Contexto y relevamiento
-
-_(Completar con el anclaje real de la Actividad 1: describir en primera persona cómo funciona hoy un centro/gimnasio que conozcas — cómo se anotan los turnos, cómo se cobran las cuotas, qué herramientas usan.)_
 
 Los centros de salud híbridos —que combinan gimnasio con consultorios profesionales de Nutrición, Psicología y Kinesiología— gestionan su operación diaria con herramientas desconectadas entre sí: planillas de socios, agendas en papel o WhatsApp por cada profesional, y registros de cobros en cuadernos o Excel.
 
@@ -93,14 +92,15 @@ Aplicación web responsive con arquitectura cliente-servidor: frontend SPA (Reac
 ### Alcance — MVP (compromiso de entrega)
 
 1. **Autenticación y roles** — socio/paciente, profesional y administración. El dueño/encargado opera con el rol administración: el MVP no define un rol propietario separado.
-2. **Gestión de socios y pacientes** — alta, baja, modificación y consulta con identidad única
-3. **Agenda de turnos** — disponibilidad por profesional, reserva y cancelación, sin superposiciones
-4. **Registro de pagos** — cuotas de gimnasio y sesiones de consultorio, con estado de cuenta por persona
+2. **Gestión de personas** — alta, baja lógica, modificación y consulta con identidad única socio-paciente.
+3. **Profesionales y disponibilidad** — ABM de profesionales, gestión de franjas horarias semanales con control de solapamiento.
+4. **Agenda de turnos** — reserva y cancelación para turnos de consultorio y de gimnasio, sin superposiciones (EXCLUDE GIST en BD).
+5. **Registro de pagos** — cuotas de gimnasio y sesiones de consultorio, estado de cuenta por persona, control de morosidad.
+6. **Notificaciones por email** — confirmación de reserva, aviso de cancelación y recordatorio 24 h antes.
 
 ### Alcance — Nice to have (si el plan lo permite)
 
-- **Notificaciones por email** — confirmaciones y recordatorios de turnos
-- **Reportes básicos** — ingresos del período y ocupación de turnos para administración
+- **Reportes básicos** — ingresos del período y ocupación de turnos para administración.
 
 ### Alcance — Fuera de alcance (versión futura)
 
@@ -133,20 +133,20 @@ Durante la elaboración de esta propuesta se utilizaron herramientas de IA como 
 
 ## Tareas y roadmap
 
-| Sprint   | Período       | Objetivo principal                                                                                          |
-| -------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
-| Sprint 1 | 31/08 – 13/09 | Diseño del esquema de base de datos, setup de proyectos (Spring Boot, React) y despliegue inicial de prueba |
-| Sprint 2 | 14/09 – 27/09 | Autenticación y roles · **2.ª entrega: esquema de BD y módulos (27/09)**                                    |
-| Sprint 3 | 28/09 – 11/10 | Gestión de socios y pacientes                                                                               |
-| Sprint 4 | 12/10 – 25/10 | Agenda de turnos                                                                                            |
-| Sprint 5 | 26/10 – 08/11 | Registro de pagos · nice to have según margen                                                               |
-| Cierre   | 09/11 – 14/11 | Estabilización, informe final y video · **Entrega final (14/11)**                                           |
+| Sprint   | Período       | Objetivo principal · Responsable primario                                                                          |
+| -------- | ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Sprint 1 | 31/08 – 13/09 | DDL definitivo, setup Spring Boot + React, despliegue inicial · **R. Calcatelli**                                  |
+| Sprint 2 | 14/09 – 27/09 | Autenticación y roles (JWT) · **2.ª entrega: esquema de BD y módulos (27/09)** · **P. Basualdo Arcati**           |
+| Sprint 3 | 28/09 – 11/10 | Módulo Personas (ABM) + Módulo Profesionales y Disponibilidad · **R. Calcatelli / P. Basualdo Arcati**            |
+| Sprint 4 | 12/10 – 25/10 | Módulo Agenda de Turnos (reserva, cancelación, validaciones) · **R. Calcatelli**                                   |
+| Sprint 5 | 26/10 – 08/11 | Módulo Pagos + Módulo Notificaciones por email · **P. Basualdo Arcati**                                            |
+| Cierre   | 09/11 – 14/11 | Estabilización, informe final y video · **Entrega final (14/11)**                                                  |
 
 | Hito de la cátedra                               | Fecha límite   | Estado |
 | ------------------------------------------------ | -------------- | ------ |
 | Formación del equipo y elección de tutora        | —              | ✅     |
-| Propuesta y repositorio (1.ª entrega)            | 30/08          | 🔜     |
-| Esquema de BD y listado de módulos (2.ª entrega) | 27/09          | ⏳     |
+| Propuesta y repositorio (1.ª entrega)            | 30/08          | ✅     |
+| Esquema de BD y listado de módulos (2.ª entrega) | 27/09          | ✅     |
 | Informe final, video y despliegue                | 14/11          | ⏳     |
 | Defensa oral                                     | mesa de examen | ⏳     |
 
@@ -182,7 +182,7 @@ Criterios verificables de éxito del proyecto:
 
 | Métrica                             | Objetivo                                                                                      |
 | ----------------------------------- | --------------------------------------------------------------------------------------------- |
-| Módulos MVP completos y funcionando | 4 de 4 desplegados en producción al 14/11                                                     |
+| Módulos MVP completos y funcionando | 6 de 6 desplegados en producción al 14/11                                                     |
 | Despliegue en la nube               | Frontend, backend y base de datos accesibles públicamente por URL desde el Sprint 1, con arranque en frío documentado (limitación del plan gratuito, ver [Riesgos](#riesgos)) |
 | Integridad del dominio              | 0 superposiciones de turnos posibles por diseño (restricciones en BD + validación en API)     |
 | Trazabilidad de pagos               | Todo pago registrado queda asociado a una persona y a un concepto (cuota o sesión)            |
@@ -239,7 +239,7 @@ _Fundamento:_ el historial de pagos y turnos debe sobrevivir a la baja por traza
 
 El proyecto es viable en sus tres dimensiones. **Técnica:** el stack cubre la totalidad del MVP con tecnologías maduras, y el despliegue gratuito fue verificado como suficiente para la escala del problema. **Temporal:** 4 módulos en ~10 semanas con sprints de 2 semanas, con el desglose del módulo de autenticación (Metodología de Sistemas I) como evidencia de capacidad de estimación y las funcionalidades nice to have como margen de ajuste. **Operativa y de conocimiento:** el equipo aplica el principio de que la familiaridad con una tecnología es un factor de viabilidad de primer orden — Spring Boot y JPA provienen de Programación III y React del recorrido de la carrera — y la elección de PaaS elimina la administración de infraestructura.
 
-Se solicita la revisión de este RFC por parte de la tutora, en particular de las [decisiones de dominio propuestas](#decisiones-de-dominio-propuestas). Con su visto bueno, el estado pasa a ✅ Aceptado y el documento se presenta como 1.ª entrega de la cátedra.
+Este RFC fue revisado y aprobado por la tutora el 21/09/2026. El estado es ✅ Aceptado y el documento fue presentado como 1.ª entrega de la cátedra.
 
 ---
 
@@ -250,3 +250,7 @@ Registro de reuniones del equipo y con la tutora:
 | Fecha      | Participantes | Temas tratados                        | Decisiones / Acuerdos                                                   |
 | ---------- | ------------- | ------------------------------------- | ----------------------------------------------------------------------- |
 | 09/08/2026 | Renzo · Pablo | Definición del proyecto y formato RFC | Se adopta Vitalys como proyecto del TFI y RFC como formato de propuesta |
+| 22/08/2026 | Renzo · Pablo · Sofía | Revisión de la 1.ª entrega (RFC-001) | Tutora aprueba la propuesta (✅ 30/08/2026). Indica incorporar relevamiento real; las decisiones de dominio quedan aceptadas. |
+| 11/09/2026 | Renzo · Pablo | Preparación de la 2.ª entrega | Se decide evaluar MongoDB vs PostgreSQL (origina RFC-002). Se genera DDL v1 en base al diseño de dominio de Metodología I. |
+| 21/09/2026 | Renzo · Pablo · Sofía | Revisión del RFC-002 y diseño de BD | Tutora aprueba PostgreSQL (Opción A) y el DDL existente. Solicita ajustes: tipos ENUM faltantes, estado AUSENTE, tabla excepciones_morosidad, constraint de cancelación, diccionario de datos, requerimientos y diagramas (feedback completo en issue #12). |
+| 25/09/2026 | Renzo · Pablo | Presentación de la 2.ª entrega (versión final) | Se incorporan todos los ajustes indicados: DDL v2, diccionario de datos, catálogo de requerimientos + HUs, diagramas (casos de uso, estados, secuencias, clases, arquitectura). Alcance ampliado a 6 módulos. |

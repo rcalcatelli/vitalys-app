@@ -1,6 +1,6 @@
 # RFC-002 — Selección del Motor de Base de Datos
 
-**Estado:** EN REVISIÓN  
+**Estado:** ✅ APROBADA — 21/09/2026  
 **Fecha:** 11/09/2026  
 **Autores:** Renzo Calcatelli · Pablo Basualdo Arcati  
 **Revisora:** Sofía Raia  
@@ -127,19 +127,16 @@ Esta estrategia mezcla ambos conceptos deliberadamente, lo cual es exactamente l
 
 ---
 
-## 7. Consecuencias según decisión
+## 7. Consecuencias de la decisión adoptada
 
-**Si se elige PostgreSQL:**
-- El DDL generado (`db/ddl/vitalys_ddl.sql`) queda como esquema definitivo sin cambios.
-- Se puede igualmente demostrar comprensión de NoSQL en el informe final describiendo por qué no se eligió y qué se hubiera embebido.
-- Riesgo técnico bajo; plazo más controlable.
+**Se eligió PostgreSQL (Opción A).** Las consecuencias directas son:
 
-**Si se elige MongoDB:**
-- El DDL actual se reemplaza por un documento de colecciones con ejemplos de documentos JSON y estrategia embedding/referencing.
-- Spring Data JPA se reemplaza por Spring Data MongoDB.
-- Supabase se reemplaza por MongoDB Atlas (tier gratuito M0).
-- Se agrega un RFC-003 describiendo el modelo de colecciones definitivo.
-- Riesgo: las reglas de negocio más complejas (deuda gym, solapamientos) requieren más código en la capa de servicio.
+- El DDL en `db/ddl/vitalys_ddl.sql` es el esquema definitivo. Incluye ENUMs, constraints, triggers anti-solapamiento y el `EXCLUDE USING GIST` para turnos.
+- Spring Data JPA y Supabase se mantienen como stack de datos para todo el proyecto.
+- El riesgo técnico es bajo; el plazo es controlable con el plan de sprints vigente.
+- No se requiere RFC-003: la decisión queda documentada y cerrada en este RFC.
+
+**Demostración de competencia NoSQL:** el informe final incluirá la estrategia de embedding/referencing de la Sección 5, explicando cómo se modelaría en MongoDB y la razón de la elección en contra. Esto demuestra comprensión de ambos paradigmas sin riesgo técnico adicional.
 
 ---
 

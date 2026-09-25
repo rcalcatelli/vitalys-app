@@ -1,6 +1,6 @@
 # Diagramas del Sistema — Vitalys App
 
-> **2.ª Entrega (re-entrega) — Trabajo Final Integrador**  
+> **2.ª Entrega — Trabajo Final Integrador**  
 > Tecnicatura Universitaria en Programación · UTN · 2026  
 > Integrantes: Renzo Calcatelli · Pablo Basualdo Arcati · Tutora: Sofía Raia
 

@@ -18,15 +18,19 @@ Validan la lógica de negocio en la capa de servicio, sin base de datos real.
 
 ### PagoServiceTest
 
+La deuda se calcula desde `personas.fecha_inicio_membresia` (columna agregada en `db/migration/V4__fecha_inicio_membresia.sql`), no desde el último período pagado: el servicio busca el primer mes sin `pago` registrado a partir de la fecha de alta de la membresía, y ese es el mes moroso — aunque existan pagos de meses posteriores. Esto reemplaza el cálculo anterior, que tapaba meses salteados con cualquier pago más reciente.
+
 | ID    | Caso de prueba                                                                 | Entrada                                              | Resultado esperado                          |
 |-------|--------------------------------------------------------------------------------|------------------------------------------------------|---------------------------------------------|
-| PU-01 | Cuota al día (último período = mes actual)                                    | periodo = 2026-09-01, hoy = 2026-09-25               | diasMora = 0, bloqueado = false             |
-| PU-02 | Cuota vencida exactamente hace 10 días                                        | periodo = 2026-08-01, hoy = 2026-09-11               | diasMora = 10, bloqueado = false            |
-| PU-03 | Cuota vencida hace 11 días → moroso                                           | periodo = 2026-08-01, hoy = 2026-09-12               | diasMora = 11, bloqueado = true             |
-| PU-04 | Sin pagos registrados → moroso con días = NULL                                | sin filas en pagos                                   | bloqueado = true (caso conservador)         |
+| PU-01 | Cuota al día (todos los meses desde el alta de la membresía, pagados hasta el actual) | fecha_inicio_membresia = 2026-07-01, pagos en 07/08/09, hoy = 2026-09-25 | diasMora = 0, bloqueado = false |
+| PU-02 | Primer mes impago desde el alta, vencido exactamente hace 10 días             | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-11 | diasMora = 10, bloqueado = false |
+| PU-03 | Mes salteado hace 11 días, con meses posteriores pagados → moroso de todos modos | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-12 | diasMora = 11, bloqueado = true (a pesar de tener agosto pagado) |
+| PU-04 | Sin ningún pago registrado desde el alta de la membresía → moroso            | fecha_inicio_membresia = 2026-01-01, sin filas en pagos, hoy = 2026-09-25 | diasMora calculado desde 2026-01 (no NULL: `fecha_inicio_membresia` es NOT NULL si `es_socio_gym = TRUE`), bloqueado = true |
 | PU-05 | Persona sin membresía gym (es_socio_gym = false) → sin bloqueo               | es_socio_gym = false                                 | bloqueado = false sin consultar pagos       |
 | PU-06 | Login con cuenta deshabilitada (RF-32)                                        | activo = false, contraseña correcta                  | CredencialesInvalidasException, no se emite token |
 | PU-07 | Contrato UserDetails de `Usuario`                                             | usuario con rol SOCIO_PACIENTE / ADMIN               | getUsername = email, autoridad `ROLE_<rol>`, isEnabled sigue a `activo` |
+| PU-08 | Mes salteado en medio del historial, con meses posteriores pagados (caso que la regla vieja pasaba por alto) | fecha_inicio_membresia = 2026-05-01, pagos en 05, 07, 08 (saltea 06), hoy = 2026-08-20 | primer mes impago = 06, diasMora > 10, bloqueado = true |
+| PU-09 | Socio nuevo: alta de la membresía este mes, sin pagos aún → no debe quedar bloqueado desde el primer día | fecha_inicio_membresia = 2026-09-01, sin pagos, hoy = 2026-09-05 | diasMora = 0 (la cuota de 09 recién vence el 2026-10-01 + 10 días), bloqueado = false |
 
 ### TurnoServiceTest
 
@@ -89,6 +93,20 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-10 | Reserva GYM sin excepción por moroso                          | 422 con mensaje de morosidad                     |
 | PI-11 | Cancelación en tiempo → estado CANCELADO_EN_TIEMPO            | 200, slot liberado (verificar EXCLUDE no bloquea)|
 | PI-12 | Cancelación tardía → estado CANCELADO_TARDE                   | 200, slot sigue bloqueado (EXCLUDE activo)       |
+
+### Gimnasio
+
+Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horaria, cupo por franja, un turno por persona y día).
+
+| ID    | Caso                                                            | Resultado esperado                              |
+|-------|------------------------------------------------------------------|--------------------------------------------------|
+| PI-30 | Reserva GYM fuera de grilla (hora no en punto o duración ≠ 60 min) | 422 (`chk_turno_gym_grilla` capturado por API)  |
+| PI-31 | Reserva GYM un domingo                                          | 422 (`chk_turno_gym_grilla`: el domingo no está en la grilla) |
+| PI-32 | Reserva GYM un sábado fuera de 09:00–12:00                      | 422 (`chk_turno_gym_grilla`: el sábado solo abre 09:00–12:00) |
+| PI-33 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
+| PI-34 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
+| PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
+| PI-36 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
 
 ### Pagos
 

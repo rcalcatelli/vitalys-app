@@ -53,6 +53,7 @@ Identidad única de cada socio o paciente del centro. Una sola fila por persona 
 | `fecha_nacimiento` | `DATE` | SÍ | — | Fecha de nacimiento; opcional |
 | `estado` | `estado_persona` | NO | ENUM · DEFAULT 'ACTIVO' | ACTIVO / INACTIVO (baja lógica) |
 | `es_socio_gym` | `BOOLEAN` | NO | DEFAULT FALSE | TRUE si tiene membresía de gimnasio activa |
+| `fecha_inicio_membresia` | `DATE` | SÍ | CHECK ligado a `es_socio_gym` | Mes/día desde el que se deben cuotas de gimnasio; NOT NULL si y solo si `es_socio_gym = TRUE` |
 | `fecha_alta` | `DATE` | NO | DEFAULT CURRENT_DATE | Fecha de registro en el centro |
 | `fecha_baja` | `DATE` | SÍ | ≥ fecha_alta | Obligatoria si estado = INACTIVO; nula si estado = ACTIVO |
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
@@ -61,6 +62,7 @@ Identidad única de cada socio o paciente del centro. Una sola fila por persona 
 **Restricciones cruzadas:**
 - `chk_fecha_baja`: `fecha_baja IS NULL OR fecha_baja >= fecha_alta`
 - `chk_baja_logica`: `(estado = 'INACTIVO' AND fecha_baja IS NOT NULL) OR (estado = 'ACTIVO' AND fecha_baja IS NULL)`
+- `chk_fecha_inicio_membresia`: `(es_socio_gym = TRUE AND fecha_inicio_membresia IS NOT NULL) OR (es_socio_gym = FALSE AND fecha_inicio_membresia IS NULL)`. Evita que un socio nuevo aparezca moroso desde el día 1 y que el cálculo por "último período pagado" salte meses sin pagar.
 
 **Normalización:** los datos de personas se mantienen separados de `usuarios` para reflejar la diferencia conceptual entre identidad (persona real) y credencial de acceso. Una persona podría existir sin acceso digital si el centro la crea internamente, aunque en el MVP toda persona requiere usuario.
 
@@ -118,7 +120,7 @@ Reservas de slots entre una persona y un profesional (consultorio) o del gimnasi
 | `estado` | `estado_turno` | NO | ENUM · DEFAULT 'RESERVADO' | Ver ciclo de vida abajo |
 | `reservado_por_usuario_id` | `BIGINT` | NO | FK usuarios | Usuario que creó la reserva (la propia persona o un ADMIN) |
 | `cancelado_en` | `TIMESTAMPTZ` | SÍ | Obligatorio si cancelado | Fecha y hora de la cancelación |
-| `cancelado_por_usuario_id` | `BIGINT` | SÍ | FK usuarios · Obligatorio si cancelado | Siempre registrado: puede ser socio, profesional o admin |
+| `cancelado_por_usuario` | `BIGINT` | SÍ | FK usuarios · Obligatorio si cancelado | Siempre registrado: puede ser socio, profesional o admin |
 | `motivo_cancelacion` | `TEXT` | SÍ | Obligatorio si cancelado | Razón de la cancelación |
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
@@ -132,9 +134,27 @@ RESERVADO ──► COMPLETADO         (profesional o admin, al finalizar la ate
           ──► CANCELADO_TARDE    (aviso con < 24 h; el slot queda bloqueado)
 ```
 
-**Restricción de solapamiento:** `ALTER TABLE turnos ADD CONSTRAINT no_solapamiento_turnos EXCLUDE USING GIST (profesional_id WITH =, tstzrange(inicio, fin, '[)') WITH &&) WHERE (profesional_id IS NOT NULL AND estado IN ('RESERVADO', 'CANCELADO_TARDE'))`. Los turnos GYM no verifican solapamiento por motor (sin profesional asignado); la API limita la capacidad de la sala.
+**Restricción de solapamiento:** `ALTER TABLE turnos ADD CONSTRAINT excl_turnos_overlap EXCLUDE USING GIST (profesional_id WITH =, tstzrange(inicio, fin, '[)') WITH &&) WHERE (profesional_id IS NOT NULL AND estado IN ('RESERVADO', 'CANCELADO_TARDE', 'AUSENTE', 'COMPLETADO'))`. Solo `CANCELADO_EN_TIEMPO` libera el horario (RN-02); `AUSENTE` y `COMPLETADO` lo mantienen bloqueado porque el slot ya fue ocupado (RN-08). Los turnos GYM no verifican este EXCLUDE (sin profesional asignado); el cupo por franja lo controla el trigger `trg_turno_gym` contra `configuracion_gym.cupo_por_franja` (ver tabla `configuracion_gym`).
 
 **Regla de morosidad (RN-01):** si `tipo_turno = 'GYM'` y `personas.es_socio_gym = TRUE`, la API verifica que la persona no tenga cuota mensual vencida hace más de 10 días. Una cuota del período `P` vence el día 1 del mes `P+1`; está vencida hace más de 10 días si `NOW() > (P + 1 mes + 10 días)`. La validación ocurre en la capa de servicio Java, no en el motor.
+
+---
+
+## Tabla: `configuracion_gym`
+
+Parámetros operativos del gimnasio. Tabla de fila única (`id = 1`) que centraliza el cupo máximo de personas por franja horaria.
+
+| Campo | Tipo | Nulable | Restricciones | Descripción |
+|-------|------|---------|---------------|-------------|
+| `id` | `SMALLINT` | NO | PK · DEFAULT 1 | Fila única de configuración |
+| `cupo_por_franja` | `INT` | NO | > 0 | Máximo de personas con turno de gym activo en una misma franja horaria |
+| `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
+
+**Restricciones:**
+- `chk_configuracion_gym_fila_unica`: `id = 1`
+- `chk_cupo_positivo`: `cupo_por_franja > 0`
+
+**Uso:** el trigger `trg_turno_gym` sobre `turnos` lee `cupo_por_franja` para rechazar una reserva de gimnasio si la franja ya alcanzó el cupo máximo. No tiene claves foráneas: es un parámetro global del sistema, no una entidad relacionada con personas ni turnos puntuales.
 
 ---
 
@@ -210,3 +230,4 @@ El modelo se encuentra en **3FN (Tercera Forma Normal)**:
 - `profesionales` es una tabla separada de `personas` porque un profesional puede no ser socio/paciente, y sus atributos (especialidad, disponibilidad) no aplican a personas. Esto evita atributos nulos en una tabla de propósito general.
 - `disponibilidad_profesional` es una tabla hija de `profesionales` porque un profesional puede tener múltiples franjas horarias por día, y las franjas cambian con frecuencia.
 - `excepciones_morosidad` es una tabla independiente para mantener un registro auditable de decisiones administrativas, separado del estado de la persona.
+- `configuracion_gym` es una tabla de fila única para no hardcodear el cupo por franja en la aplicación; permite cambiarlo sin deploy.

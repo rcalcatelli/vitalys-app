@@ -57,14 +57,32 @@ de las variables de entorno que hay que cargar en cada plataforma.
    - `DB_USERNAME` → el usuario de Postgres que muestra Supabase (por ejemplo `postgres`).
    - `DB_PASSWORD` → la contraseña elegida en el paso 2.
 
-### 1.1 Ejecutar el DDL
+### 1.1 El esquema lo crea Flyway, no se pega a mano
 
-1. En el dashboard de Supabase, ir a **SQL Editor**.
-2. Pegar el contenido completo de [`db/ddl/vitalys_ddl.sql`](../../db/ddl/vitalys_ddl.sql) y
-   ejecutarlo. Verificar que no haya errores y que las tablas (`usuarios`, `personas`,
-   `profesionales`, `disponibilidad_profesional`, `turnos`, `pagos`, `notificaciones`) aparezcan
-   en **Table Editor**.
-3. (Opcional, para pruebas manuales) ejecutar `db/dml/seed.sql` de la misma forma.
+> **No ejecutes `db/ddl/vitalys_ddl.sql` en Supabase.** Ese archivo es el esquema inicial
+> histórico y hoy está incompleto: le faltan las reglas del gimnasio, la tabla
+> `excepciones_morosidad`, `personas.fecha_inicio_membresia` y la restricción de solapamiento
+> ampliada. Pegarlo dejaría la base en un estado intermedio y, peor, Flyway fallaría después al
+> encontrar tablas que él no creó y sin su tabla de historial.
+
+**La base de Supabase queda VACÍA.** Al arrancar, el backend aplica en orden todas las
+migraciones de [`db/migration/`](../../db/migration/) y registra cada una en
+`flyway_schema_history`. Cada despliegue posterior aplica solo lo que falte.
+
+Para verificarlo después de levantar el backend (paso 2), en **SQL Editor**:
+
+```sql
+SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;
+```
+
+Deben aparecer todas las versiones con `success = true`, y las tablas en **Table Editor**.
+
+**Datos de prueba (opcional).** Si querés cargarlos, ejecutá `db/dml/seed.sql` en el SQL Editor
+**después** de que Flyway haya corrido, nunca antes: el seed asume el esquema ya creado.
+
+> Si alguna vez necesitás aplicar el esquema a mano, ejecutá los archivos de `db/migration/`
+> **en orden de versión** (V1, V2, V3…), no el DDL viejo. Ver
+> [`entorno-local-docker.md`](entorno-local-docker.md) para el detalle de cómo funciona Flyway.
 
 ---
 

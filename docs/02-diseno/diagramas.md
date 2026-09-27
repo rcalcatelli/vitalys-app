@@ -87,6 +87,7 @@ graph TD
     AD --> UC11
     AD --> UC12
     AD --> UC14
+    AD --> UC17
     AD --> UC19
     AD --> UC20
     AD --> UC21
@@ -119,9 +120,23 @@ stateDiagram-v2
         El horario está bloqueado.
     end note
 
+    note right of AUSENTE
+        El horario sigue bloqueado.
+        Incluido en excl_turnos_overlap (RN-08).
+    end note
+
+    note right of COMPLETADO
+        El horario sigue bloqueado.
+        Incluido en excl_turnos_overlap (RN-08).
+    end note
+
     note right of CANCELADO_TARDE
         El horario sigue bloqueado.
-        Se incluye en el EXCLUDE constraint.
+        Incluido en excl_turnos_overlap.
+    end note
+
+    note right of CANCELADO_EN_TIEMPO
+        Único estado que libera el horario (RN-02).
     end note
 ```
 
@@ -205,13 +220,13 @@ sequenceDiagram
     TS->>TS: calcularAnticipacion(turno.inicio, NOW())
 
     alt anticipacion >= 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_EN_TIEMPO,\ncancelado_en=NOW(), cancelado_por_usuario_id=?, motivo=?
+        TS->>DB: UPDATE turnos SET estado=CANCELADO_EN_TIEMPO,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
         DB-->>TS: ok
         TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
         TS-->>API: TurnoDTO {estado: CANCELADO_EN_TIEMPO}
         API-->>U: 200 OK "Turno cancelado en tiempo. Slot liberado."
     else anticipacion < 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_TARDE,\ncancelado_en=NOW(), cancelado_por_usuario_id=?, motivo=?
+        TS->>DB: UPDATE turnos SET estado=CANCELADO_TARDE,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
         DB-->>TS: ok
         TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
         TS-->>API: TurnoDTO {estado: CANCELADO_TARDE}
@@ -297,7 +312,62 @@ sequenceDiagram
 
 ---
 
-## 7. Diagrama de Clases del Dominio
+## 7. Diagrama de Secuencia — Registrar y consultar una excepción de morosidad
+
+```mermaid
+sequenceDiagram
+    actor A as Admin
+    actor U as Usuario (Socio)
+    participant API as ExcepcionMorosidadController
+    participant ES as ExcepcionMorosidadService
+    participant TC as TurnoController
+    participant TS as TurnoService
+    participant PS as PagoService
+    participant DB as Base de datos
+
+    Note over A,DB: 1) El ADMIN registra la excepción
+    A->>API: POST /api/excepciones-morosidad {persona_id, motivo, valida_hasta, turno_id?}
+    API->>ES: registrarExcepcion(request, actorActual)
+
+    alt actorActual.rol != ADMIN
+        ES-->>API: AccesoDenegadoException
+        API-->>A: 403 "Solo ADMIN puede registrar excepciones de morosidad"
+    else actor es ADMIN
+        ES->>DB: INSERT INTO excepciones_morosidad (persona_id, autorizado_por, turno_id, motivo, valida_hasta)
+        DB-->>ES: excepción creada (id)
+        ES-->>API: ExcepcionMorosidadDTO
+        API-->>A: 201 Created {excepcionId, personaId, validaHasta}
+    end
+
+    Note over U,DB: 2) Más tarde, el socio intenta reservar un turno de gym
+    U->>TC: POST /api/turnos {persona_id, tipo_turno=GYM, inicio}
+    TC->>TS: reservarTurno(request, usuarioActual)
+
+    TS->>PS: calcularMorosidad(persona_id)
+    PS->>DB: SELECT MAX(periodo) FROM pagos WHERE persona_id=? AND concepto='CUOTA_MENSUAL'
+    DB-->>PS: ultimo_periodo
+    PS-->>TS: diasMora (int)
+
+    alt diasMora > 10
+        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id=? AND valida_hasta >= CURRENT_DATE AND (turno_id IS NULL OR turno_id=?)
+        DB-->>TS: excepción vigente (o vacío)
+        alt sin excepción vigente
+            TS-->>TC: MorosidadException
+            TC-->>U: 422 "Cuota vencida hace X días. No puede reservar turno de gym."
+        else con excepción vigente
+            TS->>TS: continuar con la reserva (excepción autorizada, RN-09)
+        end
+    end
+
+    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, estado=RESERVADO, ...)
+    Note over TS,DB: Grilla horaria y cupo por franja los valida trg_turno_gym
+    TS-->>TC: TurnoDTO
+    TC-->>U: 201 Created {turnoId, inicio, fin, estado}
+```
+
+---
+
+## 8. Diagrama de Clases del Dominio
 
 ```mermaid
 classDiagram
@@ -318,6 +388,7 @@ classDiagram
         +LocalDate fechaNacimiento
         +EstadoPersona estado
         +Boolean esSocioGym
+        +LocalDate fechaInicioMembresia
         +LocalDate fechaAlta
         +LocalDate fechaBaja
         +estaActiva() Boolean
@@ -364,6 +435,12 @@ classDiagram
         +Boolean estaVigente() 
     }
 
+    class ConfiguracionGym {
+        +Integer id
+        +Integer cupoPorFranja
+        +validarCupo(LocalDateTime franjaInicio, int ocupados) Boolean
+    }
+
     class Pago {
         +Long id
         +ConceptoPago concepto
@@ -394,11 +471,14 @@ classDiagram
     Turno "1" --> "*" Notificacion : genera
     Persona "1" --> "*" ExcepcionMorosidad : excepciones
     Usuario "1" --> "*" ExcepcionMorosidad : autoriza
+    Turno "1" --> "0..*" ExcepcionMorosidad : habilita puntualmente
+
+    note for ConfiguracionGym "Fila única (id = 1). Usada por Turno\npara validar el cupo por franja de gimnasio\n(trigger trg_turno_gym)."
 ```
 
 ---
 
-## 8. Diagrama de Arquitectura y Despliegue
+## 9. Diagrama de Arquitectura y Despliegue
 
 ```mermaid
 graph TB
@@ -416,7 +496,7 @@ graph TB
     end
 
     subgraph Supabase["☁️ Supabase (Base de datos)"]
-        PG["PostgreSQL 16\nConexión: pooling\nbackups automáticos"]
+        PG["PostgreSQL 16\nConexión: pooling\nsin backups automáticos\n(tier gratuito)"]
     end
 
     subgraph Email["✉️ Proveedor SMTP"]

@@ -14,7 +14,8 @@
 | 1 | Autenticación y Roles | Registro, login y control de acceso por rol |
 | 2 | Gestión de Personas | Alta, baja lógica, modificación y consulta de socios/pacientes |
 | 3 | Gestión de Profesionales | ABM de profesionales y su disponibilidad horaria |
-| 4 | Agenda de Turnos | Reserva, consulta y cancelación de turnos con reglas de negocio |
+| 4 | Agenda de Turnos | Reserva, consulta y cancelación de turnos de consultorio y de gimnasio, con reglas de negocio propias de cada uno |
+| 4b | Excepciones de Morosidad | El ADMIN autoriza excepciones puntuales al bloqueo por deuda en gym |
 | 5 | Registro de Pagos | Carga de cuotas de gym y sesiones de consultorio |
 | 6 | Notificaciones | Envío de confirmaciones y recordatorios por email |
 
@@ -42,6 +43,8 @@
 | GET  | `/api/auth/me` | Datos del usuario autenticado | Autenticado |
 
 **Entidades involucradas:** `usuarios`
+
+> **Nota:** `GET /api/health` no pertenece a este módulo de negocio — es un endpoint técnico de infraestructura (usado por el `HEALTHCHECK` de Docker, ver `docs/03-despliegue/entorno-local-docker.md`) que no depende de la base de datos ni requiere autenticación.
 
 ---
 
@@ -93,28 +96,76 @@
 
 ## Módulo 4 — Agenda de Turnos
 
-**Descripción:** Gestión completa del ciclo de vida de un turno: consulta de slots disponibles, reserva y cancelación con aplicación automática de reglas de negocio.
+**Descripción:** Gestión completa del ciclo de vida de un turno. El módulo cubre dos tipos de turno con reglas propias, distinguidos por `tipo_turno`:
+
+- **CONSULTORIO:** turno con un profesional asignado (Nutrición, Psicología, Kinesiología), dentro de su franja de disponibilidad.
+- **GYM:** turno de gimnasio, sin profesional asignado, dentro de una grilla horaria fija y con cupo por franja.
+
+### Turnos de CONSULTORIO
 
 **Reglas de negocio clave:**
-- **Sin solapamientos:** El sistema valida a nivel de base de datos y API que un profesional no tenga dos turnos activos en el mismo horario.
-- **Deuda en gym:** Un socio con cuota mensual vencida hace más de 10 días no puede reservar turnos de gym. Los turnos de consultorio no se ven afectados.
-- **Cancelación en tiempo:** Aviso con ≥ 24 horas → estado `CANCELADO_EN_TIEMPO`, el slot queda libre.
-- **Cancelación tarde:** Aviso con < 24 horas → estado `CANCELADO_TARDE`, el slot no se libera. Se registra fecha, actor y motivo.
-- **Trazabilidad:** Todo turno cancelado registra `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`.
+- **Sin solapamientos:** un profesional no puede tener dos turnos activos en el mismo horario. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos, y bloquea contra cualquier turno `RESERVADO`, `CANCELADO_TARDE`, `AUSENTE` o `COMPLETADO` de ese profesional (el único estado que libera el slot es `CANCELADO_EN_TIEMPO`).
+- **Cancelación en tiempo:** aviso con ≥ 24 horas antes del inicio → estado `CANCELADO_EN_TIEMPO`, el slot queda libre.
+- **Cancelación tarde:** aviso con < 24 horas → estado `CANCELADO_TARDE`, el slot no se libera.
+- **Completado / Ausente:** los marca el **PROFESIONAL** asignado al turno (o un ADMIN), a mano, desde su agenda.
+
+### Turnos de GYM
+
+**Descripción:** el socio reserva una franja horaria del gimnasio en sí, no con un profesional puntual. Las reglas de grilla y cupo están implementadas a nivel de motor (`db/migration/V2__reglas_gimnasio.sql`), no solo en la capa de servicio:
+
+- **Grilla horaria:** franjas de 60 minutos en punto. Lunes a viernes de 07:00 a 21:00, sábados de 09:00 a 12:00. Domingo cerrado (no se puede reservar).
+- **Cupo por franja:** cada franja tiene un máximo de personas configurable (tabla `configuracion_gym`, columna `cupo_por_franja`); una reserva que superaría el cupo es rechazada.
+- **Un turno por persona por día:** un socio no puede tener más de un turno de gym activo el mismo día (índice único parcial sobre `turnos`).
+- **Solo socios de gym activos:** reserva quien tiene `es_socio_gym = TRUE` y `estado = 'ACTIVO'` en `personas`.
+- **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`.
+
+**Reglas de negocio comunes a ambos tipos:**
+- **Deuda en gym:** un socio con cuota mensual vencida hace más de 10 días no puede reservar turnos de gym (RN-01). Los turnos de consultorio no se ven afectados. El ADMIN puede levantar esta restricción puntualmente con una excepción de morosidad (ver más abajo).
+- **Trazabilidad:** todo turno cancelado registra `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`.
+
+**Completado y ausente — asimetría entre CONSULTORIO y GYM (RF-22, RF-34, RF-35):**
+
+En CONSULTORIO el turno tiene un profesional a cargo, y es quien lo marca `COMPLETADO` o `AUSENTE` desde su agenda (o un ADMIN, en su nombre). Un turno de GYM **no tiene profesional asignado**, así que ese circuito no aplica: no hay quién lo cierre "desde la agenda de un profesional". En su lugar:
+
+- El **ADMIN** marca el turno como `COMPLETADO` en el momento del check-in de la persona en el gimnasio.
+- Si la franja termina y no hubo check-in, el sistema marca el turno como `AUSENTE` automáticamente (sin intervención humana).
+
+Esta diferencia no es un accidente de implementación: es consecuencia directa de que GYM no tiene profesional, y por eso se documenta acá en vez de forzar el mismo flujo para los dos tipos de turno.
 
 **Endpoints principales:**
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| GET    | `/api/turnos/disponibles` | Slots libres por profesional y fecha | Autenticado |
-| GET    | `/api/turnos` | Listar turnos (filtros: persona, profesional, estado, fecha) | ADMIN |
-| GET    | `/api/turnos/mis-turnos` | Turnos propios del usuario autenticado | SOCIO_PACIENTE |
-| GET    | `/api/turnos/mi-agenda` | Agenda del profesional autenticado | PROFESIONAL |
-| POST   | `/api/turnos` | Reservar turno | SOCIO_PACIENTE, ADMIN |
-| PATCH  | `/api/turnos/{id}/cancelar` | Cancelar turno (regla 24h automática) | SOCIO_PACIENTE, ADMIN |
+| GET    | `/api/turnos/disponibles` | Slots libres de consultorio por profesional y fecha | Autenticado |
+| GET    | `/api/turnos/gym/cupo` | Cupo disponible de gimnasio por franja y fecha (total, ocupados, disponibles) | Autenticado |
+| GET    | `/api/turnos` | Listar turnos (filtros: persona, profesional, tipo, estado, fecha) | ADMIN |
+| GET    | `/api/turnos/mis-turnos` | Turnos propios del usuario autenticado (consultorio y gym) | SOCIO_PACIENTE |
+| GET    | `/api/turnos/mi-agenda` | Agenda del profesional autenticado (solo turnos de CONSULTORIO) | PROFESIONAL |
+| POST   | `/api/turnos` | Reservar turno de consultorio | SOCIO_PACIENTE, ADMIN |
+| POST   | `/api/turnos/gym` | Reservar turno de gimnasio | SOCIO_PACIENTE, ADMIN |
+| PATCH  | `/api/turnos/{id}/cancelar` | Cancelar turno (24h en consultorio, 2h en gym) | SOCIO_PACIENTE, ADMIN |
+| PATCH  | `/api/turnos/{id}/completado` | Marcar turno como completado (consultorio: PROFESIONAL propio; gym: check-in por ADMIN) | PROFESIONAL (propio, consultorio), ADMIN |
+| PATCH  | `/api/turnos/{id}/ausente` | Marcar turno como ausente | PROFESIONAL (propio, consultorio), ADMIN |
 | GET    | `/api/turnos/{id}` | Detalle de un turno | ADMIN, partes involucradas |
 
-**Entidades involucradas:** `turnos`, `personas`, `profesionales`, `disponibilidad_profesional`, `pagos` (consulta de deuda)
+**Entidades involucradas:** `turnos`, `personas`, `profesionales`, `disponibilidad_profesional`, `configuracion_gym`, `pagos` (consulta de deuda), `excepciones_morosidad`
+
+---
+
+## Módulo 4b — Excepciones de Morosidad
+
+**Descripción:** Permite al ADMIN levantar puntualmente el bloqueo por morosidad (RN-01) para un socio determinado, sin desactivar la regla en general. Cubre RF-30 y RN-09.
+
+**Regla de negocio clave:** la excepción se registra en `excepciones_morosidad` con el socio beneficiado, quién la autorizó, el motivo y una fecha de vencimiento (`valida_hasta`). Puede ser puntual (asociada a un `turno_id` concreto) o por período (válida para cualquier turno de gym hasta `valida_hasta`, si `turno_id` es `NULL`). La validación de RN-01 y la consulta de excepción vigente se resuelven en la capa de servicio, no en el motor de base de datos.
+
+**Endpoints principales:**
+
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| POST   | `/api/excepciones-morosidad` | Registrar una excepción para un socio moroso | ADMIN |
+| GET    | `/api/excepciones-morosidad/persona/{id}` | Listar excepciones (vigentes e históricas) de una persona | ADMIN |
+
+**Entidades involucradas:** `excepciones_morosidad`, `personas`, `usuarios`, `turnos`
 
 ---
 
@@ -180,7 +231,12 @@ Módulo 3 (Profesionales)
 
 Módulo 4 (Turnos)
     ├── depende de Módulos 2, 3
+    ├── depende de Módulo 4b para levantar el bloqueo por morosidad en gym
     └── alimenta a Módulos 5 y 6
+
+Módulo 4b (Excepciones de Morosidad)
+    ├── depende de Módulo 2 (persona beneficiada)
+    └── condiciona la regla de morosidad del Módulo 4 (RN-01) sin desactivarla
 
 Módulo 5 (Pagos)
     ├── depende de Módulos 2, 4

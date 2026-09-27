@@ -1,4 +1,19 @@
 -- =============================================================================
+-- ⚠ ARCHIVO HISTÓRICO — NO EJECUTAR
+--
+-- Este es el esquema inicial tal como fue aprobado el 21/09/2026. Se conserva como
+-- registro de esa aprobación y NO refleja el esquema actual: le faltan las reglas del
+-- gimnasio, la tabla excepciones_morosidad, personas.fecha_inicio_membresia y la
+-- restricción de solapamiento ampliada.
+--
+-- El esquema vigente se gestiona con migraciones versionadas en db/migration/ y lo
+-- aplica Flyway al arrancar el backend. Su contenido idéntico vive en
+-- db/migration/V1__esquema_inicial.sql, sobre el que se apilan V2, V3, ...
+--
+-- Ver docs/03-despliegue/entorno-local-docker.md
+-- =============================================================================
+
+-- =============================================================================
 -- Vitalys App — Esquema de Base de Datos (DDL)
 -- PostgreSQL 15+
 -- 2.ª Entrega — Trabajo Final Integrador (UTN TUP 2026)

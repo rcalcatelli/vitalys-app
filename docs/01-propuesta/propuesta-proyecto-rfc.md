@@ -50,6 +50,31 @@ Vitalys App es una aplicación web responsive para la gestión integral de un ce
 
 Los centros de salud híbridos —que combinan gimnasio con consultorios profesionales de Nutrición, Psicología y Kinesiología— gestionan su operación diaria con herramientas desconectadas entre sí: planillas de socios, agendas en papel o WhatsApp por cada profesional, y registros de cobros en cuadernos o Excel.
 
+#### Metodología del relevamiento
+
+En su revisión de la 1.ª entrega (ver [Minutas](#minutas), 22/08/2026), la tutora pidió incorporar relevamiento real. Vitalys es, sin embargo, un caso de estudio propio: no hay un centro de salud concreto disponible para relevar durante la cursada, y simular una serie de entrevistas que no ocurrieron sería peor que no tener relevamiento. Por eso el equipo optó por perfiles de usuario sintéticos como alternativa metodológica explícita, en lugar de entrevistas de campo o de una ficción de entrevistas: doce perfiles (cuatro por cada rol del sistema — SOCIO_PACIENTE, PROFESIONAL, ADMIN), construidos a partir del dominio y de la experiencia de uso de gimnasios y centros de salud similares, para contrastar el catálogo de requerimientos (RF/RN) contra necesidades concretas y detectar huecos funcionales antes de implementar.
+
+El artefacto completo está en [`relevamiento/perfiles-usuario.json`](./relevamiento/perfiles-usuario.json), rotulado explícitamente `"naturaleza": "SINTETICO"`. **Esto no es relevamiento de campo ni testimonio de personas reales**: es un artefacto de diseño elaborado por el equipo. Ninguna cita o necesidad atribuida a un perfil debe leerse como declaración textual de una persona entrevistada, sino como una formulación del equipo que representa una necesidad esperable de ese perfil. Esta aclaración es independiente de la referencia a un establecimiento real que orienta el caso de estudio (ver [Cliente](#cliente)): esa referencia da contexto general al dominio, no sustituye al relevamiento de usuarios.
+
+#### Síntesis por tipo de usuario
+
+- **SOCIO_PACIENTE** (4 perfiles): socios que combinan gimnasio y consultorio, o solo uno de los dos. El eje común es reservar sin depender del horario de recepción y entender con anticipación su estado de cuenta y las reglas de cancelación. El perfil que combina gimnasio y Psicología en la misma cuenta (SP-04) confirma que la identidad única socio-paciente no es un caso de borde sino frecuente.
+- **PROFESIONAL** (4 perfiles): tres perfiles (Nutrición, Psicología, Kinesiología) encajan en el modelo de agenda individual con duración configurable. El cuarto (PR-04, entrenamiento en sala) no atiende turnos individuales y no encaja en ese modelo — ver hallazgo crítico abajo.
+- **ADMIN** (4 perfiles): recepción, cobranzas, altas/bajas y dirección. Tres perfiles validan el diseño actual (operar en nombre de terceros, ficha única por persona); el de cobranzas expone un hueco de datos (fecha de inicio de membresía) y el de dirección confirma que los reportes agregados quedan fuera del alcance del MVP.
+
+#### Hallazgos que cuestionan el diseño
+
+El valor del relevamiento no está en confirmar lo ya definido, sino en lo que obliga a revisar:
+
+1. **El perfil PR-04 (profesional de sala) no encaja en el modelo de PROFESIONAL.** El esquema asume agenda individual con `profesional_id` por turno; un entrenador de sala no atiende turnos propios y ese modelo no lo representa.
+2. **No hay forma de consultar el cupo disponible de un turno de gimnasio** antes de reservar (perfil SP-01): el esquema previo no tenía el concepto de cupo por franja.
+3. **Nadie tenía definido quién marca `COMPLETADO` o `AUSENTE` en un turno de gimnasio** (perfil PR-01): RF-22 asigna esa acción al profesional del turno, y el turno de gimnasio no tiene profesional asignado.
+4. **Falta la fecha de inicio de membresía** para calcular desde cuándo se adeuda una cuota (perfil AD-02): sin ese dato, un socio nuevo puede aparecer como moroso desde el primer día.
+5. **No está definido qué pasa con los turnos ya reservados cuando un profesional reduce su disponibilidad** (perfil PR-03).
+6. **Reportes e indicadores agregados quedan fuera del alcance del MVP** (perfil AD-04, dirección del centro): se documenta explícitamente para que no aparezca como un olvido.
+
+Los hallazgos 1, 2 y 3 quedan resueltos a nivel de dominio por las reglas de gimnasio de la [Decisión de dominio 11](#decisiones-de-dominio-propuestas) (el endpoint de consulta de cupo se diseña en el módulo de Agenda de Turnos); los hallazgos 4 y 5 permanecen abiertos y quedan documentados aquí para no perderlos antes de encarar ese módulo; el hallazgo 6 ya estaba reflejado en el alcance del MVP.
+
 ### Actores involucrados
 
 | Actor                      | Rol en el proceso actual                                                                     | Necesidad principal                                                                 |
@@ -79,7 +104,7 @@ Existen soluciones comerciales de gestión para gimnasios y de agenda de turnos 
 
 ### Cliente
 
-Caso de estudio propio (centro de salud híbrido "Vitalys"), con anclaje en el relevamiento de un establecimiento real. El proyecto da continuidad al trabajo de planificación desarrollado por el equipo en Metodología de Sistemas I (ver `/docs/metodologia`).
+Caso de estudio propio (centro de salud híbrido "Vitalys"), sin un establecimiento real asociado: el dominio se construyó a partir de perfiles de usuario elaborados por el equipo (ver la sección de relevamiento). El proyecto da continuidad al trabajo de planificación desarrollado por el equipo en Metodología de Sistemas I (ver `/docs/metodologia`).
 
 ---
 
@@ -146,9 +171,11 @@ Durante la elaboración de esta propuesta se utilizaron herramientas de IA como 
 | ------------------------------------------------ | -------------- | ------ |
 | Formación del equipo y elección de tutora        | —              | ✅     |
 | Propuesta y repositorio (1.ª entrega)            | 30/08          | ✅     |
-| Esquema de BD y listado de módulos (2.ª entrega) | 27/09          | ✅     |
+| Esquema de BD y listado de módulos (2.ª entrega) | 27/09          | ⏳     |
 | Informe final, video y despliegue                | 14/11          | ⏳     |
 | Defensa oral                                     | mesa de examen | ⏳     |
+
+> **Estado a 27/09/2026:** la 2.ª entrega fue presentada en fecha, pero la tutora todavía no la cerró. El código existe y está verificado: `backend/` es un proyecto Spring Boot completo con autenticación JWT, 37 tests en verde y 95,5% de cobertura; `frontend/` es un proyecto Vite + React + TypeScript con login y guard por rol. El Sprint 2 está completo. El Sprint 1 está parcial: resta crear el proyecto en Supabase, ejecutar las migraciones contra esa base y desplegar en Render y Vercel, tareas que dependen de las cuentas del equipo. Las fechas del cronograma no se modifican y siguen cerrando contra la entrega final del 14/11.
 
 ---
 
@@ -232,14 +259,18 @@ _Fundamento:_ los pagos parciales introducen saldos, imputación y estados inter
 _Fundamento:_ el historial de pagos y turnos debe sobrevivir a la baja por trazabilidad, y una persona dada de baja suele volver. El borrado físico rompería las referencias de pagos y turnos históricos. Decisión con impacto directo en el esquema del Sprint 1.
 
 **8. Identidad única y roles múltiples.** El modelo de autenticación asigna un único rol por usuario. Un profesional que también sea socio del gimnasio requiere dos cuentas con emails distintos. Esta situación no se contempla en el MVP y se documenta como **limitación de diseño conocida**: la complejidad de un sistema multi-rol por usuario (selección de rol activo, contextos de permisos combinados) excede el alcance académico del proyecto. Si el caso de uso se volviera frecuente, el RFC correspondiente debería evaluar una tabla de relación `usuario_roles` y un mecanismo de cambio de contexto en el frontend.
-_Fundamento:_ en el relevamiento, los profesionales no figuran como socios de gimnasio. La regla simple de un rol por usuario simplifica la implementación de Spring Security y reduce la superficie de errores en Sprint 2.
+_Fundamento:_ ninguno de los perfiles de usuario elaborados describe a un profesional que además sea socio del gimnasio, por lo que el caso no se considera frecuente en este dominio. La regla simple de un rol por usuario simplifica la implementación de Spring Security y reduce la superficie de errores en Sprint 2.
 
 **9. Cierre de sesión con JWT.** El endpoint de logout no invalida el token en el servidor. La sesión se cierra descartando el token del lado del cliente (localStorage). El token permanece técnicamente válido hasta su TTL. Esta es una **limitación documentada del MVP**: la implementación de una lista negra de tokens (Redis u otra solución) introduce una dependencia de infraestructura adicional y no está en el alcance académico. El TTL corto (configurado en 24 h) acota la ventana de riesgo.
-_Fundamento:_ todos los endpoints están protegidos por HTTPS. El riesgo residual es aceptable para un contexto académico con datos no sensibles en producción (los datos de prueba son ficticios).
+_Fundamento:_ todos los endpoints están protegidos por HTTPS. El sistema maneja categorías de datos alcanzadas por la Ley 25.326 —datos identificatorios de personas y, en los turnos de Psicología, datos referidos a la salud (ver [Tratamiento de datos personales](#tratamiento-de-datos-personales))—, por lo que no corresponde calificarlos de "no sensibles". El riesgo residual de esta decisión se acepta en un contexto académico donde los datos cargados son ficticios, no porque el dominio carezca de datos sensibles.
 
 **10. Rol forzado en el registro público y vínculo de fichas por email.** El registro público (`POST /api/auth/registro`) crea siempre un usuario con rol `SOCIO_PACIENTE`; el campo `rol` no forma parte del contrato de entrada y, si el body lo incluye, el servicio responde 400 antes de crear ningún registro. Cuando el ADMIN carga la ficha de una persona (`POST /api/personas`) puede optar por vincularla a un usuario que ya se autorregistró (`POST /api/personas/vincular`) en lugar de crear credenciales nuevas; el vínculo se resuelve buscando el `usuario_id` por email antes del INSERT en `personas`, sin tocar la restricción `usuario_id NOT NULL UNIQUE` del esquema. Los profesionales no tienen endpoint de vínculo: el alta de un profesional (`POST /api/profesionales`) crea siempre `usuario` (rol `PROFESIONAL`) y `profesional` en la misma operación.
 _Fundamento:_ permitir un `rol` libre en el registro público contradecía a CA-01-4, RN-10 y los diagramas de casos de uso y de clases, que ya asumían rol forzado; era una inconsistencia documental, no una decisión pendiente. El vínculo por email para personas resuelve el caso real de alguien que se registra solo y luego se acerca al centro para completar su ficha. Ese mismo caso no existe para profesionales: la Decisión 8 fija un único rol por usuario, y todo usuario autorregistrado es por definición `SOCIO_PACIENTE`; vincular esa cuenta como profesional exigiría promover su rol, lo que contradice una decisión ya aceptada el 30/08. Inventar un endpoint de vínculo simétrico para profesionales habría reabierto exactamente el caso que la Decisión 8 cerró.
 _Incorporada tras la devolución de la 2.ª entrega, como cambio de alcance mediante Pull Request, según el mecanismo declarado al cierre de esta sección._
+
+**11. Turnos de gimnasio: grilla horaria, cupo y check-in.** El gimnasio no funciona con profesional asignado por turno, sino con una grilla horaria propia: franjas de 60 minutos en punto, de lunes a viernes de 07:00 a 21:00 y los sábados de 09:00 a 12:00; el domingo permanece cerrado. Cada franja tiene un cupo máximo configurable de personas (parámetro único en `configuracion_gym`, inicializado en 20) y cada persona puede reservar como máximo un turno de gimnasio por día. Solo pueden reservar quienes son socios activos del gimnasio. La cancelación libera el cupo si ocurre con 2 horas de anticipación o más, contra las 24 horas de consultorio (Decisión 2). Al no existir profesional asignado, es el rol ADMIN quien marca el turno como `COMPLETADO` en el check-in; si nadie lo marca, el sistema lo pasa automáticamente a `AUSENTE` al cerrar la franja.
+_Fundamento:_ el turno de gimnasio es un recurso compartido (el espacio y las máquinas), no la agenda de una persona: el cupo por franja modela esa diferencia sin forzar un `profesional_id` artificial en cada turno. La anticipación de cancelación baja a 2 horas porque liberar un lugar de gimnasio no depende de reorganizar la agenda de un profesional; exigir 24 horas como en consultorio dejaría cupos vacíos evitables. Que el check-in lo marque el ADMIN —y no un profesional, como en consultorio— es consecuencia directa del hallazgo 3 del relevamiento (perfil PR-01, ver [Motivación](#motivación)): nadie tenía asignada esa responsabilidad en un modelo de agenda individual que el turno de gimnasio no sigue.
+_Incorporada como cambio de alcance mediante Pull Request, a partir de los hallazgos del relevamiento de usuarios y de las reglas ya implementadas en `db/migration/V2__reglas_gimnasio.sql`._
 
 > Si no se recibe devolución antes del 30/08, el equipo adopta estas decisiones como cerradas para poder iniciar el Sprint 1 en fecha. Cualquier corrección posterior se procesa como cambio de alcance mediante Pull Request sobre este RFC.
 
@@ -247,9 +278,9 @@ _Incorporada tras la devolución de la 2.ª entrega, como cambio de alcance medi
 
 ## Conclusión
 
-El proyecto es viable en sus tres dimensiones. **Técnica:** el stack cubre la totalidad del MVP con tecnologías maduras, y el despliegue gratuito fue verificado como suficiente para la escala del problema. **Temporal:** 4 módulos en ~10 semanas con sprints de 2 semanas, con el desglose del módulo de autenticación (Metodología de Sistemas I) como evidencia de capacidad de estimación y las funcionalidades nice to have como margen de ajuste. **Operativa y de conocimiento:** el equipo aplica el principio de que la familiaridad con una tecnología es un factor de viabilidad de primer orden — Spring Boot y JPA provienen de Programación III y React del recorrido de la carrera — y la elección de PaaS elimina la administración de infraestructura.
+El proyecto es viable en sus tres dimensiones. **Técnica:** el stack cubre la totalidad del MVP con tecnologías maduras, y el despliegue gratuito fue verificado como suficiente para la escala del problema. **Temporal:** 6 módulos en ~10 semanas con sprints de 2 semanas, con el desglose del módulo de autenticación (Metodología de Sistemas I) como evidencia de capacidad de estimación y las funcionalidades nice to have como margen de ajuste. **Operativa y de conocimiento:** el equipo aplica el principio de que la familiaridad con una tecnología es un factor de viabilidad de primer orden — Spring Boot y JPA provienen de Programación III y React del recorrido de la carrera — y la elección de PaaS elimina la administración de infraestructura.
 
-Este RFC fue revisado y aprobado por la tutora el 21/09/2026. El estado es ✅ Aceptado y el documento fue presentado como 1.ª entrega de la cátedra.
+Este RFC (RFC-0001) fue revisado y aprobado por la tutora el 30/08/2026 (ver [Minutas](#minutas), reunión del 22/08/2026). El estado es ✅ Aceptado y el documento fue presentado como 1.ª entrega de la cátedra. La fecha 21/09/2026 que figura en las Minutas corresponde a la revisión del RFC-002 (diseño de base de datos), un documento distinto de este.
 
 ---
 

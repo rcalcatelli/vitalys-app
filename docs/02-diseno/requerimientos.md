@@ -26,12 +26,12 @@
 | RF-14 | Profesionales | El ADMIN y el propio PROFESIONAL pueden gestionar las franjas horarias de disponibilidad. |
 | RF-15 | Turnos | Un usuario autenticado puede consultar los slots disponibles de un profesional por fecha. |
 | RF-16 | Turnos | Un SOCIO_PACIENTE o ADMIN puede reservar un turno de consultorio para una persona. |
-| RF-17 | Turnos | Un SOCIO_PACIENTE o ADMIN puede reservar un turno de gimnasio para un socio. |
+| RF-17 | Turnos | Un SOCIO_PACIENTE o ADMIN puede reservar un turno de gimnasio para un socio, sujeto a la grilla horaria, el cupo por franja, el límite de un turno por día y la anticipación permitida (RN-14 a RN-18). |
 | RF-18 | Turnos | El sistema aplica la regla de morosidad al reservar un turno GYM (ver RN-01). |
 | RF-19 | Turnos | Un SOCIO_PACIENTE puede cancelar sus propios turnos con registro de motivo. |
-| RF-20 | Turnos | El sistema aplica automáticamente la regla de 24 h al cancelar (ver RN-02). |
+| RF-20 | Turnos | El sistema aplica automáticamente la regla de anticipación al cancelar, según el tipo de turno (24 h en consultorio, 2 h en gimnasio — ver RN-02). |
 | RF-21 | Turnos | Un ADMIN puede cancelar cualquier turno y marcar ausencias. |
-| RF-22 | Turnos | El PROFESIONAL puede ver su agenda y marcar turnos como completados o como ausencia. |
+| RF-22 | Turnos | El PROFESIONAL puede ver su agenda y marcar turnos de CONSULTORIO como completados o como ausencia. Los turnos de GYM no tienen profesional asignado; su cierre lo gestiona el ADMIN en el check-in (RF-34, RF-35). |
 | RF-23 | Pagos | El ADMIN puede registrar un pago de cuota mensual para un socio. |
 | RF-24 | Pagos | El ADMIN puede registrar un pago de sesión de consultorio asociado a un turno. |
 | RF-25 | Pagos | El ADMIN y el propio SOCIO_PACIENTE pueden consultar el historial de pagos y el estado de cuenta. |
@@ -42,6 +42,9 @@
 | RF-30 | Morosidad | El ADMIN puede registrar una excepción puntual a la regla de morosidad para un socio. |
 | RF-31 | Personas | El ADMIN puede vincular una `persona` nueva a un `usuario` que ya existe, buscándolo por email (`POST /api/personas/vincular`, ADMIN-only). Body `{email, nombre, apellido, dni}`, sin contraseña. El servicio verifica primero que el actor sea ADMIN — 403 en caso contrario (RNF-03), antes de resolver el email, para no exponer qué direcciones están registradas. Luego: 404 (no existe usuario con ese email) y 409 (usuario ya vinculado a otra persona). |
 | RF-32 | Auth | El sistema rechaza el login de un usuario con `activo = FALSE` (cuenta deshabilitada). Devuelve 401 con el mismo mensaje que una contraseña incorrecta: un error distinto permitiría deducir qué emails existen y cuáles están dados de baja. Un token emitido antes de la baja sigue siendo válido hasta su TTL (limitación documentada, Decisión de dominio 9). |
+| RF-33 | Turnos | El sistema permite a cualquier usuario autenticado consultar el cupo disponible de una franja horaria de gimnasio para una fecha dada (cupo total, ocupados y disponibles), antes de reservar. Cierra el hueco detectado para el perfil SP-01 del relevamiento (`docs/01-propuesta/relevamiento/perfiles-usuario.json`). También satisface, sin crear un rol nuevo, la necesidad del perfil PR-04 (profesional de sala, sin agenda individual) de ver la ocupación por franja para organizar la sala. |
+| RF-34 | Turnos | El ADMIN marca un turno de gimnasio como `COMPLETADO` en el momento del check-in de la persona en el gimnasio. Los turnos GYM no tienen profesional asignado, por lo que esta acción no la ejecuta un PROFESIONAL como en RF-22 (que aplica solo a turnos de CONSULTORIO). |
+| RF-35 | Turnos | El sistema marca automáticamente como `AUSENTE` todo turno de gimnasio que sigue en estado `RESERVADO` una vez finalizada su franja horaria, sin que se haya registrado el check-in (RF-34). |
 
 ---
 
@@ -66,9 +69,9 @@
 
 | ID | Descripción |
 |----|-------------|
-| RN-01 | **Morosidad en gym:** Un socio con membresía de gimnasio (`es_socio_gym = TRUE`) no puede reservar turnos de tipo GYM si tiene una cuota mensual vencida hace más de 10 días. Una cuota del período `P` (ej. 2026-09-01) vence el 1° del mes siguiente (2026-10-01). Está vencida hace más de 10 días si `NOW() > (P + 1 mes + 10 días)`. Los turnos de consultorio no se ven afectados. |
-| RN-02 | **Cancelación con anticipación:** si el aviso llega con ≥ 24 h antes del inicio → estado `CANCELADO_EN_TIEMPO` (el slot queda libre). Si llega con < 24 h → estado `CANCELADO_TARDE` (el slot permanece bloqueado). En ambos casos se registran `cancelado_en`, `cancelado_por_usuario_id` y `motivo_cancelacion`. |
-| RN-03 | **Solapamiento de turnos:** Un profesional no puede tener dos turnos activos en el mismo horario. Los estados que bloquean el horario son `RESERVADO` y `CANCELADO_TARDE`. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos. |
+| RN-01 | **Morosidad en gym:** Un socio con membresía de gimnasio (`es_socio_gym = TRUE`) no puede reservar turnos GYM si tiene al menos un mes impago desde el inicio de su membresía (`personas.fecha_inicio_membresia`). La deuda se calcula recorriendo, mes a mes, todos los períodos entre `fecha_inicio_membresia` (inclusive) y el mes actual: cada período `P` vence el 1° del mes siguiente y se considera impago si, además, `NOW() > (P + 1 mes + 10 días)` y no existe una cuota `CUOTA_MENSUAL` registrada para ese `P`. Un mes salteado cuenta como impago aunque se hayan pagado meses posteriores: el pago de un período no compensa la falta de otro. El socio es moroso si existe al menos un período en esa condición. Un socio cuyo primer período (el de `fecha_inicio_membresia`) todavía no llegó a esos 10 días de vencido no es moroso — no se bloquea desde el primer día. Los turnos de consultorio no se ven afectados. Regla dependiente de `NOW()`: se valida en el backend, no en la base. |
+| RN-02 | **Cancelación con anticipación:** el umbral de anticipación para que la cancelación quede `CANCELADO_EN_TIEMPO` depende del tipo de turno: en `CONSULTORIO` es ≥ 24 h antes del inicio; en `GYM` es ≥ 2 h antes del inicio. Por debajo del umbral que corresponda, el estado es `CANCELADO_TARDE` (el slot permanece bloqueado — RN-03). En ambos tipos de turno se registran `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`. Regla dependiente de `NOW()`: se valida en el backend, no en la base. |
+| RN-03 | **Solapamiento de turnos:** Un profesional no puede tener dos turnos activos en el mismo horario. Los estados que bloquean el horario son `RESERVADO`, `AUSENTE`, `COMPLETADO` y `CANCELADO_TARDE`; solo `CANCELADO_EN_TIEMPO` libera el horario (coherente con RN-08: un turno `AUSENTE` sigue ocupando el slot). La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos. |
 | RN-04 | **Baja lógica:** las personas nunca se eliminan físicamente. La baja se registra con `estado = INACTIVO` y `fecha_baja`. El historial de turnos y pagos se preserva. |
 | RN-05 | **Unicidad de cuota:** una persona puede tener a lo sumo una cuota mensual registrada por mes (`UNIQUE (persona_id, periodo)` parcial). |
 | RN-06 | **Unicidad de pago por turno:** un turno puede tener a lo sumo un pago de tipo `SESION_CONSULTORIO` asociado (`UNIQUE (turno_id)` parcial). |
@@ -79,6 +82,14 @@
 | RN-11 | **Disponibilidad del profesional:** las franjas horarias de un mismo profesional en el mismo día no pueden solaparse. El motor lo garantiza mediante un trigger (`trg_disponibilidad_no_overlap`). |
 | RN-12 | **Franja de disponibilidad:** un turno solo puede reservarse dentro de la franja de disponibilidad activa del profesional. La validación se realiza en la capa de servicio. |
 | RN-13 | **Resolución de `usuario_id` antes del INSERT:** en los dos caminos de alta de `personas` (alta presencial, RF-05, y vínculo, RF-31) y en el camino único de alta de `profesionales` (RF-11), el sistema resuelve completamente el `usuario_id` — confirmando que existe y que no está ya vinculado a otra fila — antes de ejecutar el INSERT correspondiente. Así las restricciones `NOT NULL UNIQUE` del DDL nunca se violan en tiempo de ejecución. |
+| RN-14 | **Grilla horaria de gimnasio:** los turnos GYM duran 60 minutos exactos y comienzan en hora en punto. Lunes a viernes se reservan entre las 07:00 y las 21:00 (inicio); sábados entre las 09:00 y las 12:00 (inicio); domingo el gimnasio permanece cerrado. La validación se garantiza en la base de datos (`CHECK` sobre la franja). |
+| RN-15 | **Cupo por franja de gimnasio:** cada franja horaria de GYM tiene un cupo máximo de personas, único para todo el gimnasio y configurable en `configuracion_gym.cupo_por_franja` (valor actual: 20). El cupo se garantiza en la base de datos mediante un trigger que cuenta los turnos activos de esa franja antes de aceptar una nueva reserva. |
+| RN-16 | **Un turno de gimnasio por persona por día:** una persona no puede tener más de un turno GYM activo el mismo día. Los turnos en estado `CANCELADO_EN_TIEMPO` o `CANCELADO_TARDE` no cuentan para este límite. Se garantiza con un índice único parcial en la base de datos. |
+| RN-17 | **Socio habilitado para reservar gimnasio:** solo puede reservar un turno GYM la persona con `es_socio_gym = TRUE` y `estado = 'ACTIVO'`. Se valida en la base de datos mediante un trigger; además está sujeta a RN-01 (morosidad). |
+| RN-18 | **Anticipación para reservar turno de gimnasio:** un turno GYM se puede reservar hasta 7 días antes de su franja y, como mínimo, con 1 hora de anticipación al inicio. Regla dependiente de `NOW()`: se valida en el backend, no en la base. |
+| RN-19 | **Cierre de turnos de gimnasio:** un turno GYM no tiene profesional asignado (`profesional_id` es siempre `NULL`), por lo que RN-08 y RF-22 no le aplican. El ADMIN marca el turno como `COMPLETADO` en el momento del check-in de la persona en el gimnasio (RF-34). Si la franja finaliza sin que se haya registrado el check-in, el turno pasa automáticamente a `AUSENTE` (RF-35). Regla dependiente de `NOW()` (cierre de franja): se valida en el backend. |
+
+> **Nota de alcance — perfil PR-04 (profesional de sala):** el modelo de `PROFESIONAL` asume agenda individual (especialidad, franjas de disponibilidad, turnos propios) y no encaja con un rol de instrucción en sala sin turnos individuales. RF-33 cubre la necesidad funcional expresada por ese perfil (ver ocupación por franja) sin crear un rol nuevo. Definir un tipo de cuenta de solo consulta para personal sin agenda propia queda fuera de alcance del MVP; si el centro necesitara que este perfil acceda al sistema, hoy debería usar una cuenta ADMIN existente, lo cual excede el principio de mínimo privilegio y se documenta como limitación conocida.
 
 ---
 
@@ -112,7 +123,7 @@
 
 **Criterios de aceptación:**
 
-- CA-02-1: El sistema muestra únicamente slots dentro de la franja de disponibilidad del profesional y sin turno activo (RESERVADO o CANCELADO_TARDE) en ese horario.
+- CA-02-1: El sistema muestra únicamente slots dentro de la franja de disponibilidad del profesional y sin turno activo (`RESERVADO`, `AUSENTE`, `COMPLETADO` o `CANCELADO_TARDE`) en ese horario (RN-03).
 - CA-02-2: Tras la reserva exitosa, el turno queda en estado `RESERVADO` y se envía email de confirmación.
 - CA-02-3: Si el horario ya fue tomado entre la consulta y la reserva, el sistema devuelve error 409.
 - CA-02-4: El campo `reservado_por_usuario_id` registra quién hizo la reserva (la propia persona o un ADMIN).
@@ -129,8 +140,8 @@
 **Criterios de aceptación:**
 
 - CA-03-1: Solo se pueden cancelar turnos en estado `RESERVADO`.
-- CA-03-2: El sistema calcula automáticamente si el aviso llega con ≥ 24 h (CANCELADO_EN_TIEMPO) o < 24 h (CANCELADO_TARDE).
-- CA-03-3: Se registran `cancelado_en`, `cancelado_por_usuario_id` y `motivo_cancelacion` (los tres obligatorios).
+- CA-03-2: El sistema calcula automáticamente si el aviso llega a tiempo o tarde, según el umbral de anticipación que corresponde al tipo de turno: 24 h en consultorio, 2 h en gimnasio (RN-02).
+- CA-03-3: Se registran `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion` (los tres obligatorios).
 - CA-03-4: Se envía email de aviso de cancelación a la persona.
 - CA-03-5: Un socio solo puede cancelar sus propios turnos; un ADMIN puede cancelar cualquiera.
 - CA-03-6: Si el turno ya está cancelado o completado, el sistema devuelve error 422.
@@ -198,3 +209,36 @@
 - CA-07-3: El body de vínculo no acepta contraseña — el `usuario` ya tiene la suya.
 - CA-07-4: Un actor no-ADMIN recibe 403, verificado en la capa de servicio (RNF-03).
 - CA-07-5: Tras el vínculo exitoso, la `persona` creada tiene el mismo `usuario_id` que el usuario encontrado (no se crea un `usuario` nuevo).
+
+---
+
+### HU-08 — Reservar un turno de gimnasio
+
+**Como** socio de gimnasio autenticado,  
+**quiero** reservar un turno de gimnasio en una franja horaria con lugar disponible,  
+**para** asegurarme un lugar sin ir a probar suerte.
+
+**Criterios de aceptación:**
+
+- CA-08-1: El sistema solo ofrece franjas válidas según la grilla horaria del gimnasio (lunes a viernes 07:00-21:00, sábados 09:00-12:00, domingo cerrado — RN-14).
+- CA-08-2: Antes de reservar, la persona puede consultar el cupo disponible de la franja elegida (RF-33).
+- CA-08-3: Solo puede reservar quien es socio de gimnasio activo (`es_socio_gym = TRUE`, `estado = 'ACTIVO'`) y no tiene meses impagos (RN-01, RN-17).
+- CA-08-4: La reserva se rechaza si la persona ya tiene otro turno GYM activo ese mismo día (RN-16).
+- CA-08-5: La reserva se rechaza si la franja ya alcanzó su cupo máximo (RN-15) o si no respeta la anticipación permitida — hasta 7 días antes, mínimo 1 hora antes (RN-18).
+- CA-08-6: Un turno de gimnasio nunca tiene profesional asignado.
+- CA-08-7: Un ADMIN puede reservar en nombre de cualquier socio; un SOCIO_PACIENTE solo para sí mismo.
+
+---
+
+### HU-09 — Registrar el check-in de un turno de gimnasio
+
+**Como** administrador,  
+**quiero** marcar la llegada de un socio a su turno de gimnasio,  
+**para** dejar constancia de la asistencia sin depender de un profesional asignado.
+
+**Criterios de aceptación:**
+
+- CA-09-1: El ADMIN marca `COMPLETADO` un turno GYM en estado `RESERVADO` en el momento del check-in (RF-34).
+- CA-09-2: Si la franja finaliza sin check-in, el turno pasa automáticamente a `AUSENTE` (RF-35).
+- CA-09-3: Un turno GYM ya `CANCELADO_EN_TIEMPO` o `CANCELADO_TARDE` no admite check-in.
+- CA-09-4: El PROFESIONAL no participa de este flujo: RF-22 aplica solo a turnos de consultorio.

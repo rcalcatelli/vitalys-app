@@ -177,8 +177,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  Período       Monto       Estado                        │   │
 │  │  Jul 2026      $15.000     ✅ Pagada (10/07/2026)        │   │
-│  │  Ago 2026      —           ❌ Vencida (mora 24 días)     │   │
-│  │  Sep 2026      —           ❌ Vencida (mora 0 días)      │   │
+│  │  Ago 2026      —           ❌ Vencida (mora 26 días)     │   │
+│  │  Sep 2026      —           🕓 Pendiente (vence 01/10)    │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  SESIONES DE CONSULTORIO                                        │
@@ -283,6 +283,45 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 - **Ya vinculado:** mensaje 409, no se ofrece ninguna acción de escritura — el ADMIN debe buscar otro email.
 
 **Regla:** el vínculo es ADMIN-only (403 si el actor no es ADMIN, verificado en la capa de servicio, RNF-03).
+
+---
+
+## W-08 — Reserva de turno de gimnasio (SOCIO_PACIENTE)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ← Mis turnos    RESERVAR TURNO DE GIMNASIO    [María Pérez] ▼  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Fecha        [lun 28/09/2026  ▼]     ← → (navegación)         │
+│                                                                  │
+│  Franjas disponibles                                            │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Horario         Cupo ocupado      Acción                 │  │
+│  │  07:00 – 08:00    12 / 20          [RESERVAR]              │  │
+│  │  08:00 – 09:00    20 / 20          ── cupo completo ──     │  │
+│  │  09:00 – 10:00     5 / 20          [RESERVAR]              │  │
+│  │  10:00 – 11:00     0 / 20          [RESERVAR]              │  │
+│  │  …                                                          │  │
+│  │  20:00 – 21:00     3 / 20          [RESERVAR]              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ Morosidad (condicional) ────────────────────────────────┐   │
+│  │ ⚠ Tenés una cuota vencida hace 24 días.                  │   │
+│  │   No podés reservar turnos de gimnasio.                   │   │
+│  │   [Ver estado de cuenta]                                  │   │
+│  └───────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌─ Confirmación (modal al hacer clic en RESERVAR) ─────────┐   │
+│  │  Confirmás la reserva?                                    │   │
+│  │  Gimnasio · Lunes 28/09/2026 · 09:00 – 10:00              │   │
+│  │  [Cancelar]                     [Confirmar reserva]       │   │
+│  └───────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Flujo:** elegir fecha → ver franjas de 60 minutos con el cupo ocupado/total de cada una → reservar una franja libre → confirmar.
+**Reglas:** solo se listan franjas dentro de la grilla del gimnasio (L-V 07:00–21:00, sáb 09:00–12:00; domingo no muestra franjas). Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si hay morosidad `> 10 días` sin excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Confirmar envía `POST /api/turnos {persona_id, tipo_turno: GYM, inicio}`.
 
 ---
 

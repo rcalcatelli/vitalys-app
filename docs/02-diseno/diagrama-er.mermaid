@@ -23,6 +23,7 @@ erDiagram
         date        fecha_nacimiento
         enum        estado          "ACTIVO | INACTIVO"
         boolean     es_socio_gym
+        date        fecha_inicio_membresia "NOT NULL sii es_socio_gym=TRUE"
         date        fecha_alta
         date        fecha_baja      "NOT NULL si estado=INACTIVO"
         timestamptz creado_en
@@ -62,7 +63,7 @@ erDiagram
         enum        estado                      "RESERVADO | COMPLETADO | AUSENTE | CANCELADO_EN_TIEMPO | CANCELADO_TARDE"
         bigint      reservado_por_usuario_id    FK  "Persona o ADMIN que creó la reserva"
         timestamptz cancelado_en                "NOT NULL si cancelado"
-        bigint      cancelado_por_usuario_id    FK  "NOT NULL si cancelado"
+        bigint      cancelado_por_usuario       FK  "NOT NULL si cancelado"
         text        motivo_cancelacion          "NOT NULL si cancelado"
         timestamptz creado_en
         timestamptz actualizado_en
@@ -90,6 +91,12 @@ erDiagram
         timestamptz creado_en
     }
 
+    configuracion_gym {
+        smallint    id              PK  "Fila única (id = 1)"
+        int         cupo_por_franja "Máximo de personas por franja de gym"
+        timestamptz actualizado_en
+    }
+
     notificaciones {
         bigint      id              PK
         bigint      persona_id      FK
@@ -109,6 +116,7 @@ erDiagram
     profesionales               ||--o{    disponibilidad_profesional  : "define"
     personas                    ||--o{    excepciones_morosidad       : "beneficia"
     usuarios                    ||--o{    excepciones_morosidad       : "autoriza"
+    turnos                      ||--o{    excepciones_morosidad       : "habilita puntualmente"
     personas                    ||--o{    pagos                       : "realiza"
     turnos                      ||--o|    pagos                       : "genera pago sesión"
     usuarios                    ||--o{    turnos                      : "reserva (trazabilidad)"

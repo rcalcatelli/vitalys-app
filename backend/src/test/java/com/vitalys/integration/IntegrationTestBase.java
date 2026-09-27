@@ -1,13 +1,11 @@
 package com.vitalys.integration;
 
-import jakarta.annotation.PostConstruct;
 import java.security.SecureRandom;
 import java.util.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -68,31 +66,6 @@ public abstract class IntegrationTestBase {
 
     @Autowired
     protected TestRestTemplate restTemplate;
-
-    /**
-     * {@code TestRestTemplate} usa por defecto {@link SimpleClientHttpRequestFactory}, que
-     * envía el body de un POST en <em>modo streaming</em> (adaptador delgado sobre
-     * {@code HttpURLConnection}). Ante una respuesta 401, la JDK intenta reintentar la
-     * request con autenticación — pero el body ya se envió en streaming y no se puede
-     * releer, así que tira {@code ResourceAccessException: cannot retry due to server
-     * authentication, in streaming mode} antes de que el test llegue a leer el status code.
-     *
-     * <p>Por eso los tests de login con credenciales inválidas (POST + body) fallaban acá
-     * mientras que los 401 de rutas GET sin body (ej. {@code AuthMeIT}, {@code SecurityIT})
-     * pasaban sin problema: sin body no hay streaming, y sin streaming no hay reintento. El
-     * servidor siempre devolvió 401 correctamente — esto es un problema del cliente HTTP de
-     * test, no de {@code GlobalExceptionHandler} ni de la app. Desactivar el streaming acá
-     * hace que el request se bufferee entero antes de enviarse, evitando el reintento. NO
-     * sacar esta configuración pensando que "no hace nada": sin ella, cualquier test que
-     * dispare una respuesta de error contra un POST con body vuelve a fallar por esta causa
-     * ajena a la lógica de negocio.
-     */
-    @PostConstruct
-    void desactivarOutputStreamingParaEvitarReintentoEnErrores() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setOutputStreaming(false);
-        restTemplate.getRestTemplate().setRequestFactory(factory);
-    }
 
     protected String urlBase() {
         return "http://localhost:" + port;

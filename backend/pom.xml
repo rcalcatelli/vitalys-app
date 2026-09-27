@@ -111,6 +111,16 @@
       <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Cliente HTTP para TestRestTemplate. Sin esto usa HttpURLConnection del JDK, que ante
+         un 401 reintenta el request con autenticación y falla si el body ya se envió:
+         "cannot retry due to server authentication, in streaming mode". Con httpclient5 en el
+         classpath, Spring Boot elige HttpComponents, que no hace ese reintento. Afectaba solo
+         a los POST con body que devuelven error; los GET nunca lo dispararon. -->
+    <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

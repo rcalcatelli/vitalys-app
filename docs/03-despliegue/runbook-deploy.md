@@ -91,7 +91,18 @@ Deben aparecer todas las versiones con `success = true`, y las tablas en **Table
 1. Crear una cuenta / iniciar sesión en [render.com](https://render.com).
 2. **New → Blueprint** y conectar el repositorio de GitHub `vitalys-app`. Render va a detectar
    [`render.yaml`](../../render.yaml) en la raíz y proponer el servicio `vitalys-backend`
-   (`env: java`, `rootDir: backend`, plan free).
+   (`runtime: docker`, plan free).
+
+   > **Por qué Docker y no Java.** Render no tiene runtime nativo de Java: los suyos son
+   > docker, node, python, ruby, go, rust, elixir y static. Un blueprint con `env: java`
+   > se rechaza con `invalid runtime java`. Usar Docker además tiene una ventaja: Render
+   > construye **la misma imagen** que corre en local con `docker compose`.
+   >
+   > El contexto de build es la **raíz del repositorio**, no `backend/`. El Dockerfile hace
+   > `COPY db/migration ./db/migration`, y las migraciones viven fuera de `backend/`. Con
+   > `rootDir: backend` ese `COPY` no encontraría nada y el build fallaría. Por eso el
+   > blueprint usa `dockerContext: .` y `dockerfilePath: ./backend/Dockerfile`, igual que
+   > `docker-compose.yml`.
 3. Confirmar la creación del servicio. Render va a pedir los valores de las variables marcadas
    como `sync: false` en `render.yaml` — completarlas en el dashboard (**nunca** en el repo):
    - `DB_URL` → la cadena JDBC del paso 1 (Session pooler).
@@ -102,7 +113,22 @@ Deben aparecer todas las versiones con `success = true`, y las tablas en **Table
    - `JWT_EXPIRATION_MS` ya viene con un valor por defecto en `render.yaml` (`86400000` = 24 h);
      solo cambiarlo si se decide otra política de expiración.
 4. Disparar el primer deploy (Render lo hace automáticamente al crear el Blueprint). El build
-   corre `mvn -B clean package -DskipTests` y el arranque `java -jar target/*.jar`.
+   es el del `backend/Dockerfile`: etapa de compilación con Maven y JDK 17, y etapa final con
+   JRE 17 corriendo `java -jar /app/app.jar` como usuario sin privilegios.
+
+   **Este arranque es el primero que aplica el esquema contra Supabase.** En los logs de
+   Render deberían aparecer las cinco migraciones:
+
+   ```
+   Schema history table "public"."flyway_schema_history" does not exist yet
+   Creating Schema History table ...
+   Migrating schema "public" to version "1 - esquema inicial"
+   Migrating schema "public" to version "2 - reglas gimnasio"
+   Migrating schema "public" to version "3 - excepciones morosidad"
+   Migrating schema "public" to version "4 - fecha inicio membresia"
+   Migrating schema "public" to version "5 - ensanchar excl turnos overlap"
+   Started VitalysApplication
+   ```
 5. Una vez que el deploy quede en estado **Live**, verificar `GET /api/health` en la URL pública
    que asigna Render (por ejemplo `https://vitalys-backend.onrender.com/api/health`) — debe
    responder `200` sin necesitar token ni base de datos disponible para ese endpoint puntual.

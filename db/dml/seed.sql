@@ -14,27 +14,29 @@ BEGIN;
 -- 1. USUARIOS
 --    Contraseñas hasheadas con bcrypt (costo 10). Texto plano en comentarios
 --    para facilitar el desarrollo local. NUNCA usar texto plano en producción.
+--    Hash verificado: generado con `SELECT crypt('Admin1234!', gen_salt('bf', 10));`
+--    (pgcrypto) para que coincida exactamente con la contraseña documentada.
 -- ---------------------------------------------------------------------------
 
 -- Admin
 INSERT INTO usuarios (email, password_hash, rol) VALUES
-  ('admin@vitalys.com',     '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'ADMIN');
+  ('admin@vitalys.com',     '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'ADMIN');
   -- password: Admin1234!
 
 -- Profesionales
 INSERT INTO usuarios (email, password_hash, rol) VALUES
-  ('nutricion@vitalys.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'PROFESIONAL'),
-  ('psico@vitalys.com',     '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'PROFESIONAL'),
-  ('kine@vitalys.com',      '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'PROFESIONAL');
+  ('nutricion@vitalys.com', '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'PROFESIONAL'),
+  ('psico@vitalys.com',     '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'PROFESIONAL'),
+  ('kine@vitalys.com',      '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'PROFESIONAL');
 
 -- Socios / Pacientes
 INSERT INTO usuarios (email, password_hash, rol) VALUES
-  ('maria.perez@mail.com',    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE'),
-  ('juan.garcia@mail.com',    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE'),
-  ('lucia.rojas@mail.com',    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE'),
-  ('carlos.soto@mail.com',    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE'),
-  ('ana.fernandez@mail.com',  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE'),
-  ('pedro.gomez@mail.com',    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lbvy', 'SOCIO_PACIENTE');
+  ('maria.perez@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('juan.garcia@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('lucia.rojas@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('carlos.soto@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('ana.fernandez@mail.com',  '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('pedro.gomez@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE');
   -- password para todos: Admin1234!
 
 -- ---------------------------------------------------------------------------
@@ -158,28 +160,33 @@ VALUES (
   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')
 );
 
--- T3: AUSENTE — Lucía con Florencia (Kinesiología), 22/09/2026
+-- T3: AUSENTE — Lucía con Florencia (Kinesiología), 23/09/2026
+-- Nota: originalmente 22/09 (martes); Florencia solo atiende Lun/Mié/Vie.
+-- Se corrige a 23/09 (miércoles), dentro de su disponibilidad.
 INSERT INTO turnos (persona_id, profesional_id, tipo_turno, inicio, fin, estado, reservado_por_usuario_id)
 VALUES (
   (SELECT id FROM personas WHERE dni = '38100003'),
   (SELECT id FROM profesionales WHERE apellido = 'Rueda'),
   'CONSULTORIO',
-  '2026-09-22 08:00:00-03',
-  '2026-09-22 08:45:00-03',
+  '2026-09-23 08:00:00-03',
+  '2026-09-23 08:45:00-03',
   'AUSENTE',
   (SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com')
 );
 
--- T4: CANCELADO_EN_TIEMPO — Ana con Valentina, canceló con 48 h de anticipación
+-- T4: CANCELADO_EN_TIEMPO — Ana con Valentina, canceló con varios días de anticipación
+-- Nota: originalmente 24/09 (jueves); Valentina solo atiende Lun/Mié.
+-- Se corrige a 28/09 (lunes), dentro de su disponibilidad; se mantiene el
+-- aviso de cancelación (22/09) con largo margen (>24h → CANCELADO_EN_TIEMPO).
 INSERT INTO turnos (
   persona_id, profesional_id, tipo_turno, inicio, fin, estado,
-  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario_id, motivo_cancelacion
+  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
 ) VALUES (
   (SELECT id FROM personas WHERE dni = '38100005'),
   (SELECT id FROM profesionales WHERE apellido = 'Méndez'),
   'CONSULTORIO',
-  '2026-09-24 09:00:00-03',
-  '2026-09-24 09:30:00-03',
+  '2026-09-28 09:00:00-03',
+  '2026-09-28 09:30:00-03',
   'CANCELADO_EN_TIEMPO',
   (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
   '2026-09-22 10:00:00-03',
@@ -188,18 +195,21 @@ INSERT INTO turnos (
 );
 
 -- T5: CANCELADO_TARDE — Juan con Rodrigo, canceló con 3 h de anticipación (bloqueado)
+-- Nota: originalmente 23/09 (miércoles); Rodrigo solo atiende Mar/Jue.
+-- Se corrige a 24/09 (jueves), dentro de su disponibilidad; se mantiene el
+-- aviso de cancelación con 3 h de margen (<24h → CANCELADO_TARDE).
 INSERT INTO turnos (
   persona_id, profesional_id, tipo_turno, inicio, fin, estado,
-  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario_id, motivo_cancelacion
+  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
 ) VALUES (
   (SELECT id FROM personas WHERE dni = '38100002'),
   (SELECT id FROM profesionales WHERE apellido = 'Almirón'),
   'CONSULTORIO',
-  '2026-09-23 14:00:00-03',
-  '2026-09-23 14:50:00-03',
+  '2026-09-24 14:00:00-03',
+  '2026-09-24 14:50:00-03',
   'CANCELADO_TARDE',
   (SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
-  '2026-09-23 11:00:00-03',
+  '2026-09-24 11:00:00-03',
   (SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
   'No me siento bien.'
 );
@@ -248,12 +258,15 @@ INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario
 --    para poder asistir a una clase de gym mientras regulariza su cuota.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta) VALUES (
-  (SELECT id FROM personas WHERE dni = '38100002'),
-  (SELECT id FROM usuarios WHERE email  = 'admin@vitalys.com'),
-  'El socio se comprometió a abonar las cuotas adeudadas antes del 30/09/2026. Se autoriza acceso temporario al gym.',
-  '2026-09-30'
-);
+-- BLOQUEADO: la tabla `excepciones_morosidad` todavía no existe en el DDL.
+-- Se agregará en el cambio pendiente `correcciones-esquema-ddl`. Reactivar
+-- este INSERT (quitar el comentario) una vez que esa tabla esté creada.
+-- INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta) VALUES (
+--   (SELECT id FROM personas WHERE dni = '38100002'),
+--   (SELECT id FROM usuarios WHERE email  = 'admin@vitalys.com'),
+--   'El socio se comprometió a abonar las cuotas adeudadas antes del 30/09/2026. Se autoriza acceso temporario al gym.',
+--   '2026-09-30'
+-- );
 
 -- ---------------------------------------------------------------------------
 -- 9. NOTIFICACIONES — registro histórico de envíos
@@ -280,7 +293,7 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
 );
 
 -- Aviso cancelación tardía de Juan (T5)
-INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) VALUES (
+INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso, detalle_error) VALUES (
   (SELECT id FROM personas WHERE dni = '38100002'),
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100002')
      AND estado = 'CANCELADO_TARDE' LIMIT 1),

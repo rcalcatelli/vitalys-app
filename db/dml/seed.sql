@@ -58,24 +58,26 @@ INSERT INTO profesionales (usuario_id, nombre, apellido, especialidad, duracion_
 --    - Pedro Gómez: dado de BAJA LÓGICA
 -- ---------------------------------------------------------------------------
 
-INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimiento, estado, es_socio_gym, fecha_alta, fecha_baja) VALUES
+-- fecha_inicio_membresia: solo para socios de gym (es_socio_gym = true). Se
+-- asume igual a fecha_alta: son socios de gym desde que se dieron de alta.
+INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimiento, estado, es_socio_gym, fecha_alta, fecha_inicio_membresia, fecha_baja) VALUES
   ((SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com'),
-   'María', 'Pérez', '38100001', '11-2001-0001', '1995-03-12', 'ACTIVO', true,  '2024-01-10', NULL),
+   'María', 'Pérez', '38100001', '11-2001-0001', '1995-03-12', 'ACTIVO', true,  '2024-01-10', '2024-01-10', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
-   'Juan', 'García', '38100002', '11-2002-0002', '1990-07-22', 'ACTIVO', true,  '2023-05-15', NULL),
+   'Juan', 'García', '38100002', '11-2002-0002', '1990-07-22', 'ACTIVO', true,  '2023-05-15', '2023-05-15', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com'),
-   'Lucía', 'Rojas', '38100003', '11-2003-0003', '1998-11-05', 'ACTIVO', true,  '2024-03-01', NULL),
+   'Lucía', 'Rojas', '38100003', '11-2003-0003', '1998-11-05', 'ACTIVO', true,  '2024-03-01', '2024-03-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'carlos.soto@mail.com'),
-   'Carlos', 'Soto', '38100004', '11-2004-0004', '1985-04-18', 'ACTIVO', false, '2025-02-20', NULL),
+   'Carlos', 'Soto', '38100004', '11-2004-0004', '1985-04-18', 'ACTIVO', false, '2025-02-20', NULL, NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
-   'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', NULL),
+   'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', '2025-06-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@mail.com'),
-   'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', '2025-08-15');
+   'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15');
 
 -- ---------------------------------------------------------------------------
 -- 4. DISPONIBILIDAD DE PROFESIONALES
@@ -232,8 +234,8 @@ VALUES (
   (SELECT id FROM personas WHERE dni = '38100003'),
   NULL,
   'GYM',
-  '2026-09-20 10:00:00-03',
-  '2026-09-20 11:00:00-03',
+  '2026-09-19 10:00:00-03',
+  '2026-09-19 11:00:00-03',
   'COMPLETADO',
   (SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com')
 );
@@ -258,15 +260,12 @@ INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario
 --    para poder asistir a una clase de gym mientras regulariza su cuota.
 -- ---------------------------------------------------------------------------
 
--- BLOQUEADO: la tabla `excepciones_morosidad` todavía no existe en el DDL.
--- Se agregará en el cambio pendiente `correcciones-esquema-ddl`. Reactivar
--- este INSERT (quitar el comentario) una vez que esa tabla esté creada.
--- INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta) VALUES (
---   (SELECT id FROM personas WHERE dni = '38100002'),
---   (SELECT id FROM usuarios WHERE email  = 'admin@vitalys.com'),
---   'El socio se comprometió a abonar las cuotas adeudadas antes del 30/09/2026. Se autoriza acceso temporario al gym.',
---   '2026-09-30'
--- );
+INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta) VALUES (
+  (SELECT id FROM personas WHERE dni = '38100002'),
+  (SELECT id FROM usuarios WHERE email  = 'admin@vitalys.com'),
+  'El socio se comprometió a abonar las cuotas adeudadas antes del 30/09/2026. Se autoriza acceso temporario al gym.',
+  '2026-09-30'
+);
 
 -- ---------------------------------------------------------------------------
 -- 9. NOTIFICACIONES — registro histórico de envíos

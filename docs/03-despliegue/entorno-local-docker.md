@@ -158,9 +158,11 @@ numerado en orden:
 
 ```
 db/migration/
-├── V1__esquema_inicial.sql
-├── V2__agregar_tabla_x.sql       (ejemplo futuro)
-└── V3__agregar_columna_y.sql     (ejemplo futuro)
+├── V1__esquema_inicial.sql              esquema aprobado el 21/09
+├── V2__reglas_gimnasio.sql              grilla, cupo y validaciones de gym
+├── V3__excepciones_morosidad.sql        tabla que faltaba
+├── V4__fecha_inicio_membresia.sql       columna en personas
+└── V5__ensanchar_excl_turnos_overlap.sql  AUSENTE y COMPLETADO bloquean
 ```
 
 El nombre sigue una convención estricta: `V<número>__<descripción>.sql` (dos guiones bajos
@@ -216,18 +218,20 @@ nada.
 **2. La tutora aprobó el esquema el 21/09** (ver `docs/02-diseno/rfc-002-motor-base-de-datos.md`,
 estado "✅ APROBADA"). Ya identificamos correcciones pendientes sobre ese esquema aprobado
 (la tabla `excepciones_morosidad`, un campo `fecha_inicio_membresia` en `personas`, ajustar
-el `EXCLUDE` de solapamiento de turnos — ver §7). Sin migraciones, aplicar esas correcciones
+el `EXCLUDE` de solapamiento de turnos). Sin migraciones, aplicar esas correcciones
 significaría **editar el archivo que la tutora ya aprobó**, perdiendo el registro histórico
 de qué era exactamente lo aprobado en esa fecha. Con Flyway, `V1__esquema_inicial.sql` queda
-congelado tal cual se aprobó — es el registro histórico — y las correcciones futuras llegan
-como `V2`, `V3`, etc., sin tocarlo nunca. (Esas correcciones son un cambio aparte, todavía no
-implementado — ver §7).
+congelado tal cual se aprobó — es el registro histórico — y las correcciones llegan como
+`V2`, `V3`, etc., sin tocarlo nunca. **Eso ya ocurrió:** las correcciones de la devolución se
+aplicaron como `V3`, `V4` y `V5`, y `V1` sigue byte a byte como se aprobó.
 
 **3. `docker compose up` converge desde cualquier estado, no solo desde cero.** Antes, "crear
 la base" y "tenerla al día" eran la misma operación manual repetida. Ahora son dos cosas
 separadas que Flyway resuelve solo: si la base no existe, aplica todo desde `V1`; si ya
-existe con `V1` aplicado y aparece un `V2`, aplica solo `V2`. El comando para levantar el
-entorno es siempre el mismo, sin importar en qué estado esté la base de cada uno.
+existe con `V1` aplicado y aparecen `V2` a `V5`, aplica solo esas cuatro. El comando para
+levantar el entorno es siempre el mismo, sin importar en qué estado esté la base de cada uno.
+Esto se verificó: una base que llevaba horas corriendo con `V1` recibió `V2` a `V5` al
+reiniciar el backend, sin borrar el volumen y sin perder datos.
 
 ---
 
@@ -236,10 +240,10 @@ entorno es siempre el mismo, sin importar en qué estado esté la base de cada u
 Cuando una futura funcionalidad necesite un cambio de esquema (una tabla, una columna, un
 índice):
 
-1. Mirá cuál es la versión más alta que existe en `db/migration/` (hoy, `V1`).
-2. Creá un archivo nuevo con la **siguiente** versión: `V2__descripcion_corta.sql`. La
+1. Mirá cuál es la versión más alta que existe en `db/migration/` (hoy, `V5`).
+2. Creá un archivo nuevo con la **siguiente** versión: `V6__descripcion_corta.sql`. La
    descripción va en minúsculas, con guiones bajos en vez de espacios (ej.
-   `V2__agregar_tabla_excepciones_morosidad.sql`).
+   `V6__agregar_tabla_reportes.sql`).
 3. Escribí ahí, y **solo ahí**, el `ALTER TABLE` / `CREATE TABLE` / lo que corresponda.
 4. Al próximo arranque de la aplicación (local, CI o Docker), Flyway detecta el archivo
    nuevo, ve que no está en `flyway_schema_history`, y lo aplica automáticamente — no hace
@@ -254,17 +258,18 @@ agregues ahí se empaqueta y se ejecuta automáticamente.
 
 ---
 
-## 7. Nota sobre las correcciones de esquema pendientes
+## 7. Las migraciones que ya existen
 
-Las correcciones ya identificadas sobre el esquema aprobado —la tabla
-`excepciones_morosidad` (ver el `INSERT` comentado en `db/dml/seed.sql`, sección 8),
-`personas.fecha_inicio_membresia`, y ampliar el `EXCLUDE USING GIST` de `turnos`— **no se
-incluyen en este cambio**. Van a llegar como `V2__correcciones_esquema.sql` (o varias
-migraciones separadas) en un cambio aparte, una vez que ese trabajo se planifique
-formalmente. La estructura que deja este cambio (carpeta `db/migration/`, Flyway ya
-integrado en Spring Boot, Docker y tests) está pensada exactamente para que agregar ese `V2`
-sea un archivo nuevo y nada más — sin tocar `V1`, sin tocar el `Dockerfile`, sin tocar el
-`docker-compose.yml`.
+| Versión | Qué hace |
+|---------|----------|
+| `V1__esquema_inicial.sql` | Esquema tal como se aprobó el 21/09. **Congelado**, no se edita nunca. |
+| `V2__reglas_gimnasio.sql` | Grilla de turnos de gym (60 min en punto, L-V 07-21, sáb 09-12), tabla `configuracion_gym` con el cupo por franja, un turno por persona y día, y validación de que sea socio activo. |
+| `V3__excepciones_morosidad.sql` | Tabla `excepciones_morosidad`, que figuraba en todos los documentos pero no en el esquema. |
+| `V4__fecha_inicio_membresia.sql` | Columna `personas.fecha_inicio_membresia`, necesaria para saber desde qué mes se adeudan cuotas. |
+| `V5__ensanchar_excl_turnos_overlap.sql` | La restricción de solapamiento ahora bloquea también `AUSENTE` y `COMPLETADO`. Solo `CANCELADO_EN_TIEMPO` libera el horario. |
+
+Ninguna de estas cuatro tocó `V1`, el `Dockerfile` ni el `docker-compose.yml`: cada una es un
+archivo nuevo y nada más. Esa es exactamente la propiedad por la que se adoptó Flyway.
 
 ---
 

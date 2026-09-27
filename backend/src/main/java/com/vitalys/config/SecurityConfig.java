@@ -20,8 +20,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * {@code SecurityFilterChain} stateless (RNF-02, design.md §3). Rutas públicas: registro, login
- * y health. Todo lo demás exige JWT válido. La regla declarativa {@code /api/admin/**} exige
+ * {@code SecurityFilterChain} stateless (RNF-02, design.md §3). Rutas públicas: registro, login,
+ * health y la documentación de Swagger UI / OpenAPI (ver {@code OpenApiConfig}). Todo lo demás
+ * exige JWT válido. La regla declarativa {@code /api/admin/**} exige
  * {@code ROLE_ADMIN} — es la primera barrera, no la única (RNF-03 exige además verificación en
  * Service para reglas de negocio).
  *
@@ -73,7 +74,12 @@ public class SecurityConfig {
                                 request.getRequestURI(),
                                 objectMapper)))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
-                                "/api/auth/registro", "/api/auth/login", "/api/health")
+                                "/api/auth/registro",
+                                "/api/auth/login",
+                                "/api/health",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**")
                         .permitAll()
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")

@@ -1,0 +1,160 @@
+{
+  "documento": "Perfiles de usuario y escenarios de uso — Vitalys App",
+  "naturaleza": "SINTETICO",
+  "aclaracion_metodologica": "Estos perfiles NO corresponden a entrevistas realizadas a personas reales. Son perfiles de usuario construidos por el equipo a partir del dominio del proyecto, para orientar el diseño funcional y contrastar los requerimientos. Se documentan como artefacto de diseño, no como relevamiento de campo. Toda cita o necesidad expresada es una formulación del equipo que representa una necesidad esperable del perfil, no el testimonio de una persona.",
+  "proposito": "Contrastar los requerimientos RF-xx contra necesidades concretas por tipo de usuario y detectar huecos funcionales antes de implementar.",
+  "elaborado_por": ["R. Calcatelli", "P. Basualdo Arcati"],
+  "version": "1.0",
+
+  "perfiles": {
+    "SOCIO_PACIENTE": [
+      {
+        "id": "SP-01",
+        "nombre_ficticio": "Marina, 34",
+        "contexto": "Trabaja en oficina, va al gimnasio tres veces por semana antes de entrar. Ademas hace seguimiento nutricional.",
+        "frecuencia": "3 turnos de gym por semana, 1 consulta de Nutricion por mes",
+        "objetivo": "Reservar sin llamar por telefono y saber si hay lugar antes de salir de casa.",
+        "dolor_actual": "Llega al gimnasio y esta lleno. Para el turno de Nutricion tiene que llamar en horario de oficina, que es cuando ella trabaja.",
+        "necesidad_expresada": "Ver la disponibilidad real antes de reservar, desde el celular y a cualquier hora.",
+        "requerimientos_relacionados": ["RF-15", "RF-16", "RF-17"],
+        "hueco_detectado": "El sistema muestra slots de profesionales (RF-15) pero no hay forma de consultar el cupo disponible de un turno de gimnasio."
+      },
+      {
+        "id": "SP-02",
+        "nombre_ficticio": "Diego, 52",
+        "contexto": "Socio del gimnasio desde hace anios. Poca familiaridad con aplicaciones.",
+        "frecuencia": "2 turnos de gym por semana",
+        "objetivo": "Que no le compliquen algo que hoy resuelve hablando con recepcion.",
+        "dolor_actual": "Cuando se atrasa con la cuota se entera recien cuando le dicen que no puede entrar.",
+        "necesidad_expresada": "Saber con anticipacion si tiene la cuota vencida, y que alguien pueda reservarle si no se maneja con la app.",
+        "requerimientos_relacionados": ["RF-25", "RN-01", "Decision 5"],
+        "hueco_detectado": "No hay notificacion previa al bloqueo por morosidad: RF-26 a RF-28 cubren turnos, no estado de cuenta."
+      },
+      {
+        "id": "SP-03",
+        "nombre_ficticio": "Carla, 27",
+        "contexto": "Paciente de Kinesiologia por una lesion. No es socia del gimnasio.",
+        "frecuencia": "2 sesiones de consultorio por semana durante la rehabilitacion",
+        "objetivo": "Reprogramar sesiones cuando le cambian el turno del trabajo.",
+        "dolor_actual": "Cancelar implica llamar; si no llama, figura como ausente.",
+        "necesidad_expresada": "Cancelar desde la app y entender si la cancelacion fue a tiempo o no.",
+        "requerimientos_relacionados": ["RF-19", "RF-20", "RN-02"],
+        "hueco_detectado": "Ninguno: RN-02 cubre el caso. Valida el disenio actual."
+      },
+      {
+        "id": "SP-04",
+        "nombre_ficticio": "Tomas, 41",
+        "contexto": "Socio del gimnasio y ademas paciente de Psicologia en el mismo centro.",
+        "frecuencia": "2 turnos de gym y 1 sesion de Psicologia por semana",
+        "objetivo": "Tener todo en un solo lugar, con la reserva de gimnasio y la de consultorio a la vista.",
+        "dolor_actual": "Son dos circuitos distintos: al gimnasio entra con la credencial, para Psicologia llama.",
+        "necesidad_expresada": "Una sola cuenta que muestre ambos tipos de turno.",
+        "requerimientos_relacionados": ["RF-10", "RF-16", "RF-17", "RN-10"],
+        "hueco_detectado": "Un bloqueo por cuota de gimnasio no debe impedirle la sesion de Psicologia. Lo contempla la Decision de dominio 1; este perfil confirma que el caso es frecuente."
+      }
+    ],
+
+    "PROFESIONAL": [
+      {
+        "id": "PR-01",
+        "nombre_ficticio": "Lic. Valentina, Nutricion",
+        "contexto": "Atiende en el centro dos dias por semana y en consultorio propio el resto.",
+        "frecuencia": "8 a 10 turnos por dia de atencion",
+        "objetivo": "Ver su agenda del dia sin depender de recepcion.",
+        "dolor_actual": "Se entera de las cancelaciones cuando el paciente no aparece.",
+        "necesidad_expresada": "Agenda propia, actualizada, y poder marcar quien vino y quien no.",
+        "requerimientos_relacionados": ["RF-22", "RN-08"],
+        "hueco_detectado": "Ninguno para consultorio. Para gimnasio no hay profesional asignado, asi que nadie tiene definido quien marca COMPLETADO o AUSENTE."
+      },
+      {
+        "id": "PR-02",
+        "nombre_ficticio": "Lic. Florencia, Psicologia",
+        "contexto": "Sesiones de 50 minutos, agenda estable, mismos pacientes durante meses.",
+        "frecuencia": "6 sesiones por dia, 3 dias por semana",
+        "objetivo": "Que su disponibilidad refleje la duracion real de sus sesiones, distinta a la de Nutricion.",
+        "dolor_actual": "Una grilla unica de 30 minutos no le sirve.",
+        "necesidad_expresada": "Duracion de turno configurable por profesional.",
+        "requerimientos_relacionados": ["RF-14", "Decision 4"],
+        "hueco_detectado": "Ninguno: la Decision de dominio 4 lo resuelve con duracion por profesional."
+      },
+      {
+        "id": "PR-03",
+        "nombre_ficticio": "Klgo. Rodrigo, Kinesiologia",
+        "contexto": "Cambia su disponibilidad seguido por licencias y congresos.",
+        "frecuencia": "10 turnos por dia, 3 dias por semana",
+        "objetivo": "Modificar su disponibilidad sin pedirselo a nadie.",
+        "dolor_actual": "Avisa por mensaje y alguien lo carga a mano, con demora y errores.",
+        "necesidad_expresada": "Editar sus propias franjas horarias.",
+        "requerimientos_relacionados": ["RF-14", "RN-11", "Decision 3"],
+        "hueco_detectado": "No esta definido que pasa con los turnos YA reservados cuando el profesional reduce su disponibilidad."
+      },
+      {
+        "id": "PR-04",
+        "nombre_ficticio": "Prof. Sofia, entrenamiento en sala",
+        "contexto": "Trabaja en la sala del gimnasio, no atiende turnos individuales.",
+        "frecuencia": "Presente durante todo el horario de apertura",
+        "objetivo": "Saber cuantas personas hay anotadas en cada franja para organizar la sala.",
+        "dolor_actual": "No sabe cuanta gente espera hasta que llegan.",
+        "necesidad_expresada": "Ver la ocupacion por franja horaria.",
+        "requerimientos_relacionados": [],
+        "hueco_detectado": "CRITICO: ningun RF cubre este rol. El modelo asume que un PROFESIONAL atiende turnos individuales con agenda propia, y este perfil no encaja. Se relaciona directamente con el punto pendiente de definir el turno de gimnasio."
+      }
+    ],
+
+    "ADMIN": [
+      {
+        "id": "AD-01",
+        "nombre_ficticio": "Recepcion, turno maniana",
+        "contexto": "Atiende mostrador y telefono simultaneamente.",
+        "frecuencia": "Uso continuo durante toda la jornada",
+        "objetivo": "Cargar una reserva mientras la persona espera del otro lado del telefono.",
+        "dolor_actual": "Los datos estan repartidos entre una planilla y un cuaderno.",
+        "necesidad_expresada": "Buscar a la persona rapido y reservar en su nombre.",
+        "requerimientos_relacionados": ["RF-06", "RF-16", "Decision 5"],
+        "hueco_detectado": "Ninguno. Valida que el ADMIN pueda operar en nombre de terceros."
+      },
+      {
+        "id": "AD-02",
+        "nombre_ficticio": "Administracion, cobranzas",
+        "contexto": "Registra pagos y controla morosidad.",
+        "frecuencia": "Diaria, con pico a principio de mes",
+        "objetivo": "Saber quien debe y desde cuando.",
+        "dolor_actual": "El calculo de deuda se hace a ojo sobre la planilla.",
+        "necesidad_expresada": "Estado de cuenta por socio y una excepcion puntual para casos justificados.",
+        "requerimientos_relacionados": ["RF-23", "RF-25", "RF-30", "RN-09"],
+        "hueco_detectado": "Falta definir desde que mes se adeuda: sin fecha de inicio de membresia, un socio nuevo aparece como moroso desde el primer dia."
+      },
+      {
+        "id": "AD-03",
+        "nombre_ficticio": "Administracion, altas y bajas",
+        "contexto": "Carga fichas de socios nuevos y procesa bajas.",
+        "frecuencia": "5 a 10 altas por semana",
+        "objetivo": "Dar de alta rapido sin duplicar personas.",
+        "dolor_actual": "La misma persona figura dos veces: una como socia del gimnasio y otra como paciente.",
+        "necesidad_expresada": "Una sola ficha por persona, aunque use ambos servicios.",
+        "requerimientos_relacionados": ["RF-05", "RF-31", "RN-10", "RN-04"],
+        "hueco_detectado": "Ninguno: RF-31 (vinculo por email) cubre el caso de quien ya se registro solo."
+      },
+      {
+        "id": "AD-04",
+        "nombre_ficticio": "Direccion del centro",
+        "contexto": "No opera el sistema a diario; consulta para tomar decisiones.",
+        "frecuencia": "Semanal",
+        "objetivo": "Ver ocupacion, ausentismo y cobranza sin pedir informes a mano.",
+        "dolor_actual": "Cada consulta implica que alguien arme una planilla.",
+        "necesidad_expresada": "Indicadores agregados de uso y cobranza.",
+        "requerimientos_relacionados": [],
+        "hueco_detectado": "Ningun RF cubre reportes ni indicadores. Se documenta como fuera del alcance del MVP para que no aparezca como olvido."
+      }
+    ]
+  },
+
+  "hallazgos_para_el_disenio": [
+    "El perfil PR-04 no encaja en el modelo actual de PROFESIONAL: el esquema asume agenda individual y los turnos de gimnasio tienen profesional_id NULL. Es el mismo vacio que seniala el punto pendiente sobre turnos de gimnasio.",
+    "No hay forma de consultar cupo disponible en gimnasio (SP-01), porque no existe el concepto de cupo en el esquema.",
+    "Nadie tiene definido quien marca COMPLETADO o AUSENTE en un turno de gimnasio (PR-01), ya que RF-22 asigna esa accion al profesional del turno.",
+    "Falta fecha de inicio de membresia para calcular la deuda (AD-02).",
+    "No esta definido el efecto sobre turnos ya reservados cuando un profesional reduce su disponibilidad (PR-03).",
+    "Reportes e indicadores (AD-04) quedan explicitamente fuera del alcance del MVP."
+  ]
+}

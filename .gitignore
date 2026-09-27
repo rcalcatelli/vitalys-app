@@ -13,6 +13,7 @@ frontend/build/
 # Entornos y secretos
 .env
 .env.*
+!.env.example
 *.local
 application-local.properties
 

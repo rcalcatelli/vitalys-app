@@ -1,0 +1,86 @@
+# Entorno local del backend de Vitalys. Ver docs/03-despliegue/entorno-local-docker.md para
+# la guía completa (qué es Flyway, por qué lo adoptamos, cómo cargar el seed, troubleshooting).
+#
+# Uso rápido:
+#   docker compose up -d              # levanta postgres + backend
+#   docker compose --profile seed up seed   # carga datos de prueba (opcional)
+#   docker compose down               # detiene los contenedores, conserva los datos
+#   docker compose down -v            # detiene los contenedores Y BORRA los datos
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: vitalys-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vitalys}
+      POSTGRES_USER: ${DB_USERNAME:-vitalys}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD. Copiá .env.example a .env y completalo.}
+    ports:
+      # Puerto expuesto al host configurable porque 5432 puede estar ocupado por otro
+      # Postgres local; adentro de la red de Docker el servicio siempre se llama "postgres"
+      # y escucha en su puerto interno 5432.
+      - "${DB_PORT_HOST:-5433}:5432"
+    volumes:
+      - vitalys_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vitalys} -d ${DB_NAME:-vitalys}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: vitalys-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      # "postgres" es el nombre del servicio de arriba; Docker lo resuelve como hostname
+      # dentro de la red interna del compose. El puerto acá SIEMPRE es el interno (5432),
+      # no DB_PORT_HOST.
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-vitalys}
+      DB_USERNAME: ${DB_USERNAME:-vitalys}
+      DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD. Copiá .env.example a .env y completalo.}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET. Copiá .env.example a .env y completalo.}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    ports:
+      - "${BACKEND_PORT_HOST:-8080}:8080"
+
+  # Servicio opcional: carga db/dml/seed.sql contra el Postgres del compose. No corre con
+  # `docker compose up` normal — solo con `--profile seed`. Pensado para desarrollo, no para
+  # levantar en cada entorno.
+  seed:
+    image: postgres:15-alpine
+    container_name: vitalys-seed
+    profiles: ["seed"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD. Copiá .env.example a .env y completalo.}
+    volumes:
+      - ./db/dml:/seed:ro
+    entrypoint:
+      [
+        "psql",
+        "-h",
+        "postgres",
+        "-U",
+        "${DB_USERNAME:-vitalys}",
+        "-d",
+        "${DB_NAME:-vitalys}",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-f",
+        "/seed/seed.sql",
+      ]
+
+volumes:
+  vitalys_pg_data:
+    name: vitalys_pg_data

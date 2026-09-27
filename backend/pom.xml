@@ -21,12 +21,31 @@
     <java.version>17</java.version>
     <jjwt.version>0.12.6</jjwt.version>
     <testcontainers.version>1.20.6</testcontainers.version>
+    <!-- Spring Boot 3.2.x todavía gestiona Flyway 9.22.x, previo al split de
+         flyway-database-postgresql (introducido en Flyway 10). Se fija acá una versión 10.x
+         explícita para poder declarar esa dependencia -->
+    <flyway.version>10.20.1</flyway.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!-- Flyway: aplica las migraciones versionadas de db/migration al arrancar
+         (ver docs/03-despliegue/entorno-local-docker.md). flyway-database-postgresql
+         es obligatorio desde Flyway 10: el soporte de cada motor de base de datos
+         se separó de flyway-core. -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>${flyway.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <version>${flyway.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -95,6 +114,23 @@
   </dependencies>
 
   <build>
+    <!-- Las migraciones de Flyway viven en db/migration en la raíz del repo (fuente única,
+         compartida con el runbook manual de Supabase), no duplicadas dentro de backend/.
+         Este resource extra las copia a target/classes/db/migration en cada build, que es
+         donde Flyway las busca por defecto (classpath:db/migration). Funciona igual corriendo
+         `mvn` desde backend/ en local/CI (../db/migration = raíz del repo) y dentro de la
+         imagen Docker (ver backend/Dockerfile: la etapa de build copia db/migration junto al
+         código antes de compilar; la etapa de runtime ya no necesita la raíz del repo, porque
+         las migraciones quedan embebidas en el jar). -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/../db/migration</directory>
+        <targetPath>db/migration</targetPath>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

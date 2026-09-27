@@ -189,7 +189,13 @@
           </execution>
           <execution>
             <id>report</id>
-            <phase>test</phase>
+            <!-- post-integration-test, NO test: en la fase 'test' solo corrieron los unitarios,
+                 así que el HTML/CSV quedaría sin la cobertura que aportan los *IT.java y
+                 mostraría 0% en SecurityConfig, JwtAuthenticationFilter y los controllers.
+                 El goal 'check' usa el jacoco.exec fusionado y mediría distinto que el reporte:
+                 dos números para lo mismo. Acá el reporte se genera después de los tests de
+                 integración y antes de 'verify', así queda publicado aunque el gate falle. -->
+            <phase>post-integration-test</phase>
             <goals>
               <goal>report</goal>
             </goals>

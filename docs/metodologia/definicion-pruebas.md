@@ -56,8 +56,8 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 |-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
 | PI-01 | Registro exitoso                                          | POST /api/auth/registro    | email único, pass ≥8 chars              | 201, JWT en body, y `rol` del usuario creado = `SOCIO_PACIENTE` |
 | PI-02 | Registro con email duplicado                              | POST /api/auth/registro    | email ya existente                       | 409 Conflict                                  |
-| PI-03 | Login correcto                                            | POST /api/auth/login       | email + pass correctos                   | 200, JWT válido                               |
-| PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | pass incorrecta                          | 401                                           |
+| PI-03 | Login correcto                                            | POST /api/auth/login       | `identificador` (email) + pass correctos | 200, JWT válido                               |
+| PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | `identificador` (email) + pass incorrecta | 401                                          |
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
 | PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
 | PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
@@ -67,6 +67,17 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-25 | Registro con contraseña de menos de 8 caracteres          | POST /api/auth/registro    | `contraseña` de 6 caracteres              | 400, `ErrorResponse` con `status=400` y `path`, ningún `usuario` creado |
 | PI-26 | Registro con email con formato inválido                   | POST /api/auth/registro    | `email` sin arroba/dominio                | 400, `ErrorResponse` con `status=400`, ningún `usuario` creado |
 
+> **Alcance de PI-06 respecto de RNF-03.** RNF-03 exige que el control de acceso por rol se
+> verifique en la capa de servicio y no solo en la presentación. PI-06 ejercita hoy la regla
+> declarativa `/api/admin/**` → `hasRole("ADMIN")` de `SecurityConfig`, que es capa de
+> presentación: ninguno de los endpoints implementados hasta ahora necesita autorización por
+> rol en el servicio, porque el registro y el login son públicos y `GET /api/auth/me` lo puede
+> invocar cualquier usuario autenticado. El primero que sí la va a requerir es
+> `POST /api/personas/vincular` (RF-31, exclusivo de ADMIN), y con él corresponde agregar el
+> caso que verifique el rechazo **desde el servicio**, no solo desde el filtro. Se deja
+> asentado para que la cobertura de RNF-03 no se dé por probada antes de tiempo.
+
+
 ### CORS
 
 | ID    | Caso                                                      | Método y URL               | Body                                     | Respuesta esperada                            |
@@ -74,6 +85,9 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-27 | Preflight CORS sobre ruta pública                          | OPTIONS /api/health        | Headers `Origin` + `Access-Control-Request-Method: GET` | 200, `Access-Control-Allow-Origin` refleja el origen y `Access-Control-Allow-Methods` incluye `GET` |
 | PI-28 | Preflight CORS sobre ruta protegida                       | OPTIONS /api/auth/me       | Headers `Origin` + `Access-Control-Request-Method: GET`, sin `Authorization` | 200 (no 401): la cadena de seguridad resuelve el preflight antes de exigir autenticación |
 | PI-29 | Login con cuenta deshabilitada                            | POST /api/auth/login       | usuario con `activo = false` y contraseña correcta | 401 con el mismo mensaje que contraseña incorrecta |
+| PI-37 | Login con DNI válido (persona con ficha) y contraseña correcta (RF-36) | POST /api/auth/login | `identificador` = DNI cargado en `personas.dni`, pass correcta | 200, JWT válido |
+| PI-38 | Login con DNI de un usuario sin ficha en `personas` (recién autorregistrado o profesional) | POST /api/auth/login | `identificador` = DNI que no está en `personas.dni` | 401, mismo mensaje que credenciales inválidas |
+| PI-39 | Login con DNI inexistente en todo el sistema               | POST /api/auth/login       | `identificador` = DNI que no existe        | 401, indistinguible de PI-38                  |
 
 ### Personas — Vínculo con usuario existente
 

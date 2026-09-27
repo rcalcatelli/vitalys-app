@@ -40,7 +40,7 @@
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | POST | `/api/auth/registro` | Registro de nuevo usuario. El rol se fuerza siempre a `SOCIO_PACIENTE`; no es un input del cliente. Si el body incluye `rol`, responde 400 antes de crear el usuario (RF-01) | Público |
-| POST | `/api/auth/login` | Login; retorna token JWT | Público |
+| POST | `/api/auth/login` | Login; body `{identificador, contrasena}`. `identificador` acepta email o DNI (RF-36) — DNI solo resuelve si la persona ya tiene ficha en `personas`; retorna token JWT | Público |
 | POST | `/api/auth/logout` | Invalida sesión | Autenticado |
 | GET  | `/api/auth/me` | Datos del usuario autenticado | Autenticado |
 

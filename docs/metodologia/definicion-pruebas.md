@@ -25,6 +25,8 @@ Validan la lógica de negocio en la capa de servicio, sin base de datos real.
 | PU-03 | Cuota vencida hace 11 días → moroso                                           | periodo = 2026-08-01, hoy = 2026-09-12               | diasMora = 11, bloqueado = true             |
 | PU-04 | Sin pagos registrados → moroso con días = NULL                                | sin filas en pagos                                   | bloqueado = true (caso conservador)         |
 | PU-05 | Persona sin membresía gym (es_socio_gym = false) → sin bloqueo               | es_socio_gym = false                                 | bloqueado = false sin consultar pagos       |
+| PU-06 | Login con cuenta deshabilitada (RF-32)                                        | activo = false, contraseña correcta                  | CredencialesInvalidasException, no se emite token |
+| PU-07 | Contrato UserDetails de `Usuario`                                             | usuario con rol SOCIO_PACIENTE / ADMIN               | getUsername = email, autoridad `ROLE_<rol>`, isEnabled sigue a `activo` |
 
 ### TurnoServiceTest
 
@@ -67,6 +69,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 |-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
 | PI-27 | Preflight CORS sobre ruta pública                          | OPTIONS /api/health        | Headers `Origin` + `Access-Control-Request-Method: GET` | 200, `Access-Control-Allow-Origin` refleja el origen y `Access-Control-Allow-Methods` incluye `GET` |
 | PI-28 | Preflight CORS sobre ruta protegida                       | OPTIONS /api/auth/me       | Headers `Origin` + `Access-Control-Request-Method: GET`, sin `Authorization` | 200 (no 401): la cadena de seguridad resuelve el preflight antes de exigir autenticación |
+| PI-29 | Login con cuenta deshabilitada                            | POST /api/auth/login       | usuario con `activo = false` y contraseña correcta | 401 con el mismo mensaje que contraseña incorrecta |
 
 ### Personas — Vínculo con usuario existente
 

@@ -41,6 +41,7 @@
 | RF-29 | Notificaciones | El ADMIN puede consultar el historial de notificaciones de una persona. |
 | RF-30 | Morosidad | El ADMIN puede registrar una excepción puntual a la regla de morosidad para un socio. |
 | RF-31 | Personas | El ADMIN puede vincular una `persona` nueva a un `usuario` que ya existe, buscándolo por email (`POST /api/personas/vincular`, ADMIN-only). Body `{email, nombre, apellido, dni}`, sin contraseña. El servicio verifica primero que el actor sea ADMIN — 403 en caso contrario (RNF-03), antes de resolver el email, para no exponer qué direcciones están registradas. Luego: 404 (no existe usuario con ese email) y 409 (usuario ya vinculado a otra persona). |
+| RF-32 | Auth | El sistema rechaza el login de un usuario con `activo = FALSE` (cuenta deshabilitada). Devuelve 401 con el mismo mensaje que una contraseña incorrecta: un error distinto permitiría deducir qué emails existen y cuáles están dados de baja. Un token emitido antes de la baja sigue siendo válido hasta su TTL (limitación documentada, Decisión de dominio 9). |
 
 ---
 

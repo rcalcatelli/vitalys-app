@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.vitalys.domain.RolUsuario;
@@ -114,6 +115,24 @@ class AuthServiceTest {
         request.setContrasena("incorrecta");
 
         assertThatThrownBy(() -> authService.login(request)).isInstanceOf(CredencialesInvalidasException.class);
+    }
+
+    @Test
+    void login_conCuentaDeshabilitada_lanzaCredencialesInvalidasYNoEmiteToken() {
+        Usuario usuario = new Usuario("baja@vitalys.test", "hash-bcrypt", RolUsuario.SOCIO_PACIENTE);
+        usuario.setActivo(false); // usuarios.activo = FALSE: baja lógica de la cuenta
+        when(usuarioRepository.findByEmail("baja@vitalys.test")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("password123", "hash-bcrypt")).thenReturn(true);
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("baja@vitalys.test");
+        request.setContrasena("password123");
+
+        // La contraseña es CORRECTA: lo que debe frenar el login es la cuenta deshabilitada.
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(CredencialesInvalidasException.class)
+                .hasMessage("Credenciales inválidas"); // mismo mensaje: no revela que la cuenta existe
+        verifyNoInteractions(jwtService);
     }
 
     @Test

@@ -61,6 +61,15 @@ public class AuthService {
             throw new CredencialesInvalidasException("Credenciales inválidas");
         }
 
+        // Cuenta deshabilitada (usuarios.activo = FALSE, "soft-disable" según el esquema).
+        // Se usa isEnabled() del contrato UserDetails para que la definición de "habilitado"
+        // viva en un solo lugar. El 401 y el mensaje son IDÉNTICOS a los de contraseña
+        // incorrecta a propósito: un error distinto permitiría averiguar qué emails existen
+        // y cuáles están dados de baja.
+        if (!usuario.isEnabled()) {
+            throw new CredencialesInvalidasException("Credenciales inválidas");
+        }
+
         String token = jwtService.generarToken(usuario);
         return new LoginResponse(token, usuario.getId(), usuario.getRol());
     }

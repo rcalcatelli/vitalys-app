@@ -1,0 +1,58 @@
+.login-page {
+  max-width: 360px;
+  margin: 64px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.login-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.password-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-input input {
+  flex: 1;
+}
+
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.login-error {
+  border: 1px solid var(--accent, #c00);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--accent, #c00);
+}
+
+.placeholder-page {
+  max-width: 480px;
+  margin: 64px auto;
+  padding: 24px;
+  text-align: center;
+}
+
+.placeholder-note {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}

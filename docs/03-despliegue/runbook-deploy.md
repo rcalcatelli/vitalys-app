@@ -1,0 +1,126 @@
+# Runbook de despliegue — Vitalys App
+
+> **3.ª Entrega — Trabajo Final Integrador**
+> Tecnicatura Universitaria en Programación · UTN · 2026
+> Integrantes: Renzo Calcatelli · Pablo Basualdo Arcati · Tutora: Sofía Raia
+
+Este documento es una guía manual, paso a paso, para dejar Vitalys funcionando en producción:
+**Supabase** (base de datos) + **Render** (backend) + **Vercel** (frontend).
+
+No es un script automatizado: los pasos de creación de cuentas/proyectos y la carga de secretos
+los ejecuta una persona (Pablo o Renzo) con sus propias credenciales. Ningún valor real de
+contraseña, cadena de conexión o secreto se escribe en este repositorio — solo los **nombres**
+de las variables de entorno que hay que cargar en cada plataforma.
+
+---
+
+## 1. Supabase (base de datos)
+
+1. Crear una cuenta / iniciar sesión en [supabase.com](https://supabase.com).
+2. Crear un nuevo proyecto:
+   - Elegir nombre (por ejemplo `vitalys-app`) y una contraseña de base de datos (guardarla en un
+     gestor de contraseñas, **no** en el repo).
+   - Elegir la región más cercana (por ejemplo `South America (São Paulo)`).
+3. Esperar a que el proyecto termine de aprovisionarse (unos minutos).
+4. Ir a **Project Settings → Database → Connection string**.
+5. **Elegir el modo de conexión correcto — este paso es crítico:**
+
+   > ⚠️ **Advertencia sobre el connection pooler de Supabase**
+   >
+   > Supabase ofrece dos modos de pooler: **Transaction pooler** (puerto 6543) y
+   > **Session pooler** (puerto 5432, o la conexión directa a Postgres).
+   >
+   > Vitalys mapea `usuarios.rol` (y en sprints futuros otras columnas) con ENUMs **nativos**
+   > de PostgreSQL vía `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`. Ese mapeo depende de que el driver
+   > pueda resolver el *cast* del tipo ENUM (`?::rol_usuario`) dentro de la misma sesión. El
+   > **Transaction pooler** rota de conexión física entre transacciones y puede romper esa
+   > resolución de cast.
+   >
+   > **Usar siempre el Session pooler (o la conexión directa), nunca el Transaction pooler.**
+   >
+   > **Síntoma si te equivocás:** los tests de integración con Testcontainers (que usan un
+   > Postgres real en un contenedor, sin pooler) pasan sin problema, pero al desplegar contra
+   > Supabase el registro/login falla con un error de cast de tipo ENUM
+   > (algo como `operator does not exist: character varying = rol_usuario` o
+   > `column "rol" is of type rol_usuario but expression is of type character varying`).
+   > Si ves ese error solo en Supabase y nunca en local/CI, revisá el modo de pooler primero.
+
+6. Copiar la cadena de conexión del **Session pooler** (o la conexión directa). Va a tener esta
+   forma (sin el valor real de contraseña, que se carga aparte en Render):
+
+   ```
+   jdbc:postgresql://<host-de-supabase>:5432/postgres?sslmode=require
+   ```
+
+7. Anotar por separado (no en el repo):
+   - `DB_URL` → la cadena JDBC de arriba.
+   - `DB_USERNAME` → el usuario de Postgres que muestra Supabase (por ejemplo `postgres`).
+   - `DB_PASSWORD` → la contraseña elegida en el paso 2.
+
+### 1.1 Ejecutar el DDL
+
+1. En el dashboard de Supabase, ir a **SQL Editor**.
+2. Pegar el contenido completo de [`db/ddl/vitalys_ddl.sql`](../../db/ddl/vitalys_ddl.sql) y
+   ejecutarlo. Verificar que no haya errores y que las tablas (`usuarios`, `personas`,
+   `profesionales`, `disponibilidad_profesional`, `turnos`, `pagos`, `notificaciones`) aparezcan
+   en **Table Editor**.
+3. (Opcional, para pruebas manuales) ejecutar `db/dml/seed.sql` de la misma forma.
+
+---
+
+## 2. Render (backend)
+
+1. Crear una cuenta / iniciar sesión en [render.com](https://render.com).
+2. **New → Blueprint** y conectar el repositorio de GitHub `vitalys-app`. Render va a detectar
+   [`render.yaml`](../../render.yaml) en la raíz y proponer el servicio `vitalys-backend`
+   (`env: java`, `rootDir: backend`, plan free).
+3. Confirmar la creación del servicio. Render va a pedir los valores de las variables marcadas
+   como `sync: false` en `render.yaml` — completarlas en el dashboard (**nunca** en el repo):
+   - `DB_URL` → la cadena JDBC del paso 1 (Session pooler).
+   - `DB_USERNAME` → usuario de Postgres.
+   - `DB_PASSWORD` → contraseña de Postgres.
+   - `JWT_SECRET` → una clave aleatoria larga (por ejemplo generada con
+     `openssl rand -base64 48`). No reutilizar secretos de otros proyectos.
+   - `JWT_EXPIRATION_MS` ya viene con un valor por defecto en `render.yaml` (`86400000` = 24 h);
+     solo cambiarlo si se decide otra política de expiración.
+4. Disparar el primer deploy (Render lo hace automáticamente al crear el Blueprint). El build
+   corre `mvn -B clean package -DskipTests` y el arranque `java -jar target/*.jar`.
+5. Una vez que el deploy quede en estado **Live**, verificar `GET /api/health` en la URL pública
+   que asigna Render (por ejemplo `https://vitalys-backend.onrender.com/api/health`) — debe
+   responder `200` sin necesitar token ni base de datos disponible para ese endpoint puntual.
+
+   > ⏱️ **Cold start del plan free de Render**: si el servicio estuvo inactivo (sin tráfico) por
+   > un rato, Render lo "duerme". La primera request después de eso puede tardar **~50 segundos**
+   > en responder mientras el contenedor arranca de nuevo. Esto es esperado en el plan free, **no
+   > es un bug** — ver la nota en el `README.md` y el checklist de smoke test en
+   > `docs/metodologia/definicion-pruebas.md`.
+
+---
+
+## 3. Vercel (frontend)
+
+1. Crear una cuenta / iniciar sesión en [vercel.com](https://vercel.com).
+2. **Add New → Project** y conectar el mismo repositorio de GitHub. Elegir el directorio raíz
+   del proyecto como `frontend/` (Vercel va a leer `frontend/vercel.json` para el build).
+3. Configurar las variables de entorno del frontend (prefijo `VITE_`, ver
+   `frontend/vercel.json` / `frontend/src/api/http.ts`):
+   - `VITE_API_URL` → la URL pública del backend en Render (paso 2.5), por ejemplo
+     `https://vitalys-backend.onrender.com`.
+4. Disparar el deploy. Vercel corre `vite build` y sirve el contenido de `dist/`.
+5. Una vez deployado, abrir la URL pública y probar el login (ver checklist de smoke test en
+   `docs/metodologia/definicion-pruebas.md`, Nivel 3).
+
+---
+
+## 4. Checklist final
+
+- [ ] Proyecto Supabase creado, DDL ejecutado, tablas visibles.
+- [ ] Connection string usa el **Session pooler** (no el Transaction pooler).
+- [ ] Servicio Render `vitalys-backend` en estado Live, `GET /api/health` responde 200.
+- [ ] Variables de entorno cargadas en Render (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`,
+      `JWT_SECRET`) — ninguna commiteada en el repo.
+- [ ] Proyecto Vercel deployado, `VITE_API_URL` apunta a la URL pública de Render.
+- [ ] Smoke test manual (Nivel 3 de `definicion-pruebas.md`) ejecutado contra el entorno real.
+
+Este runbook no despliega nada por sí mismo — cada paso lo ejecuta una persona con sus propias
+credenciales en Supabase, Render y Vercel.

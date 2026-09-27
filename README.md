@@ -115,6 +115,12 @@ npm run dev
 | Frontend | _pendiente_ | 🔜     |
 | Backend  | _pendiente_ | 🔜     |
 
+Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).
+
+> ⏱️ **Cold start (plan free de Render):** el backend se "duerme" tras un período sin tráfico.
+> La primera request después de eso puede tardar **~50 segundos** en responder mientras el
+> contenedor arranca de nuevo. Esto es un comportamiento esperado del plan free, **no es un bug**.
+
 ---
 
 ## 📅 Hoja de ruta

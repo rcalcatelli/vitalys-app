@@ -1,0 +1,15 @@
+# Entregable académico: tablas Markdown alineadas a mano + bloques Mermaid.
+# Prettier reformatearía columnas y proseWrap sin beneficio funcional real.
+docs/**
+
+# Prettier no formatea Java — el backend queda fuera del hook.
+backend/**
+
+# DDL/seed con formato propio, no tocar.
+db/**/*.sql
+
+# Artefactos generados
+node_modules
+dist
+build
+target

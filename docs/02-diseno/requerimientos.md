@@ -11,7 +11,7 @@
 | ID | Módulo | Descripción |
 |----|--------|-------------|
 | RF-01 | Auth | El sistema permite registrar un nuevo usuario con email y contraseña. El rol se asigna siempre a `SOCIO_PACIENTE`; no es un input del cliente. Si el body incluye `rol`, el servicio responde 400 antes de crear el usuario (RNF-03). |
-| RF-02 | Auth | El sistema autentica usuarios mediante email y contraseña, y devuelve un token JWT. |
+| RF-02 | Auth | El sistema autentica usuarios mediante contraseña y un identificador (email o DNI, ver RF-36), y devuelve un token JWT. |
 | RF-03 | Auth | El sistema permite cerrar sesión (invalidación del lado del cliente; el token expira por TTL). |
 | RF-04 | Auth | El sistema expone un endpoint protegido que devuelve los datos del usuario autenticado. |
 | RF-05 | Personas | El ADMIN puede dar de alta de forma presencial una nueva persona: crea un `usuario` (rol `SOCIO_PACIENTE`) y una `persona` en una sola operación, con email y contraseña nuevos. Camino alternativo al vínculo (RF-31) cuando la persona no tiene cuenta previa. |
@@ -45,6 +45,7 @@
 | RF-33 | Turnos | El sistema permite a cualquier usuario autenticado consultar el cupo disponible de una franja horaria de gimnasio para una fecha dada (cupo total, ocupados y disponibles), antes de reservar. Cierra el hueco detectado para el perfil SP-01 del relevamiento (`docs/01-propuesta/relevamiento/perfiles-usuario.json`). También satisface, sin crear un rol nuevo, la necesidad del perfil PR-04 (profesional de sala, sin agenda individual) de ver la ocupación por franja para organizar la sala. |
 | RF-34 | Turnos | El ADMIN marca un turno de gimnasio como `COMPLETADO` en el momento del check-in de la persona en el gimnasio. Los turnos GYM no tienen profesional asignado, por lo que esta acción no la ejecuta un PROFESIONAL como en RF-22 (que aplica solo a turnos de CONSULTORIO). |
 | RF-35 | Turnos | El sistema marca automáticamente como `AUSENTE` todo turno de gimnasio que sigue en estado `RESERVADO` una vez finalizada su franja horaria, sin que se haya registrado el check-in (RF-34). |
+| RF-36 | Auth | El sistema permite iniciar sesión con email o con DNI (`identificador` en el body de `POST /api/auth/login`, junto a `contrasena`). El login por DNI busca la persona en `personas.dni` y resuelve el `usuario` asociado por `usuario_id`; solo funciona para quien ya tiene ficha cargada ahí. Un usuario recién autorregistrado no tiene esa ficha todavía (queda pendiente de que el ADMIN la complete, CA-01-6) y un PROFESIONAL no tiene DNI en el esquema (solo `personas` lo tiene): ambos perfiles solo pueden ingresar con email. El 401 es el mismo, con el mismo mensaje, para identificador (email o DNI) inexistente, contraseña incorrecta y cuenta deshabilitada (RF-32) — ningún caso es distinguible de otro. |
 
 ---
 

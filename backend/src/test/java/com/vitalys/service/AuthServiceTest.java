@@ -96,7 +96,7 @@ class AuthServiceTest {
         when(jwtService.generarToken(usuario)).thenReturn("jwt-token");
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("user@vitalys.test");
+        request.setIdentificador("user@vitalys.test");
         request.setContrasena("password123");
 
         LoginResponse response = authService.login(request);
@@ -111,7 +111,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches("incorrecta", "hash-bcrypt")).thenReturn(false);
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("user@vitalys.test");
+        request.setIdentificador("user@vitalys.test");
         request.setContrasena("incorrecta");
 
         assertThatThrownBy(() -> authService.login(request)).isInstanceOf(CredencialesInvalidasException.class);
@@ -125,7 +125,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches("password123", "hash-bcrypt")).thenReturn(true);
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("baja@vitalys.test");
+        request.setIdentificador("baja@vitalys.test");
         request.setContrasena("password123");
 
         // La contraseña es CORRECTA: lo que debe frenar el login es la cuenta deshabilitada.
@@ -140,10 +140,56 @@ class AuthServiceTest {
         when(usuarioRepository.findByEmail("noexiste@vitalys.test")).thenReturn(Optional.empty());
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("noexiste@vitalys.test");
+        request.setIdentificador("noexiste@vitalys.test");
         request.setContrasena("cualquiera");
 
         assertThatThrownBy(() -> authService.login(request)).isInstanceOf(CredencialesInvalidasException.class);
+    }
+
+    @Test
+    void login_conDniValidoYContrasenaCorrecta_devuelveToken() {
+        // identificador sin "@" → se resuelve por DNI (personas.dni), no por email (RF-36).
+        Usuario usuario = new Usuario("con-ficha@vitalys.test", "hash-bcrypt", RolUsuario.SOCIO_PACIENTE);
+        usuario.setId(7L);
+        when(usuarioRepository.findByPersonaDni("30111222")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("password123", "hash-bcrypt")).thenReturn(true);
+        when(jwtService.generarToken(usuario)).thenReturn("jwt-token-dni");
+
+        LoginRequest request = new LoginRequest();
+        request.setIdentificador("30111222");
+        request.setContrasena("password123");
+
+        LoginResponse response = authService.login(request);
+
+        assertThat(response.getToken()).isEqualTo("jwt-token-dni");
+        verify(usuarioRepository, never()).findByEmail(anyString());
+    }
+
+    @Test
+    void login_conDniDeUsuarioSinFichaEnPersonas_lanzaCredencialesInvalidasException() {
+        // Usuario autorregistrado (CA-01-6) o PROFESIONAL: no tienen fila en `personas`, así que
+        // la consulta nativa por DNI no encuentra nada, sin importar si el DNI "existe" en otro
+        // lado del sistema.
+        when(usuarioRepository.findByPersonaDni("40222333")).thenReturn(Optional.empty());
+
+        LoginRequest request = new LoginRequest();
+        request.setIdentificador("40222333");
+        request.setContrasena("cualquiera");
+
+        assertThatThrownBy(() -> authService.login(request)).isInstanceOf(CredencialesInvalidasException.class);
+    }
+
+    @Test
+    void login_conDniInexistente_lanzaCredencialesInvalidasExceptionIndistinguibleDelAnterior() {
+        when(usuarioRepository.findByPersonaDni("99999999")).thenReturn(Optional.empty());
+
+        LoginRequest request = new LoginRequest();
+        request.setIdentificador("99999999");
+        request.setContrasena("cualquiera");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(CredencialesInvalidasException.class)
+                .hasMessage("Credenciales inválidas");
     }
 
     @Test

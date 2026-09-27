@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+:root,[data-theme="light"]{--bg:#F3F6F4;--surface:#FFFFFF;--surface-2:#EAF0ED;--border:#D8E1DC;--border-2:#C3CFC9;--text:#14201D;--text-2:#46554F;--text-3:#65746E;--clin:#0B6B69;--clin-ink:#0B6B69;--clin-soft:#E0EEEC;--on-clin:#FFFFFF;--gym:#C9601B;--gym-ink:#A04A10;--gym-soft:#F7E8DC;--gym-past:#E3B38D;--on-gym:#FFFFFF;--ok:#2F7D50;--ok-ink:#23663F;--ok-soft:#E2F0E7;--warn:#B7800F;--warn-ink:#865C00;--warn-soft:#FAEFD3;--bad:#B42C23;--bad-ink:#A0241C;--bad-soft:#F8E2DF;--overlay:rgba(12,22,20,.45);--brand:#0B6B69;--shadow:0 1px 2px rgba(20,32,29,.05),0 4px 16px rgba(20,32,29,.04)}
+[data-theme="dark"]{--bg:#0E1513;--surface:#151E1B;--surface-2:#1C2724;--border:#27352F;--border-2:#34453E;--text:#E4ECE8;--text-2:#A8B7B1;--text-3:#8A9A94;--clin:#35A19D;--clin-ink:#6FCBC6;--clin-soft:#133230;--on-clin:#04201F;--gym:#E0782F;--gym-ink:#F2A26B;--gym-soft:#3A2414;--gym-past:#7A4722;--on-gym:#1E0F04;--ok:#57BC80;--ok-ink:#7BD39F;--ok-soft:#15301F;--warn:#E2B347;--warn-ink:#EBC46A;--warn-soft:#332810;--bad:#EE7A6F;--bad-ink:#F39A91;--bad-soft:#3A1917;--overlay:rgba(0,0,0,.6);--brand:#0D3533;--shadow:none}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+input,select,textarea{font:inherit;color:inherit}
+a{color:var(--clin-ink)}
+a:hover{color:var(--clin)}
+@keyframes vtIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.45">
+
+<sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh;display:flex;flex-wrap:wrap">
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1 1 420px;background:var(--brand);color:#FFFFFF;padding:40px 48px;display:flex;flex-direction:column;justify-content:space-between;min-height:100vh">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="position:relative;width:28px;height:28px;border-radius:8px;background:#FFFFFF"><div style="position:absolute;right:-3px;bottom:-3px;width:11px;height:11px;border-radius:3px;background:#E0782F;border:2px solid var(--brand)"></div></div>
+          <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:21px;letter-spacing:-0.01em">Vitalys</span>
+        </div>
+        <div style="max-width:440px">
+          <h1 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:44px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 16px;text-wrap:balance">Tu salud y tu entrenamiento, en una sola cuenta.</h1>
+          <p style="margin:0;font-size:16px;opacity:.85;text-wrap:pretty">Reservá el gimnasio y pedí turno con Nutrición, Psicología o Kinesiología desde el mismo lugar.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:32px;font-size:14px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:3px;background:#E0782F"></span>Gimnasio · lun a vie 07–22 · sáb 09–13</div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:3px;background:#FFFFFF"></span>Consultorios · Nutrición, Psicología, Kinesiología</div>
+          </div>
+        </div>
+        <div style="font-size:12px;opacity:.7">Centro de salud Vitalys</div>
+      </div>
+    </sc-if>
+    <div style="flex:1 1 420px;display:flex;align-items:flex-start;justify-content:center;padding:28px 20px 40px">
+      <div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="position:relative;width:26px;height:26px;border-radius:7px;background:var(--clin)"><div style="position:absolute;right:-3px;bottom:-3px;width:10px;height:10px;border-radius:3px;background:var(--gym);border:2px solid var(--bg)"></div></div>
+            <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:19px">Vitalys</span>
+          </div>
+          <button onClick="{{ toggleTheme }}" style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);font-size:13px">{{ themeLabel }}</button>
+        </div>
+
+        <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:20px;animation:vtIn .3s ease">
+            <div>
+              <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:28px;letter-spacing:-0.01em;margin:8px 0 6px">Ingresá a tu cuenta</h2>
+              <p style="margin:0;color:var(--text-2)">Una sola cuenta para el gimnasio y los consultorios.</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">DNI o email
+                <input value="{{ f.loginId }}" onChange="{{ on.loginId }}" placeholder="38100001" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none;font-family:'IBM Plex Mono',monospace" style-focus="border-color:var(--clin);box-shadow:0 0 0 3px var(--clin-soft)">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Contraseña
+                <input type="password" value="{{ f.loginPw }}" onChange="{{ on.loginPw }}" placeholder="••••••••" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin);box-shadow:0 0 0 3px var(--clin-soft)">
+              </label>
+              <button onClick="{{ doLogin }}" style="height:48px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-size:15px;font-weight:600" style-hover="filter:brightness(1.08)">Ingresar</button>
+              <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px">
+                <a href="#" onClick="{{ noop }}">¿Olvidaste tu contraseña?</a>
+                <span style="color:var(--text-2)">¿No tenés cuenta? <a href="#" onClick="{{ goRegister }}">Registrate</a></span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)">Cuentas de demostración</div>
+              <sc-for list="{{ demo }}" as="d" hint-placeholder-count="5">
+                <button onClick="{{ d.go }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);text-align:left" style-hover="border-color:var(--clin)">
+                  <span style="width:34px;height:34px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ d.bg }};color:{{ d.fg }}">{{ d.ini }}</span>
+                  <span style="display:flex;flex-direction:column;min-width:0"><span style="font-weight:500">{{ d.name }}</span><span style="font-size:12.5px;color:var(--text-3)">{{ d.sub }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px;animation:vtIn .3s ease">
+            <div>
+              <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:28px;letter-spacing:-0.01em;margin:8px 0 6px">Creá tu cuenta</h2>
+              <p style="margin:0;color:var(--text-2)">Con la misma cuenta podés usar el gimnasio y los consultorios.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Nombre
+                <input value="{{ f.rNombre }}" onChange="{{ on.rNombre }}" style="height:46px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Apellido
+                <input value="{{ f.rApellido }}" onChange="{{ on.rApellido }}" style="height:46px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+              </label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">DNI
+              <input inputMode="numeric" value="{{ f.rDni }}" onChange="{{ on.rDni }}" placeholder="Sin puntos" style="height:46px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none;font-family:'IBM Plex Mono',monospace" style-focus="border-color:var(--clin)">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Email
+              <input type="email" value="{{ f.rEmail }}" onChange="{{ on.rEmail }}" style="height:46px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Contraseña
+              <input type="password" value="{{ f.rPw }}" onChange="{{ on.rPw }}" placeholder="Mínimo 8 caracteres" style="height:46px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+            </label>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;font-weight:500;color:var(--text-2)">¿Qué vas a usar?</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ regSv }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c.toggle }}" style="height:44px;padding:0 16px;border-radius:999px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-weight:500;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:2px;background:{{ c.dot }}"></span>{{ c.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ regErr }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 12px;border-radius:8px;background:var(--bad-soft);color:var(--bad-ink);font-size:13px">{{ regErr }}</div>
+            </sc-if>
+            <button onClick="{{ doRegister }}" style="height:48px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-size:15px;font-weight:600">Crear cuenta</button>
+            <span style="font-size:13px;color:var(--text-2);text-align:center">¿Ya tenés cuenta? <a href="#" onClick="{{ goLogin }}">Ingresá</a></span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;min-height:100vh">
+
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+      <aside style="width:248px;flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:20px;padding:22px 14px;background:var(--surface);border-right:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;padding:0 8px">
+          <div style="position:relative;width:26px;height:26px;border-radius:7px;background:var(--clin)"><div style="position:absolute;right:-3px;bottom:-3px;width:10px;height:10px;border-radius:3px;background:var(--gym);border:2px solid var(--surface)"></div></div>
+          <div style="display:flex;flex-direction:column;line-height:1.1"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px">Vitalys</span><span style="font-size:11.5px;color:var(--text-3)">{{ roleLabel }}</span></div>
+        </div>
+        <nav style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+            <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:10px;width:100%;height:40px;padding:0 12px;border:0;border-radius:8px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:{{ n.fw }};text-align:left" style-hover="background:var(--surface-2)">
+              <span style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:{{ n.dot }}"></span>{{ n.label }}
+            </button>
+          </sc-for>
+        </nav>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+          <button onClick="{{ toggleTheme }}" style="height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-2);font-size:13px;text-align:left">{{ themeLabel }}</button>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--border)">
+            <span style="width:34px;height:34px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--clin-soft);color:var(--clin-ink)">{{ userCard.ini }}</span>
+            <div style="display:flex;flex-direction:column;min-width:0;flex:1"><span style="font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userCard.name }}</span><span style="font-size:12px;color:var(--text-3)">{{ userCard.sub }}</span></div>
+          </div>
+          <button onClick="{{ logout }}" style="height:34px;border:0;background:transparent;color:var(--text-3);font-size:13px;text-align:left;padding:0 8px" style-hover="color:var(--text)">Cerrar sesión</button>
+        </div>
+      </aside>
+    </sc-if>
+
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+        <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;height:56px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="position:relative;width:24px;height:24px;border-radius:7px;background:var(--clin)"><div style="position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:3px;background:var(--gym);border:2px solid var(--surface)"></div></div>
+            <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:17px">Vitalys</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onClick="{{ toggleTheme }}" aria-label="Cambiar tema" style="height:40px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-2);font-size:12.5px">{{ themeShort }}</button>
+            <button onClick="{{ logout }}" aria-label="Cerrar sesión" style="width:40px;height:40px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--clin-soft);color:var(--clin-ink)">{{ userCard.ini }}</button>
+          </div>
+        </header>
+      </sc-if>
+
+      <sc-if value="{{ acting }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;background:var(--warn-soft);color:var(--warn-ink);font-size:13px;border-bottom:1px solid var(--border)">
+          <span><strong style="font-weight:600">Recepción</strong> operando en nombre de <strong style="font-weight:600">{{ actingName }}</strong>. Todo lo que hagas queda registrado.</span>
+          <button onClick="{{ stopActing }}" style="height:34px;padding:0 12px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font-weight:600;font-size:13px">Volver a Recepción</button>
+        </div>
+      </sc-if>
+
+      <main style="flex:1;width:100%;max-width:1160px;margin:0 auto;padding:{{ mainPad }}">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px">
+          <div style="min-width:0">
+            <div style="font-size:12.5px;color:var(--text-3);margin-bottom:4px">{{ page.eyebrow }}</div>
+            <h1 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:{{ h1Size }};line-height:1.1;letter-spacing:-0.015em;margin:0;text-wrap:balance">{{ page.title }}</h1>
+            <sc-if value="{{ page.sub }}" hint-placeholder-val="{{ false }}"><p style="margin:6px 0 0;color:var(--text-2);text-wrap:pretty">{{ page.sub }}</p></sc-if>
+          </div>
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-2);padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)">{{ nowLabel }}</span>
+          </sc-if>
+        </div>
+
+        <!-- ============ SOCIO: INICIO ============ -->
+        <sc-if value="{{ is.inicio }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <div style="display:flex;flex-wrap:wrap;gap:16px">
+              <sc-if value="{{ ini.hasNext }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:2 1 400px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px">
+                  <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)">Tu próximo turno · {{ ini.nt.rel }}</div>
+                  <div style="display:flex;gap:18px;align-items:center">
+                    <div style="width:96px;flex-shrink:0;padding:12px 0 14px;border-radius:12px;background:{{ ini.nt.soft }};color:{{ ini.nt.ink }};text-align:center;display:flex;flex-direction:column;align-items:center">
+                      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">{{ ini.nt.dow }}</span>
+                      <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:48px;line-height:1;margin:4px 0">{{ ini.nt.day }}</span>
+                      <span style="font-size:13px;font-weight:500">{{ ini.nt.mon }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                      <span style="display:inline-flex;align-self:flex-start;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:{{ ini.nt.soft }};color:{{ ini.nt.ink }}"><span style="width:7px;height:7px;border-radius:2px;background:{{ ini.nt.dot }}"></span>{{ ini.nt.kindLabel }}</span>
+                      <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:22px;line-height:1.15">{{ ini.nt.svc }}</span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:500">{{ ini.nt.start }} – {{ ini.nt.end }}</span>
+                      <span style="color:var(--text-2);font-size:13.5px">{{ ini.nt.who }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <button onClick="{{ goTurnos }}" style="height:44px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-weight:500">Ver mis turnos</button>
+                    <button onClick="{{ ini.nt.cancel }}" style="height:44px;padding:0 16px;border:0;border-radius:8px;background:transparent;color:var(--bad-ink);font-weight:500">Cancelar turno</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ini.noNext }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:2 1 400px;background:var(--surface);border:1px dashed var(--border-2);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:8px;justify-content:center">
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:20px">No tenés turnos próximos</span>
+                  <span style="color:var(--text-2)">Reservá el gimnasio o pedí una consulta con los accesos de abajo.</span>
+                </div>
+              </sc-if>
+
+              <div style="flex:1 1 260px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                  <span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)">Cuota del gimnasio</span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ fee.chip.bg }};color:{{ fee.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ fee.chip.label }}</span>
+                </div>
+                <sc-if value="{{ fee.hasAmount }}" hint-placeholder-val="{{ true }}">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500">{{ fee.amount }}<span style="font-size:13px;color:var(--text-3)"> /mes</span></span>
+                </sc-if>
+                <span style="color:var(--text-2);font-size:13.5px;text-wrap:pretty">{{ fee.line }}</span>
+                <button onClick="{{ goCuenta }}" style="margin-top:auto;align-self:flex-start;height:40px;padding:0;border:0;background:transparent;color:var(--clin-ink);font-weight:600">Ver estado de cuenta →</button>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px">
+              <button onClick="{{ goGym }}" disabled="{{ ini.gymDisabled }}" style="display:flex;flex-direction:column;gap:8px;text-align:left;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);opacity:{{ ini.gymOp }}" style-hover="border-color:var(--gym)">
+                <span style="display:flex;align-items:center;justify-content:space-between;width:100%"><span style="display:flex;align-items:center;gap:8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px"><span style="width:10px;height:10px;border-radius:3px;background:var(--gym)"></span>Reservar gimnasio</span><span style="color:var(--gym-ink);font-size:20px">→</span></span>
+                <span style="color:var(--text-2);font-size:13.5px">{{ ini.gymSub }}</span>
+              </button>
+              <button onClick="{{ goConsulta }}" style="display:flex;flex-direction:column;gap:8px;text-align:left;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text)" style-hover="border-color:var(--clin)">
+                <span style="display:flex;align-items:center;justify-content:space-between;width:100%"><span style="display:flex;align-items:center;gap:8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px"><span style="width:10px;height:10px;border-radius:3px;background:var(--clin)"></span>Pedir consulta</span><span style="color:var(--clin-ink);font-size:20px">→</span></span>
+                <span style="color:var(--text-2);font-size:13.5px">Nutrición, Psicología o Kinesiología.</span>
+              </button>
+            </div>
+
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Tu semana</span>
+                <span style="font-size:13px;color:var(--text-3)">{{ ini.weekSummary }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
+                <sc-for list="{{ ini.week }}" as="w" hint-placeholder-count="7">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 10px;border-radius:10px;background:{{ w.bg }};border:1px solid {{ w.bd }};min-height:96px">
+                    <span style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-3)">{{ w.dow }}</span>
+                    <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px;color:{{ w.numFg }}">{{ w.num }}</span>
+                    <sc-for list="{{ w.items }}" as="it" hint-placeholder-count="0">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;padding:2px 4px;border-radius:4px;background:{{ it.bg }};color:{{ it.fg }};text-decoration:{{ it.deco }}">{{ it.t }}</span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-3)">
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:var(--gym)"></span>Gimnasio</span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:var(--clin)"></span>Consultorio</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ SOCIO: RESERVAR GIMNASIO ============ -->
+        <sc-if value="{{ is.gym }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <sc-if value="{{ gym.lock }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;background:var(--bad-soft);color:var(--bad-ink);border:1px solid var(--bad)">
+                <strong style="font-weight:600">{{ gym.lockTitle }}</strong>
+                <span style="font-size:13.5px;text-wrap:pretty">{{ gym.lockText }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ gym.exc }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px 16px;border-radius:12px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px"><strong style="font-weight:600">Excepción autorizada por Recepción.</strong> Podés reservar aunque tu cuota esté vencida. {{ gym.excText }}</div>
+            </sc-if>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ gymRules }}" as="r" hint-placeholder-count="4">
+                <span style="font-size:12px;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text-2)">{{ r }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin:0 -2px;scrollbar-width:thin">
+              <sc-for list="{{ gym.days }}" as="d" hint-placeholder-count="7">
+                <button onClick="{{ d.pick }}" style="flex:1 0 64px;min-height:76px;padding:8px 4px;border-radius:12px;border:1.5px solid {{ d.bd }};background:{{ d.bg }};color:{{ d.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:{{ d.op }}">
+                  <span style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">{{ d.dow }}</span>
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:22px;line-height:1.1">{{ d.num }}</span>
+                  <span style="font-size:11px;font-weight:500;min-height:14px">{{ d.sub }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px">
+              <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ gym.dayTitle }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-3)">{{ gym.dayHours }}</span>
+            </div>
+            <sc-if value="{{ gym.closed }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:36px 20px;text-align:center;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2)">Los domingos el gimnasio está cerrado.</div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:10px">
+              <sc-for list="{{ gym.slots }}" as="sl" hint-placeholder-count="8">
+                <button onClick="{{ sl.pick }}" disabled="{{ sl.disabled }}" style="text-align:left;padding:12px 12px 11px;border-radius:12px;border:1.5px solid {{ sl.bd }};background:{{ sl.bg }};color:var(--text);display:flex;flex-direction:column;gap:9px;min-height:44px;opacity:{{ sl.op }}">
+                  <span style="display:flex;justify-content:space-between;align-items:baseline;width:100%"><span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600">{{ sl.time }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-3)">– {{ sl.end }}</span></span>
+                  <span style="display:block;width:100%;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><span style="display:block;height:100%;width:{{ sl.pct }};background:{{ sl.bar }};border-radius:3px"></span></span>
+                  <span style="display:flex;justify-content:space-between;gap:6px;width:100%;font-size:12px"><span style="font-family:'IBM Plex Mono',monospace;color:var(--text-2)">{{ sl.count }}/20</span><span style="font-weight:500;color:{{ sl.noteFg }};text-align:right">{{ sl.note }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ gym.hasSel }}" hint-placeholder-val="{{ false }}">
+              <div style="position:sticky;bottom:{{ stickyBottom }};z-index:15;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1.5px solid var(--gym);box-shadow:0 8px 28px rgba(0,0,0,.14);animation:vtIn .2s ease">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font-size:12px;font-weight:600;color:var(--gym-ink);text-transform:uppercase;letter-spacing:.05em">Gimnasio</span>
+                  <span style="font-weight:600">{{ gym.selLabel }}</span>
+                  <span style="font-size:12.5px;color:var(--text-3)">Cancelás sin cargo hasta 2 h antes.</span>
+                </div>
+                <div style="display:flex;gap:8px;flex:1 0 auto;justify-content:flex-end">
+                  <button onClick="{{ gym.clear }}" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cambiar</button>
+                  <button onClick="{{ gym.confirm }}" style="height:46px;padding:0 20px;border:0;border-radius:8px;background:var(--gym);color:var(--on-gym);font-weight:600">Confirmar reserva</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ SOCIO: CONSULTORIO ============ -->
+        <sc-if value="{{ is.consulta }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <sc-if value="{{ cons.moraNote }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px 16px;border-radius:12px;background:var(--clin-soft);color:var(--clin-ink);font-size:13.5px">Tu cuota de gimnasio está vencida, pero las consultas siguen habilitadas.</div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-3)">
+              <span style="display:flex;align-items:center;gap:6px;color:var(--clin-ink);font-weight:600"><span style="width:20px;height:20px;border-radius:50%;background:var(--clin);color:var(--on-clin);display:flex;align-items:center;justify-content:center;font-size:11px">1</span>Especialidad</span>
+              <span style="flex:0 0 24px;height:1px;background:var(--border-2)"></span>
+              <span style="display:flex;align-items:center;gap:6px;color:{{ cons.step2Fg }};font-weight:600"><span style="width:20px;height:20px;border-radius:50%;background:{{ cons.step2Bg }};color:{{ cons.step2Num }};display:flex;align-items:center;justify-content:center;font-size:11px">2</span>Horario</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px">
+              <sc-for list="{{ cons.pros }}" as="p" hint-placeholder-count="3">
+                <button onClick="{{ p.pick }}" style="text-align:left;padding:16px;border-radius:14px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};color:var(--text);display:flex;flex-direction:column;gap:8px" style-hover="border-color:var(--clin)">
+                  <span style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ p.esp }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;padding:3px 8px;border-radius:6px;background:var(--clin-soft);color:var(--clin-ink)">{{ p.dur }} min</span></span>
+                  <span style="color:var(--text-2)">{{ p.name }}</span>
+                  <span style="font-size:12.5px;color:var(--text-3)">{{ p.next }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ cons.hasPro }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;animation:vtIn .25s ease">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)">Próximo día con agenda</span>
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ cons.dayTitle }}</span>
+                  <span style="font-size:13px;color:var(--text-2)">{{ cons.proLine }}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">
+                  <sc-for list="{{ cons.slots }}" as="c" hint-placeholder-count="6">
+                    <button onClick="{{ c.pick }}" disabled="{{ c.disabled }}" style="height:56px;border-radius:10px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;opacity:{{ c.op }}">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">{{ c.time }}</span>
+                      <span style="font-size:11px">{{ c.label }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+                <span style="font-size:12.5px;color:var(--text-3)">Cancelación en término hasta 24 h antes. Después queda como “cancelado fuera de término”.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cons.hasSel }}" hint-placeholder-val="{{ false }}">
+              <div style="position:sticky;bottom:{{ stickyBottom }};z-index:15;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1.5px solid var(--clin);box-shadow:0 8px 28px rgba(0,0,0,.14);animation:vtIn .2s ease">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font-size:12px;font-weight:600;color:var(--clin-ink);text-transform:uppercase;letter-spacing:.05em">{{ cons.selEsp }}</span>
+                  <span style="font-weight:600">{{ cons.selLabel }}</span>
+                  <span style="font-size:12.5px;color:var(--text-3)">{{ cons.selPro }}</span>
+                </div>
+                <div style="display:flex;gap:8px;flex:1 0 auto;justify-content:flex-end">
+                  <button onClick="{{ cons.clear }}" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cambiar</button>
+                  <button onClick="{{ cons.confirm }}" style="height:46px;padding:0 20px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Confirmar turno</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ SOCIO: MIS TURNOS ============ -->
+        <sc-if value="{{ is.turnos }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:22px;animation:vtIn .3s ease">
+            <sc-for list="{{ turnos.groups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">{{ g.title }}</span><span style="font-size:12.5px;color:var(--text-3)">{{ g.note }}</span></div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+                  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid;grid-template-columns:1.1fr .9fr 1.8fr 1.5fr 110px;gap:12px;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2)">
+                      <span>Fecha</span><span>Hora</span><span>Servicio</span><span>Estado</span><span></span>
+                    </div>
+                  </sc-if>
+                  <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:{{ turnos.cols }};gap:{{ turnos.gap }};align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                      <span style="font-weight:500">{{ r.date }}</span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-2);text-align:{{ turnos.timeAlign }}">{{ r.time }}</span>
+                      <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:{{ r.dot }}"></span><span style="display:flex;flex-direction:column;min-width:0"><span>{{ r.svc }}</span><span style="font-size:12px;color:var(--text-3)">{{ r.who }}</span></span></span>
+                      <span style="justify-self:{{ turnos.chipJustify }}"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span></span>
+                      <span style="justify-self:end;grid-column:{{ turnos.actCol }}">
+                        <sc-if value="{{ r.canCancel }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ r.cancel }}" style="height:40px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--bad-ink);font-weight:500;font-size:13px" style-hover="border-color:var(--bad)">Cancelar</button>
+                        </sc-if>
+                      </span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:20px 16px;color:var(--text-3);border-top:1px solid var(--border)">No hay turnos.</div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ SOCIO: ESTADO DE CUENTA ============ -->
+        <sc-if value="{{ is.cuenta }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <sc-if value="{{ acc.blocked }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;background:var(--bad-soft);color:var(--bad-ink);border:1px solid var(--bad)">
+                <strong style="font-weight:600">Reserva de gimnasio bloqueada · {{ acc.dias }} días de mora</strong>
+                <span style="font-size:13.5px">Registrá el pago en recepción para volver a reservar. Las consultas siguen habilitadas.</span>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-wrap:wrap;gap:16px">
+              <div style="flex:3 1 360px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)">
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px">
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--gym)"></span>Cuota mensual de gimnasio</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500">{{ fee.amount }}</span>
+                  </div>
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;background:{{ fee.chip.bg }};color:{{ fee.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ fee.chip.label }}</span>
+                </div>
+                <sc-if value="{{ acc.hasSteps }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+                    <sc-for list="{{ acc.steps }}" as="st" hint-placeholder-count="3">
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="height:4px;border-radius:2px;background:{{ st.bar }}"></span>
+                        <span style="font-size:12px;color:var(--text-3)">{{ st.label }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:{{ st.fg }}">{{ st.date }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <span style="color:var(--text-2);font-size:13.5px">{{ fee.line }}</span>
+              </div>
+              <div style="flex:2 1 280px;padding:18px;border-radius:14px;background:var(--warn-soft);color:var(--warn-ink);display:flex;flex-direction:column;gap:8px">
+                <strong style="font-weight:600;font-size:15px">Cómo funciona la mora</strong>
+                <span style="font-size:13.5px;text-wrap:pretty">Con la cuota vencida hace más de 10 días no se puede reservar el gimnasio.</span>
+                <span style="font-size:13.5px;text-wrap:pretty">Las consultas de Nutrición, Psicología y Kinesiología siguen habilitadas.</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Pagos registrados</span>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+                <sc-for list="{{ acc.pays }}" as="p" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                    <span style="font-weight:500">{{ p.concept }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right">{{ p.amount }}</span>
+                    <span style="font-size:12.5px;color:var(--text-3)"><span style="font-family:'IBM Plex Mono',monospace">{{ p.date }}</span> · {{ p.method }}</span>
+                    <span style="font-size:12px;color:var(--ok-ink);text-align:right">Registrado</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ acc.noPays }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:20px 16px;color:var(--text-3)">Todavía no hay pagos registrados.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ PROFESIONAL: AGENDA ============ -->
+        <sc-if value="{{ is.agenda }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ ag.stats }}" as="s" hint-placeholder-count="3">
+                <span style="display:flex;align-items:baseline;gap:6px;padding:8px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border)"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ s.v }}</span><span style="font-size:12.5px;color:var(--text-2)">{{ s.l }}</span></span>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ ag.rows }}" as="r" hint-placeholder-count="6">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:12px 14px;border-radius:12px;background:{{ r.bg }};border:1px {{ r.bdStyle }} {{ r.bd }};opacity:{{ r.op }}">
+                  <div style="display:flex;flex-direction:column;width:58px;flex-shrink:0">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">{{ r.time }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-3)">{{ r.end }}</span>
+                  </div>
+                  <div style="flex:1 1 160px;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="font-weight:{{ r.fw }};color:{{ r.nameFg }}">{{ r.name }}</span>
+                    <sc-if value="{{ r.booked }}" hint-placeholder-val="{{ true }}"><span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ r.dni }}</span></span></sc-if>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+                    <sc-if value="{{ r.showChip }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span>
+                    </sc-if>
+                    <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ r.att }}" style="height:40px;padding:0 14px;border:1.5px solid var(--ok);border-radius:8px;background:var(--ok-soft);color:var(--ok-ink);font-weight:600;font-size:13px">Atendido</button>
+                      <button onClick="{{ r.abs }}" style="height:40px;padding:0 14px;border:1.5px solid var(--bad);border-radius:8px;background:var(--bad-soft);color:var(--bad-ink);font-weight:600;font-size:13px">Ausente</button>
+                    </sc-if>
+                    <sc-if value="{{ r.marked }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ r.undo }}" style="height:36px;padding:0 10px;border:0;background:transparent;color:var(--text-3);font-size:12.5px">Deshacer</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ PROFESIONAL: DISPONIBILIDAD ============ -->
+        <sc-if value="{{ is.disp }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <div style="padding:12px 16px;border-radius:12px;background:{{ disp.noteBg }};color:{{ disp.noteFg }};font-size:13.5px">{{ disp.note }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+              <div style="flex:1 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Franjas</span>
+                <sc-for list="{{ disp.rows }}" as="r" hint-placeholder-count="4">
+                  <div style="display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;border:1.5px solid {{ r.bd }};background:{{ r.bg }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 40px;gap:6px;align-items:center">
+                      <select value="{{ r.day }}" onChange="{{ r.onDay }}" aria-label="Día" style="height:42px;padding:0 6px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:13.5px;min-width:0">
+                        <sc-for list="{{ dayOpts }}" as="o" hint-placeholder-count="6"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+                      </select>
+                      <select value="{{ r.from }}" onChange="{{ r.onFrom }}" aria-label="Desde" style="height:42px;padding:0 6px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;min-width:0">
+                        <sc-for list="{{ hourOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for>
+                      </select>
+                      <select value="{{ r.to }}" onChange="{{ r.onTo }}" aria-label="Hasta" style="height:42px;padding:0 6px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;min-width:0">
+                        <sc-for list="{{ hourOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for>
+                      </select>
+                      <button onClick="{{ r.remove }}" aria-label="Quitar franja" style="width:40px;height:42px;border:0;border-radius:8px;background:transparent;color:var(--text-3);font-size:18px" style-hover="color:var(--bad-ink)">×</button>
+                    </div>
+                    <sc-if value="{{ r.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--bad-ink)">{{ r.err }}</span></sc-if>
+                  </div>
+                </sc-for>
+                <button onClick="{{ disp.add }}" style="height:44px;border:1px dashed var(--border-2);border-radius:10px;background:transparent;color:var(--clin-ink);font-weight:600">+ Agregar franja</button>
+                <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px">
+                  <button onClick="{{ disp.discard }}" disabled="{{ disp.clean }}" style="height:44px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);opacity:{{ disp.discardOp }}">Descartar</button>
+                  <button onClick="{{ disp.save }}" disabled="{{ disp.cantSave }}" style="height:44px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600;opacity:{{ disp.saveOp }}">Guardar cambios</button>
+                </div>
+              </div>
+              <div style="flex:2 1 420px;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Semana</span><span style="font-size:12.5px;color:var(--text-3)">{{ disp.durNote }}</span></div>
+                <div style="overflow-x:auto">
+                  <div style="display:grid;grid-template-columns:40px repeat(6,minmax(52px,1fr));gap:4px;min-width:360px">
+                    <span></span>
+                    <sc-for list="{{ disp.grid }}" as="d" hint-placeholder-count="6"><span style="text-align:center;font-size:12px;font-weight:600;color:var(--text-2);padding-bottom:4px">{{ d.label }}</span></sc-for>
+                    <div style="display:flex;flex-direction:column">
+                      <sc-for list="{{ disp.hours }}" as="h" hint-placeholder-count="14"><span style="height:30px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);transform:translateY(-6px)">{{ h }}</span></sc-for>
+                    </div>
+                    <sc-for list="{{ disp.grid }}" as="d" hint-placeholder-count="6">
+                      <div style="position:relative;height:420px;border-radius:6px;background-color:var(--surface-2);background-image:repeating-linear-gradient(to bottom,var(--border) 0 1px,transparent 1px 30px)">
+                        <sc-for list="{{ d.blocks }}" as="b" hint-placeholder-count="0">
+                          <div style="position:absolute;left:3px;right:3px;top:{{ b.top }};height:{{ b.h }};border-radius:6px;background:{{ b.bg }};border:1.5px solid {{ b.bd }};color:{{ b.fg }};padding:4px 5px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;line-height:1.25;overflow:hidden">{{ b.from }}<br>{{ b.to }}</div>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ RECEPCIÓN: HOY ============ -->
+        <sc-if value="{{ is.hoy }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
+              <sc-for list="{{ hoy.kpis }}" as="k" hint-placeholder-count="4">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+                  <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-2)"><span style="width:8px;height:8px;border-radius:2px;background:{{ k.dot }}"></span>{{ k.label }}</span>
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:34px;line-height:1;color:{{ k.fg }}">{{ k.value }}</span>
+                  <span style="font-size:12px;color:var(--text-3)">{{ k.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+              <div style="flex:3 1 420px;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Ocupación del gimnasio por franja</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-3)">
+                    <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--gym-past)"></span>Pasadas</span>
+                    <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--gym)"></span>En curso</span>
+                    <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--gym-soft);border:1px dashed var(--gym)"></span>Reservadas</span>
+                  </div>
+                </div>
+                <div style="position:relative;display:flex;align-items:flex-end;gap:{{ hoy.barGap }};height:200px;padding-top:18px;border-bottom:1px solid var(--border-2)">
+                  <div style="position:absolute;left:0;right:0;top:18px;border-top:1px dashed var(--text-3)"></div>
+                  <span style="position:absolute;right:0;top:0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-3)">Cupo 20</span>
+                  <sc-for list="{{ hoy.bars }}" as="b" hint-placeholder-count="15">
+                    <div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:{{ b.fw }};color:{{ b.vFg }}">{{ b.v }}</span>
+                      <div style="width:100%;height:{{ b.pct }};background:{{ b.bg }};border:1px {{ b.bdStyle }} {{ b.bd }};border-bottom:0;border-radius:4px 4px 0 0"></div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:{{ hoy.barGap }};margin-top:-8px">
+                  <sc-for list="{{ hoy.bars }}" as="b" hint-placeholder-count="15"><span style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:{{ b.lFg }};font-weight:{{ b.fw }}">{{ b.h }}</span></sc-for>
+                </div>
+              </div>
+              <div style="flex:2 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Requieren atención</span><span style="font-size:12.5px;color:var(--text-3)">{{ hoy.attCount }}</span></div>
+                <sc-for list="{{ hoy.att }}" as="a" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="font-weight:500">{{ a.name }}</span>
+                      <span style="font-size:12.5px;color:var(--text-3)">{{ a.detail }}</span>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:{{ a.chip.bg }};color:{{ a.chip.fg }}">{{ a.chip.label }}</span>
+                  </div>
+                </sc-for>
+                <button onClick="{{ goPagos }}" style="height:42px;margin-top:4px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-weight:500">Ir a Pagos y cuotas</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ RECEPCIÓN: INGRESO ============ -->
+        <sc-if value="{{ is.ingreso }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;animation:vtIn .3s ease">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gym-ink)"><span style="width:8px;height:8px;border-radius:50%;background:var(--gym)"></span>Franja en curso</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600">10:00 – 11:00</span>
+                </div>
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:20px">{{ ing.progress }}</span>
+              </div>
+              <div style="height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden"><div style="height:100%;width:{{ ing.pct }};background:var(--gym);border-radius:5px;transition:width .3s"></div></div>
+              <span style="font-size:13px;color:var(--text-2);text-wrap:pretty">A las <span style="font-family:'IBM Plex Mono',monospace">11:00</span>, al cerrar la franja, quienes no hayan ingresado pasan a <strong style="font-weight:600;color:var(--bad-ink)">Ausente</strong>.</span>
+            </div>
+            <input value="{{ f.ingQ }}" onChange="{{ on.ingQ }}" placeholder="Buscar por nombre o DNI" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--gym)">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ ing.rows }}" as="r" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--border);min-height:62px">
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                    <span style="font-weight:500">{{ r.name }}</span>
+                    <span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ r.dni }}</span></span>
+                  </div>
+                  <sc-if value="{{ r.in }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--ok-soft);color:var(--ok-ink);white-space:nowrap">Ingresó <span style="font-family:'IBM Plex Mono',monospace">{{ r.time }}</span></span>
+                    <button onClick="{{ r.undo }}" style="height:36px;padding:0 8px;border:0;background:transparent;color:var(--text-3);font-size:12.5px">Deshacer</button>
+                  </sc-if>
+                  <sc-if value="{{ r.out }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ r.mark }}" style="height:44px;padding:0 16px;border:0;border-radius:8px;background:var(--gym);color:var(--on-gym);font-weight:600;white-space:nowrap">Marcar ingreso</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ ing.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3)">Nadie coincide con la búsqueda.</div></sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ RECEPCIÓN: PERSONAS ============ -->
+        <sc-if value="{{ is.personas }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;animation:vtIn .3s ease">
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <input value="{{ f.q }}" onChange="{{ on.q }}" placeholder="Buscar por nombre o DNI" style="flex:1 1 240px;height:44px;padding:0 14px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+              <button onClick="{{ openNueva }}" style="height:44px;padding:0 18px;border:0;border-radius:10px;background:var(--clin);color:var(--on-clin);font-weight:600">+ Nueva persona</button>
+            </div>
+            <div style="display:flex;gap:6px;overflow-x:auto">
+              <sc-for list="{{ per.filters }}" as="fl" hint-placeholder-count="4">
+                <button onClick="{{ fl.pick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ fl.bd }};background:{{ fl.bg }};color:{{ fl.fg }};font-size:13px;font-weight:500;white-space:nowrap">{{ fl.label }}</button>
+              </sc-for>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:1.5fr 1fr 1.7fr 1.4fr 120px;gap:12px;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2)">
+                  <span>Nombre</span><span>DNI</span><span>Servicios</span><span>Cuota</span><span></span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ per.rows }}" as="p" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:{{ per.cols }};gap:8px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border);opacity:{{ p.op }}">
+                  <span style="display:flex;flex-direction:column;min-width:0"><span style="font-weight:500">{{ p.name }}</span><span style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.email }}</span></span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-2);text-align:{{ per.dniAlign }}">{{ p.dni }}</span>
+                  <span style="display:flex;flex-wrap:wrap;gap:4px">
+                    <sc-for list="{{ p.sv }}" as="c" hint-placeholder-count="2"><span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span></sc-for>
+                  </span>
+                  <span style="justify-self:{{ per.chipJustify }}"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ p.chip.bg }};color:{{ p.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ p.chip.label }}</span></span>
+                  <span style="justify-self:end;grid-column:{{ per.actCol }}"><button onClick="{{ p.act }}" style="height:38px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-size:13px;font-weight:500;white-space:nowrap">Operar como</button></span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ per.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3)">No hay personas que coincidan.</div></sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ RECEPCIÓN: PAGOS ============ -->
+        <sc-if value="{{ is.pagos }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:20px;animation:vtIn .3s ease">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Cuotas vencidas</span><span style="font-size:12.5px;color:var(--text-3)">A los 10 días se bloquea la reserva de gimnasio</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ pag.overdue }}" as="o" hint-placeholder-count="3">
+                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border)">
+                    <div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px">
+                      <span style="font-weight:600">{{ o.name }}</span>
+                      <span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ o.dni }}</span> · venció <span style="font-family:'IBM Plex Mono',monospace">{{ o.vencio }}</span></span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:0 1 190px">
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:{{ o.diasFg }}">{{ o.dias }}</span>
+                      <span style="display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:{{ o.chip.bg }};color:{{ o.chip.fg }}">{{ o.chip.label }}</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-left:auto">
+                      <sc-if value="{{ o.canExc }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ o.exc }}" style="height:42px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-weight:500;font-size:13px">Autorizar excepción</button>
+                      </sc-if>
+                      <button onClick="{{ o.pay }}" style="height:42px;padding:0 16px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600;font-size:13px">Registrar pago</button>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ pag.noOverdue }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">No hay cuotas vencidas.</div></sc-if>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+              <div style="flex:1 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:16px;margin-bottom:6px">Por vencer</span>
+                <sc-for list="{{ pag.soon }}" as="o" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--border)">
+                    <span style="font-weight:500">{{ o.name }}</span>
+                    <span style="display:inline-flex;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--warn-soft);color:var(--warn-ink);white-space:nowrap">{{ o.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:16px;margin-bottom:6px">Pagos registrados</span>
+                <sc-for list="{{ pag.recent }}" as="p" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--border)">
+                    <span style="font-weight:500">{{ p.name }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:500">{{ p.amount }}</span>
+                    <span style="font-size:12px;color:var(--text-3)"><span style="font-family:'IBM Plex Mono',monospace">{{ p.date }}</span> · {{ p.concept }} · {{ p.method }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:16px;margin-bottom:6px">Excepciones autorizadas</span>
+                <sc-for list="{{ pag.excs }}" as="e" hint-placeholder-count="0">
+                  <div style="display:flex;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--border)">
+                    <span style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:500">{{ e.name }}</span><span style="font-size:11.5px;font-weight:600;color:var(--warn-ink)">{{ e.vig }}</span></span>
+                    <span style="font-size:12.5px;color:var(--text-2)">“{{ e.motivo }}”</span>
+                    <span style="font-size:12px;color:var(--text-3)">Autorizó {{ e.by }} · <span style="font-family:'IBM Plex Mono',monospace">{{ e.when }}</span></span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ pag.noExcs }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--text-3);padding:8px 0;border-top:1px solid var(--border)">Sin excepciones. Cada excepción queda registrada con quién la autorizó.</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </main>
+    </div>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <nav style="position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:4px 4px calc(4px + env(safe-area-inset-bottom))">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <button onClick="{{ n.go }}" style="flex:1;min-width:0;height:56px;border:0;background:transparent;color:{{ n.mfg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:{{ n.fw }}">
+            <span style="width:22px;height:4px;border-radius:2px;background:{{ n.mbar }}"></span>{{ n.short }}
+          </button>
+        </sc-for>
+      </nav>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- ============ MODALES ============ -->
+<sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeModal }}" style="position:fixed;inset:0;z-index:50;background:var(--overlay);display:flex;align-items:{{ modalAlign }};justify-content:center;padding:{{ modalPad }}">
+    <div onClick="{{ stop }}" style="width:100%;max-width:460px;max-height:90vh;overflow:auto;background:var(--surface);border-radius:{{ modalRadius }};padding:22px 20px;display:flex;flex-direction:column;gap:16px;animation:vtIn .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+
+      <sc-if value="{{ m.cancel }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Cancelar turno</h3>
+        <div style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px;background:var(--surface-2)">
+          <span style="font-weight:600">{{ m.svc }}</span>
+          <span style="font-size:13px;color:var(--text-2)">{{ m.when }}</span>
+        </div>
+        <div style="padding:12px 14px;border-radius:10px;background:{{ m.polBg }};color:{{ m.polFg }};font-size:13.5px;display:flex;flex-direction:column;gap:3px">
+          <strong style="font-weight:600">{{ m.polTitle }}</strong>
+          <span>{{ m.polText }}</span>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Volver</button>
+          <button onClick="{{ doCancel }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--bad);color:#FFFFFF;font-weight:600">Cancelar turno</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ m.pago }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Registrar pago</h3>
+        <span style="color:var(--text-2)">{{ m.name }} · DNI <span style="font-family:'IBM Plex Mono',monospace">{{ m.dni }}</span></span>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Concepto
+          <input value="{{ m.concept }}" readOnly="{{ true }}" style="height:44px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-size:14px">
+        </label>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Monto
+            <input inputMode="numeric" value="{{ f.monto }}" onChange="{{ on.monto }}" style="height:44px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;font-family:'IBM Plex Mono',monospace;outline:none" style-focus="border-color:var(--clin)">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Medio
+            <select value="{{ f.medio }}" onChange="{{ on.medio }}" style="height:44px;width:100%;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+              <option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option>
+            </select>
+          </label>
+        </div>
+        <span style="font-size:12.5px;color:var(--text-3)">Al registrar el pago, la cuota pasa a “Al día” y se desbloquea la reserva de gimnasio.</span>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
+          <button onClick="{{ doPago }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Registrar pago</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ m.exc }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Autorizar excepción</h3>
+        <div style="padding:12px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px;text-wrap:pretty">Habilita a <strong style="font-weight:600">{{ m.name }}</strong> a reservar el gimnasio aunque tenga {{ m.dias }} días de mora. Queda registrada con tu usuario, fecha y motivo.</div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Motivo
+          <textarea value="{{ f.motivo }}" onChange="{{ on.motivo }}" rows="3" placeholder="Ej.: pagará el viernes, acordado con administración" style="padding:10px 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;resize:vertical;outline:none" style-focus="border-color:var(--warn)"></textarea>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Vigencia
+          <select value="{{ f.vig }}" onChange="{{ on.vig }}" style="height:44px;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+            <option value="Hasta 48 h">Hasta 48 h</option><option value="Una sola reserva">Una sola reserva</option><option value="Hasta fin de mes">Hasta fin de mes</option>
+          </select>
+        </label>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
+          <button onClick="{{ doExc }}" disabled="{{ m.excDisabled }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--warn);color:#1E1400;font-weight:600;opacity:{{ m.excOp }}">Autorizar</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ m.nueva }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Nueva persona</h3>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Nombre y apellido
+          <input value="{{ f.nName }}" onChange="{{ on.nName }}" style="height:44px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+        </label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">DNI
+            <input inputMode="numeric" value="{{ f.nDni }}" onChange="{{ on.nDni }}" style="height:44px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;font-family:'IBM Plex Mono',monospace;outline:none" style-focus="border-color:var(--clin)">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Email
+            <input value="{{ f.nEmail }}" onChange="{{ on.nEmail }}" style="height:44px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+          </label>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13px;font-weight:500;color:var(--text-2)">Servicios</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ m.svOpts }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.toggle }}" style="height:40px;padding:0 14px;border-radius:999px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-weight:500;font-size:13px">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ m.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--bad-ink)">{{ m.err }}</span></sc-if>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
+          <button onClick="{{ doNueva }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Crear persona</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;transform:translateX(-50%);top:{{ toastTop }};z-index:60;max-width:calc(100% - 32px);padding:12px 16px;border-radius:10px;background:var(--text);color:var(--bg);font-size:13.5px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.2);animation:vtIn .2s ease">{{ toast }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;socio&quot;,&quot;profesional&quot;,&quot;recepcion&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  NOW = new Date(2026, 8, 29, 10, 40);
+  TODAY = '2026-09-29';
+  D = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  ML = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  PROS = [
+    { id: 'vm', name: 'Lic. Valentina Méndez', esp: 'Nutrición', dur: 30 },
+    { id: 'rm', name: 'Lic. Rodrigo Almirón', esp: 'Psicología', dur: 50 },
+    { id: 'fr', name: 'Lic. Florencia Rueda', esp: 'Kinesiología', dur: 45 },
+  ];
+  SV = { gym: 'Gimnasio', nut: 'Nutrición', psi: 'Psicología', kin: 'Kinesiología' };
+  CUOTA = 38000;
+  state = this.seed();
+
+  seed() {
+    const start = (this.props && this.props.startAs) || 'login';
+    const role = start === 'login' ? 'socio' : start;
+    const mail = n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(' ', '.') + '@mail.com';
+    const P = (id, name, dni, sv, fee) => ({ id, name, dni, sv, fee, email: mail(name) });
+    const ing = [['Lucía Rojas','40311852'],['Martín Díaz','36450221'],['Julieta Ibarra','39877610'],['Diego Paz','34512987'],['Camila Ortiz','38765002'],['Nicolás Herrera','37120554'],['Valeria Castro','41900213'],['Federico Molina','33876410'],['Paula Suárez','39011277'],['Agustín Ríos','42567001'],['Micaela Acosta','40782236'],['Gonzalo Benítez','35998120'],['Rocío Medina','38440915'],['Lautaro Silva','43120078']].map((x, i) => ({ id: 'i' + i, name: x[0], dni: x[1] }));
+    const checkins = {};
+    ['10:01','10:02','10:04','10:05','10:08','10:11','10:15','10:22','10:31'].forEach((t, i) => checkins['i' + i] = t);
+    return {
+      auth: start === 'login' ? 'login' : null,
+      role, userId: 'p1', acting: null,
+      screen: { socio: 'inicio', profesional: 'agenda', recepcion: 'hoy' }[role],
+      theme: (this.props && this.props.theme) || 'light',
+      width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+      persons: [
+        P('p1','María Pérez','38100001',['gym','nut'],{ st: 'al_dia', vence: '2026-10-10' }),
+        P('p2','Juan García','35220417',['gym','psi'],{ st: 'bloqueado', vencio: '2026-09-11', dias: 18 }),
+        P('p3','Lucía Rojas','40311852',['gym','nut'],{ st: 'por_vencer', vence: '2026-10-01' }),
+        P('p4','Ana Fernández','37654120',['gym','kin'],{ st: 'vencida', vencio: '2026-09-22', dias: 7 }),
+        P('p5','Carlos Soto','29877345',['kin'],{ st: 'na' }),
+        P('p6','Pedro Gómez','33012988',['gym'],{ st: 'baja' }),
+        P('p7','Sofía Luna','41208776',['nut'],{ st: 'na' }),
+        P('p8','Martín Díaz','36450221',['gym','nut'],{ st: 'al_dia', vence: '2026-10-15' }),
+        P('p9','Julieta Ibarra','39877610',['gym','psi'],{ st: 'al_dia', vence: '2026-10-12' }),
+        P('p10','Tomás Vera','42100345',['gym'],{ st: 'bloqueado', vencio: '2026-09-17', dias: 12 }),
+        P('p11','Camila Ortiz','38765002',['gym','kin'],{ st: 'vencida', vencio: '2026-09-26', dias: 3 }),
+        P('p12','Diego Paz','34512987',['gym'],{ st: 'por_vencer', vence: '2026-10-03' }),
+      ],
+      gym: [
+        { id: 'g1', pid: 'p1', date: '2026-09-30', hour: 8, status: 'Reservado' },
+        { id: 'g2', pid: 'p1', date: '2026-10-02', hour: 19, status: 'Reservado' },
+        { id: 'g3', pid: 'p1', date: '2026-09-28', hour: 8, status: 'Completado' },
+        { id: 'g4', pid: 'p1', date: '2026-09-26', hour: 10, status: 'Completado' },
+        { id: 'g5', pid: 'p1', date: '2026-09-24', hour: 8, status: 'Ausente' },
+        { id: 'g6', pid: 'p1', date: '2026-09-21', hour: 18, status: 'Cancelado en término' },
+        { id: 'g7', pid: 'p2', date: '2026-09-10', hour: 19, status: 'Completado' },
+      ],
+      cons: [
+        { id: 'c1', pid: 'p1', pro: 'vm', date: '2026-10-01', time: '16:00', status: 'Reservado' },
+        { id: 'c2', pid: 'p1', pro: 'vm', date: '2026-09-15', time: '09:30', status: 'Completado' },
+        { id: 'c3', pid: 'p1', pro: 'vm', date: '2026-09-01', time: '10:00', status: 'Cancelado en término' },
+        { id: 'c4', pid: 'p1', pro: 'vm', date: '2026-08-18', time: '11:00', status: 'Cancelado fuera de término' },
+        { id: 'c10', pid: 'p3', pro: 'vm', date: '2026-09-29', time: '09:00', status: 'Completado' },
+        { id: 'c11', pid: 'p4', pro: 'vm', date: '2026-09-29', time: '10:00', status: 'Reservado' },
+        { id: 'c12', pid: 'p7', pro: 'vm', date: '2026-09-29', time: '10:30', status: 'Reservado' },
+        { id: 'c13', pid: 'p2', pro: 'vm', date: '2026-09-29', time: '11:30', status: 'Reservado' },
+        { id: 'c14', pid: 'p8', pro: 'vm', date: '2026-09-29', time: '12:30', status: 'Reservado' },
+        { id: 'c20', pid: 'p5', pro: 'fr', date: '2026-09-30', time: '08:00', status: 'Reservado' },
+        { id: 'c21', pid: 'p2', pro: 'rm', date: '2026-10-01', time: '17:30', status: 'Reservado' },
+        { id: 'c22', pid: 'p9', pro: 'rm', date: '2026-09-29', time: '15:00', status: 'Reservado' },
+        { id: 'c23', pid: 'p5', pro: 'fr', date: '2026-09-25', time: '09:30', status: 'Completado' },
+      ],
+      avail: {
+        vm: [{ id: 'a1', day: 1, from: '09:00', to: '13:00' }, { id: 'a2', day: 2, from: '09:00', to: '13:00' }, { id: 'a3', day: 3, from: '09:00', to: '13:00' }, { id: 'a4', day: 4, from: '15:00', to: '19:00' }],
+        rm: [{ id: 'b1', day: 2, from: '15:00', to: '20:00' }, { id: 'b2', day: 4, from: '15:00', to: '20:00' }],
+        fr: [{ id: 'f1', day: 1, from: '08:00', to: '12:00' }, { id: 'f2', day: 3, from: '08:00', to: '12:00' }, { id: 'f3', day: 5, from: '08:00', to: '12:00' }],
+      },
+      draft: null,
+      ingreso: ing, checkins,
+      payments: [
+        { id: 'y1', pid: 'p1', date: '2026-09-08', concept: 'Cuota septiembre', method: 'Transferencia', amount: 38000 },
+        { id: 'y2', pid: 'p1', date: '2026-09-15', concept: 'Consulta Nutrición', method: 'Débito', amount: 25000 },
+        { id: 'y3', pid: 'p1', date: '2026-08-09', concept: 'Cuota agosto', method: 'Transferencia', amount: 38000 },
+        { id: 'y4', pid: 'p1', date: '2026-07-10', concept: 'Cuota julio', method: 'Efectivo', amount: 35000 },
+        { id: 'y5', pid: 'p2', date: '2026-08-11', concept: 'Cuota agosto', method: 'Efectivo', amount: 38000 },
+        { id: 'y6', pid: 'p8', date: '2026-09-15', concept: 'Cuota septiembre', method: 'Débito', amount: 38000 },
+        { id: 'y7', pid: 'p9', date: '2026-09-12', concept: 'Cuota septiembre', method: 'Transferencia', amount: 38000 },
+      ],
+      exceptions: [],
+      gymDay: 0, gymSel: null, consPro: null, consSel: null,
+      modal: null, toast: null, pFilter: 'todos',
+      form: { loginId: '', loginPw: '', q: '', ingQ: '', rGym: true, rCons: false },
+    };
+  }
+
+  componentDidMount() {
+    this._rs = () => this.setState({ width: window.innerWidth });
+    window.addEventListener('resize', this._rs);
+    this._rs();
+    document.documentElement.dataset.theme = this.state.theme;
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._rs); clearTimeout(this._tt); }
+  componentDidUpdate(pp, ps) {
+    if (pp.theme !== this.props.theme && this.props.theme) this.setState({ theme: this.props.theme });
+    if (ps.theme !== this.state.theme) document.documentElement.dataset.theme = this.state.theme;
+  }
+
+  p2(n) { return String(n).padStart(2, '0'); }
+  dOf(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+  ymd(d) { return d.getFullYear() + '-' + this.p2(d.getMonth() + 1) + '-' + this.p2(d.getDate()); }
+  add(s, n) { const x = this.dOf(s); x.setDate(x.getDate() + n); return this.ymd(x); }
+  toMin(hm) { const [h, m] = hm.split(':').map(Number); return h * 60 + m; }
+  hm(m) { return this.p2(Math.floor(m / 60)) + ':' + this.p2(m % 60); }
+  at(s, t) { const d = this.dOf(s); const m = typeof t === 'number' ? t * 60 : this.toMin(t); d.setMinutes(m); return d; }
+  off(s) { return Math.round((this.dOf(s) - this.dOf(this.TODAY)) / 864e5); }
+  dm(s) { const d = this.dOf(s); return this.p2(d.getDate()) + '/' + this.p2(d.getMonth() + 1); }
+  dmy(s) { return this.dm(s) + '/' + s.slice(0, 4); }
+  short(s) { const d = this.dOf(s); return this.DS[d.getDay()] + ' ' + d.getDate() + ' ' + this.M[d.getMonth()]; }
+  long(s) { const d = this.dOf(s); return this.D[d.getDay()] + ' ' + d.getDate() + ' de ' + this.ML[d.getMonth()]; }
+  rel(s) { const o = this.off(s); return o === 0 ? 'hoy' : o === 1 ? 'mañana' : o === -1 ? 'ayer' : o > 0 ? 'en ' + o + ' días' : 'hace ' + (-o) + ' días'; }
+  money(n) { return '$ ' + Number(n).toLocaleString('es-AR'); }
+  ini(n) { return n.replace('Lic. ', '').split(' ').map(x => x[0]).slice(0, 2).join(''); }
+  tc(t) { return { ok: ['var(--ok-ink)','var(--ok-soft)'], warn: ['var(--warn-ink)','var(--warn-soft)'], bad: ['var(--bad-ink)','var(--bad-soft)'], clin: ['var(--clin-ink)','var(--clin-soft)'], gym: ['var(--gym-ink)','var(--gym-soft)'], neu: ['var(--text-2)','var(--surface-2)'] }[t]; }
+  chip(label, t) { const [fg, bg] = this.tc(t); return { label, fg, bg }; }
+  statusChip(s, pro) {
+    const t = { 'Reservado': 'clin', 'Completado': 'ok', 'Ausente': 'bad', 'Cancelado en término': 'neu', 'Cancelado fuera de término': 'warn' }[s];
+    return this.chip(pro && s === 'Completado' ? 'Atendido' : s, t);
+  }
+  hasExc(pid) { return this.state.exceptions.some(e => e.pid === pid); }
+  feeInfo(p) {
+    const f = p.fee;
+    const map = {
+      al_dia: [this.chip('Al día', 'ok'), 'Próximo vencimiento: ' + (f.vence ? this.dmy(f.vence) : '')],
+      por_vencer: [this.chip('Vence el ' + (f.vence ? this.dm(f.vence) : ''), 'warn'), 'Vence ' + (f.vence ? this.rel(f.vence) : '') + '. Pagala para seguir reservando sin interrupciones.'],
+      vencida: [this.chip('Vencida · ' + f.dias + ' d', 'warn'), 'Venció el ' + (f.vencio ? this.dmy(f.vencio) : '') + '. En ' + (10 - (f.dias || 0)) + ' días se bloquea la reserva de gimnasio.'],
+      bloqueado: [this.chip('Bloqueado · ' + f.dias + ' d de mora', 'bad'), 'Venció el ' + (f.vencio ? this.dmy(f.vencio) : '') + '. La reserva de gimnasio está bloqueada.'],
+      baja: [this.chip('Dado de baja', 'neu'), 'El servicio de gimnasio está dado de baja.'],
+      na: [this.chip('Sin cuota de gym', 'neu'), 'Solo usás consultorios; se abonan por consulta.'],
+    }[f.st];
+    return { chip: map[0], line: map[1], amount: this.money(this.CUOTA), hasAmount: f.st !== 'na' && f.st !== 'baja' };
+  }
+
+  gymHours(s) { const w = this.dOf(s).getDay(); if (w === 0) return []; if (w === 6) return [9, 10, 11, 12]; const a = []; for (let h = 7; h <= 21; h++) a.push(h); return a; }
+  baseOcc(s, h) {
+    const o = this.off(s), w = this.dOf(s).getDay();
+    if (o === 0 && h === 10) return 14;
+    if ((o === 0 && (h === 18 || h === 19)) || (o === 2 && h === 19) || (o === 1 && h === 8)) return 20;
+    const peak = w === 6 ? { 9: 15, 10: 19, 11: 14, 12: 9 } : { 7: 16, 8: 18, 9: 12, 10: 10, 11: 8, 12: 9, 13: 11, 14: 7, 15: 6, 16: 9, 17: 14, 18: 19, 19: 19, 20: 17, 21: 10 };
+    const r = ((o * 37 + h * 13 + w * 7) % 11) - 5;
+    return Math.max(0, Math.min(20, Math.round((peak[h] || 8) + r * 0.6 - Math.max(0, o) * 1.3)));
+  }
+  occ(s, h) { return Math.min(20, this.baseOcc(s, h) + this.state.gym.filter(b => b.isNew && b.date === s && b.hour === h && b.status === 'Reservado').length); }
+
+  active(c) { return c.status === 'Reservado' || c.status === 'Completado' || c.status === 'Ausente'; }
+  proSlots(pid, s, avail) {
+    const pro = this.PROS.find(p => p.id === pid), w = this.dOf(s).getDay();
+    const out = [];
+    (avail || this.state.avail[pid]).filter(a => a.day === w).forEach(a => { for (let t = this.toMin(a.from); t + pro.dur <= this.toMin(a.to); t += pro.dur) out.push(t); });
+    return out.sort((a, b) => a - b).map(t => ({ t, time: this.hm(t), end: this.hm(t + pro.dur), b: this.state.cons.find(c => c.pro === pid && c.date === s && c.time === this.hm(t) && this.active(c)) }));
+  }
+  nextAgenda(pid) {
+    for (let i = 0; i < 21; i++) {
+      const s = this.add(this.TODAY, i), sl = this.proSlots(pid, s);
+      if (sl.some(x => !x.b && this.at(s, x.time) > this.NOW)) return { date: s, slots: sl };
+    }
+    return null;
+  }
+  items(pid) {
+    const g = this.state.gym.filter(b => b.pid === pid).map(b => ({ id: b.id, kind: 'gym', date: b.date, start: this.p2(b.hour) + ':00', end: this.p2(b.hour + 1) + ':00', svc: 'Gimnasio', who: 'Sala de entrenamiento · 60 min', status: b.status, ts: this.at(b.date, b.hour) }));
+    const c = this.state.cons.filter(b => b.pid === pid).map(b => { const p = this.PROS.find(x => x.id === b.pro); return { id: b.id, kind: 'cons', date: b.date, start: b.time, end: this.hm(this.toMin(b.time) + p.dur), svc: p.esp, who: p.name, status: b.status, ts: this.at(b.date, b.time) }; });
+    return g.concat(c);
+  }
+
+  flash(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: null }), 3200); }
+  setF(k, v) { this.setState(s => ({ form: Object.assign({}, s.form, { [k]: v }) })); }
+  go(id) { this.setState({ screen: id, gymSel: null, consSel: null }); window.scrollTo(0, 0); }
+  askCancel(it) {
+    const hrs = (it.ts - this.NOW) / 36e5, lim = it.kind === 'gym' ? 2 : 24;
+    this.setState({ modal: { type: 'cancel', it, ok: hrs >= lim, hrs, lim } });
+  }
+  doCancel() {
+    const { it, ok } = this.state.modal, st = ok ? 'Cancelado en término' : 'Cancelado fuera de término';
+    const key = it.kind === 'gym' ? 'gym' : 'cons';
+    this.setState(s => ({ [key]: s[key].map(b => b.id === it.id ? Object.assign({}, b, { status: st }) : b), modal: null }));
+    this.flash('Turno cancelado · ' + st.toLowerCase());
+  }
+  login(role, uid) {
+    this.setState({ auth: null, role, userId: uid || 'p1', acting: null, screen: { socio: 'inicio', profesional: 'agenda', recepcion: 'hoy' }[role], gymDay: 0, gymSel: null, consPro: null, consSel: null });
+    window.scrollTo(0, 0);
+  }
+
+  renderVals() {
+    const s = this.state, f = s.form, mob = s.width < 760, NOW = this.NOW;
+    const role = s.acting ? 'socio' : s.role, uid = s.acting || s.userId;
+    const me = s.persons.find(p => p.id === uid) || s.persons[0];
+    const on = {};
+    ['loginId','loginPw','rNombre','rApellido','rDni','rEmail','rPw','q','ingQ','monto','medio','motivo','vig','nName','nDni','nEmail'].forEach(k => on[k] = e => this.setF(k, e.target.value));
+    const toggleTheme = () => this.setState(x => ({ theme: x.theme === 'dark' ? 'light' : 'dark' }));
+
+    const navDefs = {
+      socio: [['inicio','Inicio','Inicio','neu'],['gym','Reservar gimnasio','Gimnasio','gym'],['consulta','Turno de consultorio','Consulta','clin'],['turnos','Mis turnos','Turnos','neu'],['cuenta','Estado de cuenta','Cuenta','neu']],
+      profesional: [['agenda','Agenda de hoy','Agenda','clin'],['disp','Disponibilidad','Disponibilidad','clin']],
+      recepcion: [['hoy','Hoy en el centro','Hoy','neu'],['ingreso','Ingreso al gimnasio','Ingreso','gym'],['personas','Personas','Personas','neu'],['pagos','Pagos y cuotas','Pagos','neu']],
+    }[role];
+    const nav = navDefs.map(([id, label, sh, k]) => {
+      const act = s.screen === id, g = k === 'gym';
+      return { id, label, short: sh, go: () => this.go(id), bg: act ? (g ? 'var(--gym-soft)' : 'var(--clin-soft)') : 'transparent', fg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-2)', fw: act ? 600 : 500, dot: g ? 'var(--gym)' : k === 'clin' ? 'var(--clin)' : 'var(--text-3)', mfg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-3)', mbar: act ? (g ? 'var(--gym)' : 'var(--clin)') : 'transparent' };
+    });
+    const is = {}; ['inicio','gym','consulta','turnos','cuenta','agenda','disp','hoy','ingreso','personas','pagos'].forEach(k => is[k] = s.screen === k);
+
+    let userCard;
+    if (role === 'socio') userCard = { name: me.name, ini: this.ini(me.name), sub: me.sv.map(x => this.SV[x]).join(' + ') };
+    else if (role === 'profesional') userCard = { name: 'Lic. Valentina Méndez', ini: 'VM', sub: 'Nutrición' };
+    else userCard = { name: 'Laura Benítez', ini: 'LB', sub: 'Recepción' };
+    const nowLabel = this.short(this.TODAY) + ' · 10:40';
+    const pages = {
+      inicio: ['Hola, ' + me.name.split(' ')[0], this.long(this.TODAY), ''],
+      gym: ['Reservar gimnasio', 'Gimnasio', 'Elegí un día y una franja de 60 minutos.'],
+      consulta: ['Turno de consultorio', 'Consultorios', 'Elegí la especialidad y un horario libre.'],
+      turnos: ['Mis turnos', me.name, ''],
+      cuenta: ['Estado de cuenta', me.name, ''],
+      agenda: ['Agenda de hoy', this.long(this.TODAY) + ' · Nutrición', ''],
+      disp: ['Disponibilidad', 'Lic. Valentina Méndez · Nutrición', 'Tus franjas semanales de atención.'],
+      hoy: ['Hoy en el centro', this.long(this.TODAY) + ' · 10:40', ''],
+      ingreso: ['Ingreso al gimnasio', 'Recepción', ''],
+      personas: ['Personas', 'Recepción', 'Socios y pacientes del centro.'],
+      pagos: ['Pagos y cuotas', 'Recepción', ''],
+    }[s.screen] || ['', '', ''];
+    const page = { title: pages[0], eyebrow: pages[1], sub: pages[2] };
+    const fee = this.feeInfo(me);
+    const blocked = me.fee.st === 'bloqueado' && !this.hasExc(me.id);
+    const noGym = !me.sv.includes('gym') || me.fee.st === 'baja';
+
+    const out = {
+      theme: s.theme, themeLabel: s.theme === 'dark' ? 'Modo claro' : 'Modo oscuro', themeShort: s.theme === 'dark' ? 'Claro' : 'Oscuro', toggleTheme,
+      loggedOut: !!s.auth, loggedIn: !s.auth, isLogin: s.auth === 'login', isRegister: s.auth === 'register',
+      isMobile: mob, isDesktop: !mob, f, on, nav, is, page, userCard, nowLabel, fee,
+      roleLabel: { socio: 'Socio / paciente', profesional: 'Profesional', recepcion: 'Recepción' }[role],
+      mainPad: mob ? '18px 16px 96px' : '32px 36px 56px', h1Size: mob ? '26px' : '32px', stickyBottom: mob ? '76px' : '20px',
+      acting: !!s.acting, actingName: s.acting ? me.name : '', stopActing: () => this.setState({ acting: null, screen: 'personas' }),
+      logout: () => this.setState({ auth: 'login', acting: null }),
+      noop: e => e.preventDefault(),
+      goRegister: e => { e.preventDefault(); this.setState({ auth: 'register' }); },
+      goLogin: e => { e.preventDefault(); this.setState({ auth: 'login' }); },
+      goTurnos: () => this.go('turnos'), goCuenta: () => this.go('cuenta'), goGym: () => this.go('gym'), goConsulta: () => this.go('consulta'), goPagos: () => this.go('pagos'),
+      toast: s.toast, toastTop: mob ? '64px' : '20px',
+    };
+
+    // auth
+    out.demo = [
+      ['María Pérez','Socia y paciente · al día','socio','p1','clin'],
+      ['Juan García','Socio · bloqueado por mora','socio','p2','bad'],
+      ['Carlos Soto','Solo paciente de Kinesiología','socio','p5','clin'],
+      ['Lic. Valentina Méndez','Profesional · Nutrición','profesional',null,'clin'],
+      ['Laura Benítez','Recepción · administración','recepcion',null,'gym'],
+    ].map(([name, sub, r, u, t]) => { const [fg, bg] = this.tc(t); return { name, sub, ini: this.ini(name), fg, bg, go: () => this.login(r, u) }; });
+    out.doLogin = () => { const p = s.persons.find(x => x.dni === f.loginId.trim() || x.email === f.loginId.trim()); this.login('socio', p ? p.id : 'p1'); };
+    out.regSv = [['rGym','Gimnasio','gym'],['rCons','Consultorios','clin']].map(([k, label, t]) => { const v = f[k]; return { label, toggle: () => this.setF(k, !v), bd: v ? 'var(--' + t + ')' : 'var(--border-2)', bg: v ? 'var(--' + t + '-soft)' : 'var(--surface)', fg: v ? 'var(--' + t + '-ink)' : 'var(--text-2)', dot: 'var(--' + t + ')' }; });
+    out.regErr = s.regErr || '';
+    out.doRegister = () => {
+      const dni = (f.rDni || '').replace(/\D/g, '');
+      if (!f.rNombre || !f.rApellido) return this.setState({ regErr: 'Completá nombre y apellido.' });
+      if (dni.length < 7) return this.setState({ regErr: 'Ingresá un DNI válido, sin puntos.' });
+      if (s.persons.some(p => p.dni === dni)) return this.setState({ regErr: 'Ya existe una cuenta con ese DNI.' });
+      const sv = []; if (f.rGym) sv.push('gym'); if (f.rCons) sv.push('nut');
+      const id = 'p' + Date.now(), name = f.rNombre.trim() + ' ' + f.rApellido.trim();
+      this.setState(x => ({ regErr: '', persons: x.persons.concat([{ id, name, dni, sv, email: f.rEmail || '', fee: f.rGym ? { st: 'al_dia', vence: '2026-10-29' } : { st: 'na' } }]) }), () => { this.login('socio', id); this.flash('¡Bienvenido/a a Vitalys, ' + f.rNombre.trim() + '!'); });
+    };
+
+    // INICIO
+    if (is.inicio) {
+      const its = this.items(uid);
+      const fut = its.filter(i => i.status === 'Reservado' && i.ts > NOW).sort((a, b) => a.ts - b.ts);
+      const n0 = fut[0], g = n0 && n0.kind === 'gym';
+      const mon = this.add(this.TODAY, -((this.dOf(this.TODAY).getDay() + 6) % 7));
+      const week = [0, 1, 2, 3, 4, 5, 6].map(i => {
+        const d = this.add(mon, i), today = d === this.TODAY, dd = this.dOf(d);
+        const list = its.filter(x => x.date === d && x.status !== 'Cancelado en término' && x.status !== 'Cancelado fuera de término').sort((a, b) => a.ts - b.ts);
+        return { dow: this.DS[dd.getDay()], num: dd.getDate(), bg: today ? 'var(--clin-soft)' : 'transparent', bd: today ? 'var(--clin)' : 'var(--border)', numFg: today ? 'var(--clin-ink)' : this.dOf(d) < this.dOf(this.TODAY) ? 'var(--text-3)' : 'var(--text)',
+          items: list.map(x => ({ t: x.start, bg: x.kind === 'gym' ? 'var(--gym-soft)' : 'var(--clin-soft)', fg: x.kind === 'gym' ? 'var(--gym-ink)' : 'var(--clin-ink)', deco: x.status === 'Ausente' ? 'line-through' : 'none' })) };
+      });
+      const wk = its.filter(x => this.off(x.date) >= this.off(mon) && this.off(x.date) <= this.off(mon) + 6);
+      const pend = wk.filter(x => x.status === 'Reservado' && x.ts > NOW).length, done = wk.filter(x => x.status === 'Completado').length;
+      out.ini = {
+        hasNext: !!n0, noNext: !n0, week,
+        weekSummary: pend + (pend === 1 ? ' turno por delante' : ' turnos por delante') + ' · ' + done + (done === 1 ? ' completado' : ' completados'),
+        nt: n0 ? { rel: this.rel(n0.date), dow: this.D[this.dOf(n0.date).getDay()], day: this.dOf(n0.date).getDate(), mon: this.ML[this.dOf(n0.date).getMonth()], svc: g ? 'Gimnasio' : 'Consulta de ' + n0.svc, start: n0.start, end: n0.end, who: n0.who, kindLabel: g ? 'Gimnasio' : 'Consultorio', soft: g ? 'var(--gym-soft)' : 'var(--clin-soft)', ink: g ? 'var(--gym-ink)' : 'var(--clin-ink)', dot: g ? 'var(--gym)' : 'var(--clin)', cancel: () => this.askCancel(n0) } : {},
+        gymDisabled: noGym, gymOp: noGym ? 0.5 : 1,
+        gymSub: noGym ? 'No tenés el servicio de gimnasio activo.' : blocked ? 'Bloqueado por mora: regularizá tu cuota para reservar.' : 'Franjas de 60 min · hasta 7 días antes.',
+      };
+    }
+
+    // GYM
+    out.gymRules = ['Lun a vie 07–22 · Sáb 09–13', 'Franjas de 60 min · cupo 20', '1 turno por día', 'Hasta 7 días antes y 1 h antes'];
+    if (is.gym) {
+      const mine = s.gym.filter(b => b.pid === uid && b.status === 'Reservado');
+      const lock = noGym || blocked;
+      const days = [0, 1, 2, 3, 4, 5, 6].map(i => {
+        const d = this.add(this.TODAY, i), dd = this.dOf(d), closed = !this.gymHours(d).length, act = s.gymDay === i, has = mine.some(b => b.date === d);
+        return { dow: this.DS[dd.getDay()], num: dd.getDate(), sub: closed ? 'Cerrado' : has ? 'Tu turno' : i === 0 ? 'Hoy' : '', pick: () => this.setState({ gymDay: i, gymSel: null }),
+          bg: act ? 'var(--gym)' : 'var(--surface)', fg: act ? 'var(--on-gym)' : closed ? 'var(--text-3)' : 'var(--text)', bd: act ? 'var(--gym)' : 'var(--border)', op: closed && !act ? 0.6 : 1 };
+      });
+      const date = this.add(this.TODAY, s.gymDay), hours = this.gymHours(date), dayMine = mine.find(b => b.date === date);
+      const slots = hours.map(h => {
+        const c = this.occ(date, h), st = this.at(date, h), isMine = dayMine && dayMine.hour === h;
+        let reason = null;
+        if (isMine) reason = 'Tu turno';
+        else if (st <= NOW) reason = 'Ya pasó';
+        else if (st - 36e5 < NOW) reason = 'Cierra 1 h antes';
+        else if (lock) reason = noGym ? 'No disponible' : 'Bloqueado';
+        else if (dayMine) reason = 'Ya tenés turno este día';
+        else if (c >= 20) reason = 'Cupo completo';
+        const sel = s.gymSel && s.gymSel.date === date && s.gymSel.hour === h, dis = !!reason;
+        return { time: this.p2(h) + ':00', end: this.p2(h + 1) + ':00', count: c, pct: (c / 20 * 100) + '%', disabled: dis,
+          note: reason || (20 - c === 1 ? '1 lugar libre' : (20 - c) + ' lugares libres'),
+          noteFg: isMine ? 'var(--gym-ink)' : reason === 'Cupo completo' ? 'var(--bad-ink)' : dis ? 'var(--text-3)' : 'var(--ok-ink)',
+          bar: isMine || !dis ? 'var(--gym)' : 'var(--text-3)',
+          bd: sel || isMine ? 'var(--gym)' : 'var(--border)', bg: sel ? 'var(--gym-soft)' : dis && !isMine ? 'var(--surface-2)' : 'var(--surface)', op: dis && !isMine ? 0.7 : 1,
+          pick: () => this.setState({ gymSel: { date, hour: h } }) };
+      });
+      const sel = s.gymSel;
+      out.gym = {
+        days, slots, closed: !hours.length, dayTitle: this.long(date) + (s.gymDay === 0 ? ' · hoy' : ''),
+        dayHours: !hours.length ? 'Cerrado' : this.dOf(date).getDay() === 6 ? '09:00 – 13:00' : '07:00 – 22:00',
+        lock, exc: me.fee.st === 'bloqueado' && !blocked, excText: '',
+        lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Tu cuota está vencida hace ' + me.fee.dias + ' días',
+        lockText: noGym ? 'Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.' : 'Con más de 10 días de mora no se puede reservar el gimnasio. Las consultas siguen habilitadas. Regularizá el pago en recepción.',
+        hasSel: !!sel, selLabel: sel ? this.long(sel.date) + ' · ' + this.p2(sel.hour) + ':00 – ' + this.p2(sel.hour + 1) + ':00' : '',
+        clear: () => this.setState({ gymSel: null }),
+        confirm: () => { const x = s.gymSel; this.setState(y => ({ gym: y.gym.concat([{ id: 'g' + Date.now(), pid: uid, date: x.date, hour: x.hour, status: 'Reservado', isNew: true }]), gymSel: null })); this.flash('Listo, reservaste gimnasio el ' + this.short(x.date) + ' a las ' + this.p2(x.hour) + ':00'); },
+      };
+    }
+
+    // CONSULTA
+    if (is.consulta) {
+      const pros = this.PROS.map(p => {
+        const na = this.nextAgenda(p.id), free = na ? na.slots.filter(x => !x.b && this.at(na.date, x.time) > NOW).length : 0, act = s.consPro === p.id;
+        return { esp: p.esp, dur: p.dur, name: p.name, next: na ? 'Próxima agenda: ' + this.rel(na.date) + ', ' + this.short(na.date).toLowerCase() + ' · ' + free + ' libres' : 'Sin agenda próxima',
+          bd: act ? 'var(--clin)' : 'var(--border)', bg: act ? 'var(--clin-soft)' : 'var(--surface)', pick: () => this.setState({ consPro: p.id, consSel: null }) };
+      });
+      const pro = this.PROS.find(p => p.id === s.consPro), na = pro ? this.nextAgenda(pro.id) : null;
+      const slots = na ? na.slots.map(x => {
+        const past = this.at(na.date, x.time) <= NOW, taken = !!x.b, dis = past || taken, sel = s.consSel === x.time;
+        return { time: x.time, label: taken ? 'Ocupado' : past ? 'Ya pasó' : 'Libre', disabled: dis, op: dis ? 0.55 : 1,
+          bd: sel ? 'var(--clin)' : 'var(--border)', bg: sel ? 'var(--clin)' : dis ? 'var(--surface-2)' : 'var(--surface)', fg: sel ? 'var(--on-clin)' : dis ? 'var(--text-3)' : 'var(--text)',
+          pick: () => this.setState({ consSel: x.time }) };
+      }) : [];
+      const hasPro = !!pro;
+      out.cons = {
+        pros, hasPro, slots, moraNote: me.fee.st === 'bloqueado' || me.fee.st === 'vencida',
+        step2Fg: hasPro ? 'var(--clin-ink)' : 'var(--text-3)', step2Bg: hasPro ? 'var(--clin)' : 'var(--surface-2)', step2Num: hasPro ? 'var(--on-clin)' : 'var(--text-3)',
+        dayTitle: na ? this.long(na.date) + ' · ' + this.rel(na.date) : '', proLine: pro ? pro.name + ' · ' + pro.esp + ' · ' + pro.dur + ' min' : '',
+        hasSel: !!(pro && s.consSel), selEsp: pro ? pro.esp : '', selPro: pro ? pro.name + ' · ' + pro.dur + ' min' : '',
+        selLabel: na && s.consSel ? this.long(na.date) + ' · ' + s.consSel + ' – ' + this.hm(this.toMin(s.consSel) + pro.dur) : '',
+        clear: () => this.setState({ consSel: null }),
+        confirm: () => { const t = s.consSel; this.setState(y => ({ cons: y.cons.concat([{ id: 'c' + Date.now(), pid: uid, pro: pro.id, date: na.date, time: t, status: 'Reservado' }]), consSel: null, consPro: null })); this.flash('Turno confirmado: ' + pro.esp + ', ' + this.short(na.date) + ' ' + t); },
+      };
+    }
+
+    // TURNOS
+    if (is.turnos) {
+      const its = this.items(uid);
+      const row = (x, can) => ({ date: this.short(x.date), time: x.start + ' – ' + x.end, svc: x.svc, who: x.who, dot: x.kind === 'gym' ? 'var(--gym)' : 'var(--clin)', chip: this.statusChip(x.status), canCancel: can, cancel: () => this.askCancel(x) });
+      const up = its.filter(x => x.status === 'Reservado' && x.ts > NOW).sort((a, b) => a.ts - b.ts).map(x => row(x, true));
+      const hist = its.filter(x => !(x.status === 'Reservado' && x.ts > NOW)).sort((a, b) => b.ts - a.ts).map(x => row(x, false));
+      out.turnos = {
+        groups: [{ title: 'Próximos', note: 'Gimnasio: sin cargo hasta 2 h antes · Consultorio: hasta 24 h antes', rows: up, empty: !up.length }, { title: 'Historial', note: '', rows: hist, empty: !hist.length }],
+        cols: mob ? 'minmax(0,1fr) auto' : '1.1fr .9fr 1.8fr 1.5fr 110px', gap: mob ? '6px 12px' : '12px',
+        timeAlign: mob ? 'right' : 'left', chipJustify: 'start', actCol: mob ? '2' : 'auto',
+      };
+    }
+
+    // CUENTA
+    if (is.cuenta) {
+      const pays = s.payments.filter(p => p.pid === uid).sort((a, b) => b.date.localeCompare(a.date));
+      const lastCuota = pays.find(p => p.concept.startsWith('Cuota'));
+      const fs = me.fee, due = fs.vence || fs.vencio, stepsOk = !!due && fs.st !== 'na' && fs.st !== 'baja';
+      const pastDue = fs.st === 'vencida' || fs.st === 'bloqueado';
+      out.acc = {
+        blocked, dias: fs.dias, hasSteps: stepsOk,
+        steps: stepsOk ? [
+          { label: 'Último pago', date: lastCuota ? this.dm(lastCuota.date) : '—', bar: 'var(--ok)', fg: 'var(--text)' },
+          { label: pastDue ? 'Venció' : 'Vence', date: this.dm(due), bar: pastDue ? 'var(--warn)' : 'var(--border-2)', fg: pastDue ? 'var(--warn-ink)' : 'var(--text)' },
+          { label: 'Bloqueo de gimnasio', date: this.dm(this.add(due, 10)), bar: fs.st === 'bloqueado' ? 'var(--bad)' : 'var(--border-2)', fg: fs.st === 'bloqueado' ? 'var(--bad-ink)' : 'var(--text-2)' },
+        ] : [],
+        pays: pays.map(p => ({ concept: p.concept, amount: this.money(p.amount), date: this.dmy(p.date), method: p.method })), noPays: !pays.length,
+      };
+    }
+
+    // AGENDA
+    if (is.agenda) {
+      const sl = this.proSlots('vm', this.TODAY);
+      const rows = sl.map(x => {
+        const st = this.at(this.TODAY, x.time), en = this.at(this.TODAY, x.end), b = x.b, p = b && s.persons.find(q => q.id === b.pid);
+        const past = en <= NOW, cur = st <= NOW && en > NOW;
+        if (!b) return { time: x.time, end: x.end, name: past ? 'Hueco libre (pasado)' : 'Libre', booked: false, fw: 400, nameFg: 'var(--text-3)', bg: 'transparent', bd: 'var(--border-2)', bdStyle: 'dashed', op: past ? 0.6 : 1, showChip: false, pending: false, marked: false, chip: {} };
+        const pending = past && b.status === 'Reservado', marked = b.status === 'Completado' || b.status === 'Ausente';
+        const set = v => () => this.setState(y => ({ cons: y.cons.map(c => c.id === b.id ? Object.assign({}, c, { status: v }) : c) }));
+        return { time: x.time, end: x.end, name: p.name, dni: p.dni, booked: true, fw: 600, nameFg: 'var(--text)', bg: cur ? 'var(--clin-soft)' : 'var(--surface)', bd: cur ? 'var(--clin)' : 'var(--border)', bdStyle: 'solid', op: 1,
+          showChip: !pending, chip: cur && b.status === 'Reservado' ? this.chip('En curso', 'clin') : pending ? {} : b.status === 'Reservado' ? this.chip('Reservado', 'neu') : this.statusChip(b.status, true),
+          pending, marked, att: set('Completado'), abs: set('Ausente'), undo: set('Reservado') };
+      });
+      const booked = sl.filter(x => x.b).length;
+      out.ag = { rows, stats: [{ v: booked, l: 'pacientes' }, { v: sl.length - booked, l: 'huecos libres' }, { v: sl.filter(x => x.b && x.b.status === 'Completado').length, l: 'atendidos' }, { v: '30 min', l: 'por consulta' }] };
+    }
+
+    // DISPONIBILIDAD
+    const hourOpts = []; for (let m = 7 * 60; m <= 21 * 60; m += 30) hourOpts.push(this.hm(m));
+    out.hourOpts = hourOpts;
+    out.dayOpts = [1, 2, 3, 4, 5, 6].map(v => ({ v, l: this.D[v] }));
+    if (is.disp) {
+      const dr = s.draft || s.avail.vm;
+      const errs = {};
+      dr.forEach(a => {
+        if (this.toMin(a.to) <= this.toMin(a.from)) { errs[a.id] = 'El horario de fin tiene que ser posterior al de inicio.'; return; }
+        const o = dr.find(b => b.id !== a.id && b.day === a.day && this.toMin(b.from) < this.toMin(a.to) && this.toMin(a.from) < this.toMin(b.to));
+        if (o) errs[a.id] = 'Se superpone con ' + this.D[o.day].toLowerCase() + ' ' + o.from + '–' + o.to + '.';
+      });
+      const upd = (id, patch) => this.setState(y => ({ draft: (y.draft || y.avail.vm).map(a => a.id === id ? Object.assign({}, a, patch) : a) }));
+      const hasErr = Object.keys(errs).length > 0, dirty = !!s.draft && JSON.stringify(s.draft) !== JSON.stringify(s.avail.vm);
+      const hours = []; for (let h = 7; h < 21; h++) hours.push(this.p2(h));
+      out.disp = {
+        rows: dr.map(a => ({ day: a.day, from: a.from, to: a.to, err: errs[a.id] || '', bd: errs[a.id] ? 'var(--bad)' : 'var(--border)', bg: errs[a.id] ? 'var(--bad-soft)' : 'transparent',
+          onDay: e => upd(a.id, { day: +e.target.value }), onFrom: e => upd(a.id, { from: e.target.value }), onTo: e => upd(a.id, { to: e.target.value }),
+          remove: () => this.setState(y => ({ draft: (y.draft || y.avail.vm).filter(b => b.id !== a.id) })) })),
+        add: () => this.setState(y => ({ draft: (y.draft || y.avail.vm).concat([{ id: 'a' + Date.now(), day: 5, from: '09:00', to: '12:00' }]) })),
+        clean: !dirty, discardOp: dirty ? 1 : 0.5, discard: () => this.setState({ draft: null }),
+        cantSave: !dirty || hasErr, saveOp: !dirty || hasErr ? 0.45 : 1,
+        save: () => { this.setState(y => ({ avail: Object.assign({}, y.avail, { vm: y.draft }), draft: null })); this.flash('Disponibilidad guardada'); },
+        note: hasErr ? 'Hay franjas que se superponen o son inválidas. Corregilas para poder guardar.' : 'Las franjas de un mismo día no pueden superponerse. Los turnos ya reservados se mantienen.',
+        noteBg: hasErr ? 'var(--bad-soft)' : 'var(--clin-soft)', noteFg: hasErr ? 'var(--bad-ink)' : 'var(--clin-ink)',
+        durNote: 'Consultas de 30 min', hours,
+        grid: [1, 2, 3, 4, 5, 6].map(d => ({ label: this.DS[d], blocks: dr.filter(a => a.day === d && this.toMin(a.to) > this.toMin(a.from)).map(a => {
+          const e = !!errs[a.id], t0 = Math.max(0, this.toMin(a.from) - 420), t1 = Math.min(840, this.toMin(a.to) - 420);
+          return { top: (t0 / 60 * 30) + 'px', h: ((t1 - t0) / 60 * 30) + 'px', from: a.from, to: a.to, bg: e ? 'var(--bad-soft)' : 'var(--clin-soft)', bd: e ? 'var(--bad)' : 'var(--clin)', fg: e ? 'var(--bad-ink)' : 'var(--clin-ink)' };
+        }) })),
+      };
+    }
+
+    // HOY
+    const overdue = s.persons.filter(p => (p.fee.st === 'vencida' || p.fee.st === 'bloqueado')).sort((a, b) => b.fee.dias - a.fee.dias);
+    if (is.hoy) {
+      const hrs = this.gymHours(this.TODAY);
+      const tot = hrs.reduce((a, h) => a + this.occ(this.TODAY, h), 0);
+      const inNow = Object.keys(s.checkins).length;
+      const consHoy = s.cons.filter(c => c.date === this.TODAY && this.active(c)).length;
+      const bl = overdue.filter(p => p.fee.st === 'bloqueado').length;
+      out.hoy = {
+        kpis: [
+          { label: 'En el gimnasio ahora', value: inNow, sub: 'franja 10:00 · de 20 lugares', dot: 'var(--gym)', fg: 'var(--text)' },
+          { label: 'Turnos de gym hoy', value: tot, sub: hrs.length + ' franjas · ' + Math.round(tot / (hrs.length * 20) * 100) + '% ocupado', dot: 'var(--gym)', fg: 'var(--text)' },
+          { label: 'Consultas hoy', value: consHoy, sub: 'Nutrición y Psicología', dot: 'var(--clin)', fg: 'var(--text)' },
+          { label: 'Cuotas vencidas', value: overdue.length, sub: bl + ' bloqueadas por mora', dot: 'var(--bad)', fg: overdue.length ? 'var(--bad-ink)' : 'var(--text)' },
+        ],
+        barGap: mob ? '3px' : '6px',
+        bars: hrs.map(h => {
+          const v = this.occ(this.TODAY, h), cur = h === 10, past = h < 10;
+          return { h: this.p2(h), v, pct: (v / 20 * 100) + '%', bg: cur ? 'var(--gym)' : past ? 'var(--gym-past)' : 'var(--gym-soft)', bd: cur || past ? 'transparent' : 'var(--gym)', bdStyle: past || cur ? 'solid' : 'dashed', fw: cur ? 700 : 500, vFg: cur ? 'var(--gym-ink)' : 'var(--text-3)', lFg: cur ? 'var(--gym-ink)' : 'var(--text-3)' };
+        }),
+      };
+      const att = [];
+      overdue.forEach(p => att.push({ name: p.name, detail: p.fee.st === 'bloqueado' ? (this.hasExc(p.id) ? 'Excepción autorizada · ' + p.fee.dias + ' días de mora' : p.fee.dias + ' días de mora · no puede reservar gimnasio') : 'Vencida hace ' + p.fee.dias + ' días · se bloquea en ' + (10 - p.fee.dias) + ' días', chip: p.fee.st === 'bloqueado' ? this.chip('Bloqueado', 'bad') : this.chip('Vencida', 'warn') }));
+      s.persons.filter(p => p.fee.st === 'por_vencer').forEach(p => att.push({ name: p.name, detail: 'Vence el ' + this.dm(p.fee.vence) + ' (' + this.rel(p.fee.vence) + ')', chip: this.chip('Por vencer', 'warn') }));
+      out.hoy.att = att; out.hoy.attCount = att.length + ' personas';
+    }
+
+    // INGRESO
+    if (is.ingreso) {
+      const q = (f.ingQ || '').toLowerCase().trim();
+      const rows = s.ingreso.filter(r => !q || r.name.toLowerCase().includes(q) || r.dni.includes(q))
+        .sort((a, b) => (s.checkins[a.id] ? 1 : 0) - (s.checkins[b.id] ? 1 : 0))
+        .map(r => ({ name: r.name, dni: r.dni, in: !!s.checkins[r.id], out: !s.checkins[r.id], time: s.checkins[r.id] || '',
+          mark: () => { this.setState(y => ({ checkins: Object.assign({}, y.checkins, { [r.id]: '10:40' }) })); this.flash(r.name + ' ingresó al gimnasio'); },
+          undo: () => this.setState(y => { const c = Object.assign({}, y.checkins); delete c[r.id]; return { checkins: c }; }) }));
+      const n = Object.keys(s.checkins).length, t = s.ingreso.length;
+      out.ing = { rows, empty: !rows.length, progress: n + ' de ' + t + ' ingresaron', pct: (n / t * 100) + '%' };
+    }
+
+    // PERSONAS
+    if (is.personas) {
+      const q = (f.q || '').toLowerCase().trim();
+      const flt = { todos: () => true, gym: p => p.sv.includes('gym'), cons: p => p.sv.some(x => x !== 'gym'), deuda: p => ['vencida','bloqueado'].includes(p.fee.st) };
+      const rows = s.persons.filter(p => (!q || p.name.toLowerCase().includes(q) || p.dni.includes(q)) && flt[s.pFilter](p)).map(p => ({
+        name: p.name, dni: p.dni, email: p.email, op: p.fee.st === 'baja' ? 0.6 : 1,
+        sv: p.sv.map(x => { const [fg, bg] = this.tc(x === 'gym' ? 'gym' : 'clin'); return { label: this.SV[x], fg, bg }; }),
+        chip: this.feeInfo(p).chip,
+        act: () => { this.setState({ acting: p.id, screen: 'inicio', gymDay: 0, gymSel: null, consPro: null, consSel: null }); window.scrollTo(0, 0); },
+      }));
+      out.per = {
+        rows, empty: !rows.length,
+        filters: [['todos','Todos'],['gym','Gimnasio'],['cons','Consultorio'],['deuda','Con deuda']].map(([k, l]) => { const a = s.pFilter === k; return { label: l, pick: () => this.setState({ pFilter: k }), bg: a ? 'var(--text)' : 'var(--surface)', fg: a ? 'var(--bg)' : 'var(--text-2)', bd: a ? 'var(--text)' : 'var(--border)' }; }),
+        cols: mob ? 'minmax(0,1fr) auto' : '1.5fr 1fr 1.7fr 1.4fr 120px', dniAlign: mob ? 'right' : 'left', chipJustify: mob ? 'end' : 'start', actCol: mob ? '1 / -1' : 'auto',
+      };
+    }
+    out.openNueva = () => this.setState(y => ({ modal: { type: 'nueva', sv: ['gym'] }, form: Object.assign({}, y.form, { nName: '', nDni: '', nEmail: '' }) }));
+
+    // PAGOS
+    const openPago = p => this.setState(y => ({ modal: { type: 'pago', pid: p.id }, form: Object.assign({}, y.form, { monto: String(this.CUOTA), medio: 'Efectivo' }) }));
+    const openExc = p => this.setState(y => ({ modal: { type: 'exc', pid: p.id }, form: Object.assign({}, y.form, { motivo: '', vig: 'Hasta 48 h' }) }));
+    if (is.pagos) {
+      out.pag = {
+        overdue: overdue.map(p => {
+          const ex = this.hasExc(p.id), b = p.fee.st === 'bloqueado';
+          return { name: p.name, dni: p.dni, vencio: this.dm(p.fee.vencio), dias: p.fee.dias + ' días de atraso', diasFg: b ? 'var(--bad-ink)' : 'var(--warn-ink)',
+            chip: b ? (ex ? this.chip('Excepción activa', 'warn') : this.chip('Reserva de gym bloqueada', 'bad')) : this.chip('Se bloquea en ' + (10 - p.fee.dias) + ' días', 'warn'),
+            canExc: b && !ex, pay: () => openPago(p), exc: () => openExc(p) };
+        }),
+        noOverdue: !overdue.length,
+        soon: s.persons.filter(p => p.fee.st === 'por_vencer').map(p => ({ name: p.name, label: 'Vence ' + this.dm(p.fee.vence) })),
+        recent: s.payments.slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5).map(p => ({ name: (s.persons.find(x => x.id === p.pid) || {}).name, amount: this.money(p.amount), date: this.dm(p.date), concept: p.concept, method: p.method })),
+        excs: s.exceptions.map(e => ({ name: (s.persons.find(x => x.id === e.pid) || {}).name, motivo: e.motivo, vig: e.vig, by: 'Laura Benítez', when: this.dm(this.TODAY) + ' 10:40' })),
+        noExcs: !s.exceptions.length,
+      };
+    }
+
+    // MODALES
+    const md = s.modal;
+    out.modalOpen = !!md; out.closeModal = () => this.setState({ modal: null }); out.stop = e => e.stopPropagation();
+    out.modalAlign = mob ? 'flex-end' : 'center'; out.modalPad = mob ? '0' : '20px'; out.modalRadius = mob ? '18px 18px 0 0' : '16px';
+    out.m = { cancel: false, pago: false, exc: false, nueva: false };
+    if (md && md.type === 'cancel') {
+      const it = md.it, g = it.kind === 'gym';
+      out.m = Object.assign(out.m, { cancel: true, svc: g ? 'Gimnasio' : 'Consulta de ' + it.svc + ' · ' + it.who, when: this.long(it.date) + ' · ' + it.start + ' – ' + it.end,
+        polBg: md.ok ? 'var(--ok-soft)' : 'var(--warn-soft)', polFg: md.ok ? 'var(--ok-ink)' : 'var(--warn-ink)',
+        polTitle: md.ok ? 'Cancelación en término, sin cargo' : 'Cancelación fuera de término',
+        polText: md.ok ? 'Faltan ' + Math.floor(md.hrs) + ' h; el límite es ' + md.lim + ' h antes del turno.' : 'Faltan menos de ' + md.lim + ' h. El turno queda registrado como “cancelado fuera de término”.' });
+    }
+    out.doCancel = () => this.doCancel();
+    if (md && (md.type === 'pago' || md.type === 'exc')) {
+      const p = s.persons.find(x => x.id === md.pid);
+      const venc = p.fee.vencio || p.fee.vence;
+      out.m = Object.assign(out.m, { pago: md.type === 'pago', exc: md.type === 'exc', name: p.name, dni: p.dni, dias: p.fee.dias, concept: 'Cuota ' + this.ML[this.dOf(venc || this.TODAY).getMonth()] + ' · gimnasio',
+        excDisabled: !(f.motivo || '').trim(), excOp: (f.motivo || '').trim() ? 1 : 0.5 });
+    }
+    out.doPago = () => {
+      const p = s.persons.find(x => x.id === md.pid), venc = p.fee.vencio || p.fee.vence || this.TODAY;
+      const amt = parseInt(String(f.monto).replace(/\D/g, ''), 10) || this.CUOTA;
+      this.setState(y => ({
+        persons: y.persons.map(x => x.id === p.id ? Object.assign({}, x, { fee: { st: 'al_dia', vence: '2026-10-29' } }) : x),
+        payments: y.payments.concat([{ id: 'y' + Date.now(), pid: p.id, date: this.TODAY, concept: 'Cuota ' + this.ML[this.dOf(venc).getMonth()], method: f.medio || 'Efectivo', amount: amt }]),
+        exceptions: y.exceptions.filter(e => e.pid !== p.id), modal: null,
+      }));
+      this.flash('Pago registrado · ' + p.name + ' queda al día');
+    };
+    out.doExc = () => {
+      const p = s.persons.find(x => x.id === md.pid);
+      this.setState(y => ({ exceptions: y.exceptions.concat([{ pid: p.id, motivo: f.motivo.trim(), vig: f.vig || 'Hasta 48 h' }]), modal: null }));
+      this.flash('Excepción registrada para ' + p.name);
+    };
+    if (md && md.type === 'nueva') {
+      out.m = Object.assign(out.m, { nueva: true, err: md.err || '',
+        svOpts: Object.keys(this.SV).map(k => { const a = md.sv.includes(k), t = k === 'gym' ? 'gym' : 'clin';
+          return { label: this.SV[k], bd: a ? 'var(--' + t + ')' : 'var(--border-2)', bg: a ? 'var(--' + t + '-soft)' : 'var(--surface)', fg: a ? 'var(--' + t + '-ink)' : 'var(--text-2)',
+            toggle: () => this.setState(y => ({ modal: Object.assign({}, y.modal, { sv: a ? y.modal.sv.filter(z => z !== k) : y.modal.sv.concat([k]) }) })) }; }) });
+    }
+    out.doNueva = () => {
+      const dni = (f.nDni || '').replace(/\D/g, ''), name = (f.nName || '').trim();
+      const err = !name ? 'Ingresá nombre y apellido.' : dni.length < 7 ? 'El DNI tiene que tener 7 u 8 dígitos.' : s.persons.some(p => p.dni === dni) ? 'Ya existe una persona con ese DNI.' : !md.sv.length ? 'Elegí al menos un servicio.' : '';
+      if (err) return this.setState(y => ({ modal: Object.assign({}, y.modal, { err }) }));
+      this.setState(y => ({ persons: [{ id: 'p' + Date.now(), name, dni, sv: md.sv, email: f.nEmail || '', fee: md.sv.includes('gym') ? { st: 'al_dia', vence: '2026-10-29' } : { st: 'na' } }].concat(y.persons), modal: null }));
+      this.flash(name + ' se agregó a Personas');
+    };
+    return out;
+  }
+}
+</script>
+</body>
+</html>

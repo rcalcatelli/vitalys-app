@@ -147,11 +147,30 @@ Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-dep
 
 - [x] Conformación del equipo y elección de tutora
 - [x] **1.ª entrega** — Propuesta y repositorio (30/08)
-- [ ] **2.ª entrega** — Esquema de BD y módulos (27/09): la tutora todavía no la cerró. Devolución pendiente de resolver en su totalidad.
+- [ ] **2.ª entrega** — Esquema de BD y módulos (27/09): **las 12 observaciones de la devolución están resueltas** (ver detalle abajo). Pendiente de confirmación de la tutora.
 - [ ] **Entrega final** — Informe, video y despliegue (14/11)
 - [ ] Defensa oral
 
+### Devolución de la 2.ª entrega — estado de las 12 observaciones
+
+| # | Observación | Resuelto en |
+|---|-------------|-------------|
+| 1 | Tabla `excepciones_morosidad` ausente del esquema | `db/migration/V3__excepciones_morosidad.sql`, más el diccionario de datos y el diagrama ER |
+| 2 | El script de datos de prueba no se podía ejecutar | `db/dml/seed.sql`: cuatro errores de SQL, tres turnos en días en que el profesional no atiende y el hash que no correspondía a la contraseña documentada |
+| 3 | Relevamiento sin hacer | `docs/01-propuesta/relevamiento/perfiles-usuario.json` y la sección de relevamiento del RFC-0001 |
+| 4 | Estados de sprints incorrectos | `docs/metodologia/plan-sprints.md`, con el estado real por tarea. Las fechas no cambian |
+| 5 | Turno de gimnasio sin definir | `db/migration/V2__reglas_gimnasio.sql`, RN-14 a RN-19, RF-33 a RF-35 y la Decisión de dominio 11 |
+| 6 | Sin fecha de inicio de membresía y cálculo de mora incorrecto | `db/migration/V4__fecha_inicio_membresia.sql` y RN-01 reescrita |
+| 7 | RF-01 permitía elegir el rol en el registro público | RF-01, CA-01-4 y CA-01-7; RF-31 para el vínculo por email; Decisión de dominio 10 |
+| 8 | La restricción de solapamiento no cubría ausentes ni completados | `db/migration/V5__ensanchar_excl_turnos_overlap.sql` y RN-03 |
+| 9 | Nombres de columna desunificados | `cancelado_por_usuario` unificado en todos los documentos y en el seed |
+| 10 | `modulos.md` y README desactualizados | Ambos archivos |
+| 11 | Seis inconsistencias en el RFC-0001 y los documentos de diseño | RFC-0001, `diagramas.md` y `wireframes.md` |
+| 12 | Riesgo de los tipos enumerados fuera de la matriz | RG-13 en la matriz de riesgos, con la solución ya implementada y verificada (`@JdbcTypeCode(SqlTypes.NAMED_ENUM)`) |
+
+Las desviaciones deliberadas respecto del mockup de diseño están documentadas, con el requerimiento que las motiva, en [`docs/02-diseno/design-system/README.md`](docs/02-diseno/design-system/README.md).
+
 **Avance real (no altera las fechas de arriba):**
 
-- Sprint 2 completo: backend con autenticación JWT, frontend con login, CI en verde (37 tests, ~95,5% de cobertura de backend, por encima del umbral mínimo del 90% que exige el gate de JaCoCo en CI).
-- Sprint 1 parcial: falta crear el proyecto en Supabase, ejecutar las migraciones contra esa base, y los despliegues de backend (Render) y frontend (Vercel). Estas tareas dependen de las cuentas del equipo, todavía no disponibles.
+- **Sprint 2 completo.** Backend con autenticación JWT (registro con rol forzado, login por DNI o email, `/api/auth/me`), frontend con las pantallas de login y registro siguiendo el sistema de diseño, y documentación de la API con Swagger. CI en verde: 25 tests unitarios y 18 de integración en el backend con 95,5 % de cobertura, y 83 tests en el frontend con 97,4 %. Ambos con un gate del 90 % que rompe el build.
+- **Sprint 1 parcial.** Falta crear el proyecto en Supabase, ejecutar las migraciones contra esa base y los despliegues de backend (Render) y frontend (Vercel). Dependen de las cuentas del equipo, todavía no disponibles. El paso a paso está en [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).

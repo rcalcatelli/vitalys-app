@@ -8,6 +8,7 @@ import com.vitalys.dto.RegistroRequest;
 import com.vitalys.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -63,7 +64,25 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión", description = "Valida credenciales y devuelve un JWT (HS256, TTL 24h).")
+    @Operation(
+            summary = "Iniciar sesión",
+            description = "Valida credenciales y devuelve un JWT (HS256, TTL 24h). El campo \"identificador\" "
+                    + "acepta email o DNI (RF-36). El login por DNI solo funciona para quien ya tiene ficha "
+                    + "cargada en `personas`: un usuario recién autorregistrado (la ficha queda pendiente de "
+                    + "completar por el ADMIN, CA-01-6) o un PROFESIONAL (no tiene DNI en el esquema) deben "
+                    + "ingresar con email.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = LoginRequest.class),
+                    examples = {
+                        @ExampleObject(
+                                name = "Login por email",
+                                value = "{\"identificador\": \"socio@vitalys.test\", \"contrasena\": \"contraseñaSegura123\"}"),
+                        @ExampleObject(
+                                name = "Login por DNI",
+                                value = "{\"identificador\": \"30111222\", \"contrasena\": \"contraseñaSegura123\"}")
+                    }))
     @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
@@ -71,8 +90,8 @@ public class AuthController {
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = LoginResponse.class))),
         @ApiResponse(
                 responseCode = "401",
-                description = "Credenciales inválidas O cuenta deshabilitada — mismo mensaje a propósito, "
-                        + "para no revelar qué emails existen",
+                description = "Credenciales inválidas O cuenta deshabilitada O identificador (email/DNI) "
+                        + "inexistente — mismo mensaje a propósito, para no revelar qué emails o DNI existen",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {

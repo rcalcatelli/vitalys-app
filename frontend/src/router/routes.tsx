@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { RoleGuard } from "../components/RoleGuard";
 import { LoginPage } from "../pages/LoginPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
+import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
+import { RegistroPage } from "../pages/RegistroPage";
+import { RoleGuard } from "./RoleGuard";
 
 /**
  * Rutas de la app (T2-7). Las homes por rol son placeholders (ver
@@ -12,6 +14,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/registro" element={<RegistroPage />} />
+      <Route path="/recuperar-contrasena" element={<RecuperarContrasenaPage />} />
 
       <Route
         path="/admin/dashboard"

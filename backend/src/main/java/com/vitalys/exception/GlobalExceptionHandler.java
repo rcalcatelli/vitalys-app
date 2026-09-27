@@ -3,6 +3,8 @@ package com.vitalys.exception;
 import com.vitalys.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(RolNoPermitidoException.class)
     public ResponseEntity<ErrorResponse> handleRolNoPermitido(RolNoPermitidoException ex, HttpServletRequest req) {
@@ -46,6 +50,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
+        // Sin este log, un 500 inesperado (p.ej. en /api/auth/login) queda sin rastro alguno en
+        // CI: la respuesta al cliente es genérica a propósito (no filtra detalles internos), pero
+        // el stack trace real DEBE quedar en los logs del servidor para poder diagnosticarlo.
+        log.error("Excepción no controlada en {} {}", req.getMethod(), req.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", req);
     }
 

@@ -9,8 +9,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -24,12 +22,25 @@ import org.testcontainers.utility.DockerImageName;
  * con {@link SecureRandom}, nunca como literal en el código fuente.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
 public abstract class IntegrationTestBase {
 
-    @Container
+    /**
+     * Patrón <em>singleton container</em> de Testcontainers: el contenedor se arranca UNA vez
+     * en el bloque estático y NUNCA se detiene; lo limpia Ryuk al terminar la JVM.
+     *
+     * <p>NO usar {@code @Testcontainers} + {@code @Container} acá. Esa combinación, en una clase
+     * base que extienden varias clases de test, detiene el contenedor al terminar cada subclase y
+     * arranca otro con un puerto nuevo. Spring, en cambio, cachea el {@code ApplicationContext} y
+     * evalúa {@code @DynamicPropertySource} una sola vez, así que el pool sigue apuntando al
+     * puerto muerto: {@code Connection to localhost:PUERTO refused} y 30 s de timeout de Hikari
+     * en toda clase que no haya corrido primero.
+     */
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:15-alpine")).withInitScript("vitalys_ddl.sql");
+
+    static {
+        POSTGRES.start();
+    }
 
     private static final String JWT_TEST_SECRET = generarSecretoDeTest();
 

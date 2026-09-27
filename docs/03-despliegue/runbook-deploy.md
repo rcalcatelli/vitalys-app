@@ -110,6 +110,11 @@ Deben aparecer todas las versiones con `success = true`, y las tablas en **Table
    - `DB_PASSWORD` → contraseña de Postgres.
    - `JWT_SECRET` → una clave aleatoria larga (por ejemplo generada con
      `openssl rand -base64 48`). No reutilizar secretos de otros proyectos.
+   - `SPRING_PROFILES_ACTIVE` ya viene fijado en `render.yaml` como `prod`. **No lo borres.**
+     La configuración del datasource vive en `application-prod.properties`, no en
+     `application.properties`: sin perfil activo la aplicación arranca, no encuentra
+     `spring.datasource.url` y muere con *"Failed to configure a DataSource"* aunque las
+     cuatro variables de arriba estén bien cargadas.
    - `JWT_EXPIRATION_MS` ya viene con un valor por defecto en `render.yaml` (`86400000` = 24 h);
      solo cambiarlo si se decide otra política de expiración.
 4. Disparar el primer deploy (Render lo hace automáticamente al crear el Blueprint). El build

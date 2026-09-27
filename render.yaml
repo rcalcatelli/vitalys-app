@@ -19,6 +19,13 @@ services:
     dockerContext: .
     healthCheckPath: /api/health
     envVars:
+      # Sin perfil activo, Spring carga solo application.properties, que NO define el
+      # datasource: `spring.datasource.url` vive en application-dev/-prod.properties.
+      # El arranque falla con "Failed to configure a DataSource: 'url' attribute is not
+      # specified" aunque DB_URL esté cargada, porque nadie la lee. docker-compose.yml
+      # setea esta misma variable; acá faltaba.
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
       - key: DB_URL
         sync: false
       - key: DB_USERNAME

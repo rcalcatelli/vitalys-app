@@ -10,17 +10,17 @@
 
 | ID | Módulo | Descripción |
 |----|--------|-------------|
-| RF-01 | Auth | El sistema permite registrar un nuevo usuario con email, contraseña y rol. |
+| RF-01 | Auth | El sistema permite registrar un nuevo usuario con email y contraseña. El rol se asigna siempre a `SOCIO_PACIENTE`; no es un input del cliente. Si el body incluye `rol`, el servicio responde 400 antes de crear el usuario (RNF-03). |
 | RF-02 | Auth | El sistema autentica usuarios mediante email y contraseña, y devuelve un token JWT. |
 | RF-03 | Auth | El sistema permite cerrar sesión (invalidación del lado del cliente; el token expira por TTL). |
 | RF-04 | Auth | El sistema expone un endpoint protegido que devuelve los datos del usuario autenticado. |
-| RF-05 | Personas | El ADMIN puede registrar una nueva persona con nombre, apellido, DNI, email y contraseña. |
+| RF-05 | Personas | El ADMIN puede dar de alta de forma presencial una nueva persona: crea un `usuario` (rol `SOCIO_PACIENTE`) y una `persona` en una sola operación, con email y contraseña nuevos. Camino alternativo al vínculo (RF-31) cuando la persona no tiene cuenta previa. |
 | RF-06 | Personas | El ADMIN puede listar personas con filtros por nombre, DNI y estado. |
 | RF-07 | Personas | El ADMIN puede actualizar los datos de una persona. |
 | RF-08 | Personas | El ADMIN puede dar de baja lógica a una persona (estado → INACTIVO, requiere fecha_baja). |
 | RF-09 | Personas | El ADMIN puede reactivar una persona inactiva (estado → ACTIVO, fecha_baja → NULL). |
 | RF-10 | Personas | Un SOCIO_PACIENTE puede consultar y editar sus propios datos de perfil. |
-| RF-11 | Profesionales | El ADMIN puede registrar un nuevo profesional con especialidad y duración de turno. |
+| RF-11 | Profesionales | El ADMIN puede registrar un nuevo profesional: crea un `usuario` (rol `PROFESIONAL`) y un `profesional` (especialidad, duración de turno) en una sola operación. No existe endpoint de vínculo para profesionales: la Decisión de dominio 8 del RFC-0001 fija un único rol por usuario y el registro público fuerza siempre `SOCIO_PACIENTE` (RF-01); un usuario autorregistrado es por definición `SOCIO_PACIENTE`, y vincularlo como profesional exigiría promover su rol, contradiciendo la Decisión 8. |
 | RF-12 | Profesionales | El ADMIN puede listar y consultar profesionales activos. |
 | RF-13 | Profesionales | El ADMIN puede modificar datos de un profesional y dar de baja lógica. |
 | RF-14 | Profesionales | El ADMIN y el propio PROFESIONAL pueden gestionar las franjas horarias de disponibilidad. |
@@ -40,6 +40,8 @@
 | RF-28 | Notificaciones | El sistema envía un email de recordatorio 24 h antes de cada turno reservado. |
 | RF-29 | Notificaciones | El ADMIN puede consultar el historial de notificaciones de una persona. |
 | RF-30 | Morosidad | El ADMIN puede registrar una excepción puntual a la regla de morosidad para un socio. |
+| RF-31 | Personas | El ADMIN puede vincular una `persona` nueva a un `usuario` que ya existe, buscándolo por email (`POST /api/personas/vincular`, ADMIN-only). Body `{email, nombre, apellido, dni}`, sin contraseña. El servicio verifica primero que el actor sea ADMIN — 403 en caso contrario (RNF-03), antes de resolver el email, para no exponer qué direcciones están registradas. Luego: 404 (no existe usuario con ese email) y 409 (usuario ya vinculado a otra persona). |
+| RF-32 | Auth | El sistema rechaza el login de un usuario con `activo = FALSE` (cuenta deshabilitada). Devuelve 401 con el mismo mensaje que una contraseña incorrecta: un error distinto permitiría deducir qué emails existen y cuáles están dados de baja. Un token emitido antes de la baja sigue siendo válido hasta su TTL (limitación documentada, Decisión de dominio 9). |
 
 ---
 
@@ -73,9 +75,10 @@
 | RN-07 | **Concepto de pago excluyente:** `CUOTA_MENSUAL` requiere `periodo` (primer día del mes) y `turno_id = NULL`. `SESION_CONSULTORIO` requiere `turno_id` y `periodo = NULL`. |
 | RN-08 | **Ausencia:** si el paciente no se presenta al turno, el profesional o el admin registra el estado `AUSENTE`. El slot se considera ocupado (no se libera). |
 | RN-09 | **Excepción por morosidad:** el ADMIN puede autorizar una excepción puntual a RN-01 para un socio moroso. La excepción queda registrada en `excepciones_morosidad` con motivo, autorizador y fecha de vencimiento. |
-| RN-10 | **Alta de personas:** el registro de usuario es público (RF-01), pero el alta en `personas` es exclusiva del ADMIN (RF-05). Un socio puede crear su cuenta de usuario pero no completar su ficha sin intervención del administrador. |
+| RN-10 | **Alta de personas:** el registro de usuario es público (RF-01) y siempre asigna `SOCIO_PACIENTE`. El alta en `personas` tiene dos caminos, ambos exclusivos del ADMIN: (1) alta presencial (RF-05) — crea `usuario` + `persona` juntos con credenciales nuevas; (2) vínculo (RF-31) — busca un `usuario` existente por email y crea `persona` con ese `usuario_id`. El alta de `profesionales` (RF-11) solo tiene camino de alta presencial; no existe vínculo. |
 | RN-11 | **Disponibilidad del profesional:** las franjas horarias de un mismo profesional en el mismo día no pueden solaparse. El motor lo garantiza mediante un trigger (`trg_disponibilidad_no_overlap`). |
 | RN-12 | **Franja de disponibilidad:** un turno solo puede reservarse dentro de la franja de disponibilidad activa del profesional. La validación se realiza en la capa de servicio. |
+| RN-13 | **Resolución de `usuario_id` antes del INSERT:** en los dos caminos de alta de `personas` (alta presencial, RF-05, y vínculo, RF-31) y en el camino único de alta de `profesionales` (RF-11), el sistema resuelve completamente el `usuario_id` — confirmando que existe y que no está ya vinculado a otra fila — antes de ejecutar el INSERT correspondiente. Así las restricciones `NOT NULL UNIQUE` del DDL nunca se violan en tiempo de ejecución. |
 
 ---
 
@@ -94,9 +97,10 @@
 - CA-01-1: El sistema acepta email único y contraseña de al menos 8 caracteres.
 - CA-01-2: Si el email ya existe, el sistema devuelve error 409 con mensaje descriptivo.
 - CA-01-3: La contraseña se almacena como hash; nunca en texto plano.
-- CA-01-4: El rol asignado por defecto es `SOCIO_PACIENTE`.
+- CA-01-4: El rol asignado es siempre `SOCIO_PACIENTE`.
 - CA-01-5: Tras el registro exitoso, el sistema devuelve un token JWT listo para usar.
 - CA-01-6: La ficha de persona queda pendiente de completar por el ADMIN (el usuario existe pero `personas` no tiene fila aún).
+- CA-01-7: Si el body incluye la clave `rol` (cualquier valor), el sistema responde 400 antes de crear el usuario; el campo no se ignora en silencio.
 
 ---
 
@@ -178,3 +182,19 @@
 - CA-06-2: Una cuota figura como vencida si `NOW() > (periodo + 1 mes)`.
 - CA-06-3: Un SOCIO_PACIENTE solo puede ver su propio estado de cuenta; un ADMIN puede ver el de cualquier persona.
 - CA-06-4: Si la persona tiene cuotas vencidas hace más de 10 días, el sistema indica explícitamente que no puede reservar turnos GYM.
+
+---
+
+### HU-07 — Vincular una ficha de persona con un usuario existente
+
+**Como** administrador,  
+**quiero** buscar por email un usuario que ya se registró solo y vincularlo a una ficha de persona nueva,  
+**para** completar su alta sin pedirle que cree una segunda cuenta.
+
+**Criterios de aceptación:**
+
+- CA-07-1: El ADMIN busca por email; si no hay `usuario` con ese email, el sistema responde 404.
+- CA-07-2: Si el `usuario` encontrado ya tiene una `persona` vinculada, el sistema responde 409.
+- CA-07-3: El body de vínculo no acepta contraseña — el `usuario` ya tiene la suya.
+- CA-07-4: Un actor no-ADMIN recibe 403, verificado en la capa de servicio (RNF-03).
+- CA-07-5: Tras el vínculo exitoso, la `persona` creada tiene el mismo `usuario_id` que el usuario encontrado (no se crea un `usuario` nuevo).

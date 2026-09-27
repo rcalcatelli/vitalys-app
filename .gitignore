@@ -5,6 +5,7 @@ backend/target/
 !backend/.mvn/wrapper/maven-wrapper.jar
 
 # Node / React
+node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/build/
@@ -12,6 +13,7 @@ frontend/build/
 # Entornos y secretos
 .env
 .env.*
+!.env.example
 *.local
 application-local.properties
 
@@ -23,3 +25,7 @@ application-local.properties
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# SDD / Agent Teams Lite tooling
+.atl/
+openspec/

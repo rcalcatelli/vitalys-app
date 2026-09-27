@@ -25,6 +25,8 @@ Validan la lógica de negocio en la capa de servicio, sin base de datos real.
 | PU-03 | Cuota vencida hace 11 días → moroso                                           | periodo = 2026-08-01, hoy = 2026-09-12               | diasMora = 11, bloqueado = true             |
 | PU-04 | Sin pagos registrados → moroso con días = NULL                                | sin filas en pagos                                   | bloqueado = true (caso conservador)         |
 | PU-05 | Persona sin membresía gym (es_socio_gym = false) → sin bloqueo               | es_socio_gym = false                                 | bloqueado = false sin consultar pagos       |
+| PU-06 | Login con cuenta deshabilitada (RF-32)                                        | activo = false, contraseña correcta                  | CredencialesInvalidasException, no se emite token |
+| PU-07 | Contrato UserDetails de `Usuario`                                             | usuario con rol SOCIO_PACIENTE / ADMIN               | getUsername = email, autoridad `ROLE_<rol>`, isEnabled sigue a `activo` |
 
 ### TurnoServiceTest
 
@@ -48,12 +50,34 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 
 | ID    | Caso                                                      | Método y URL               | Body                                     | Respuesta esperada                            |
 |-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
-| PI-01 | Registro exitoso                                          | POST /api/auth/register    | email único, pass ≥8 chars              | 201, JWT en body                              |
-| PI-02 | Registro con email duplicado                              | POST /api/auth/register    | email ya existente                       | 409 Conflict                                  |
+| PI-01 | Registro exitoso                                          | POST /api/auth/registro    | email único, pass ≥8 chars              | 201, JWT en body, y `rol` del usuario creado = `SOCIO_PACIENTE` |
+| PI-02 | Registro con email duplicado                              | POST /api/auth/registro    | email ya existente                       | 409 Conflict                                  |
 | PI-03 | Login correcto                                            | POST /api/auth/login       | email + pass correctos                   | 200, JWT válido                               |
 | PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | pass incorrecta                          | 401                                           |
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
 | PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
+| PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
+| PI-22 | JWT expirado contra endpoint protegido                    | GET /api/auth/me           | JWT firmado con la clave real de la app, `exp` en el pasado | 401                           |
+| PI-23 | JWT malformado contra endpoint protegido                  | GET /api/auth/me           | Header `Bearer esto-no-es-un-jwt`        | 401                                           |
+| PI-24 | JWT con firma inválida contra endpoint protegido          | GET /api/auth/me           | JWT bien formado pero firmado con una clave distinta a la de la app | 401                |
+| PI-25 | Registro con contraseña de menos de 8 caracteres          | POST /api/auth/registro    | `contraseña` de 6 caracteres              | 400, `ErrorResponse` con `status=400` y `path`, ningún `usuario` creado |
+| PI-26 | Registro con email con formato inválido                   | POST /api/auth/registro    | `email` sin arroba/dominio                | 400, `ErrorResponse` con `status=400`, ningún `usuario` creado |
+
+### CORS
+
+| ID    | Caso                                                      | Método y URL               | Body                                     | Respuesta esperada                            |
+|-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
+| PI-27 | Preflight CORS sobre ruta pública                          | OPTIONS /api/health        | Headers `Origin` + `Access-Control-Request-Method: GET` | 200, `Access-Control-Allow-Origin` refleja el origen y `Access-Control-Allow-Methods` incluye `GET` |
+| PI-28 | Preflight CORS sobre ruta protegida                       | OPTIONS /api/auth/me       | Headers `Origin` + `Access-Control-Request-Method: GET`, sin `Authorization` | 200 (no 401): la cadena de seguridad resuelve el preflight antes de exigir autenticación |
+| PI-29 | Login con cuenta deshabilitada                            | POST /api/auth/login       | usuario con `activo = false` y contraseña correcta | 401 con el mismo mensaje que contraseña incorrecta |
+
+### Personas — Vínculo con usuario existente
+
+| ID    | Caso                                                      | Método y URL                  | Body                                     | Respuesta esperada                            |
+|-------|-------------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
+| PI-19 | Vínculo con email sin usuario                             | POST /api/personas/vincular   | email inexistente                        | 404, ninguna `persona` creada                 |
+| PI-20 | Vínculo con usuario ya vinculado                          | POST /api/personas/vincular   | email de usuario con `persona` existente | 409                                            |
+| PI-21 | Vínculo con actor no-ADMIN                                | POST /api/personas/vincular   | JWT de `SOCIO_PACIENTE` + body con email inexistente | 403 (no 404): la autorización se verifica antes de resolver el email |
 
 ### Turnos
 
@@ -104,8 +128,12 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 | Componente                  | Cobertura objetivo (líneas) |
 |-----------------------------|----------------------------|
 | PagoService                 | 90 %                       |
-| TurnoService                | 85 %                       |
+| TurnoService                | 90 %                       |
+| AuthService                 | 90 %                       |
 | Constraints de BD (via PI)  | 100 % de los casos críticos|
-| Controladores REST          | 70 % (happy path + errores)|
+| Controladores REST          | 90 % (happy path + errores)|
 
-Las métricas de cobertura se verifican con JaCoCo en el build de CI (GitHub Actions).
+Las métricas de cobertura se verifican con JaCoCo en el build de CI (GitHub Actions —
+`.github/workflows/backend-ci.yml`, job `backend`): el gate está configurado como
+`BUNDLE`/`LINE`/`COVEREDRATIO` con mínimo `0.90`, y el build de `mvn verify` **falla** si la
+cobertura no lo alcanza (no es un reporte informativo).

@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Maven verify + JaCoCo gate 0.90)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # `mvn verify` corre unit tests (Surefire) + integración con
+      # Testcontainers (Failsafe, requiere Docker — nativo en ubuntu-latest)
+      # y aplica el gate de JaCoCo (BUNDLE/LINE/COVEREDRATIO >= 0.90).
+      # El build falla si la cobertura no llega al umbral.
+      - name: mvn verify
+        run: mvn -B verify
+
+      # Publica el reporte HTML/CSV de JaCoCo como artifact del build, incluso cuando el gate
+      # de cobertura falla (if: always()) — antes la única forma de ver el número real era
+      # grepear una línea de warning del log de Maven.
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build

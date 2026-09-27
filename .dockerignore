@@ -1,0 +1,15 @@
+# Reduce el contexto de build enviado al daemon de Docker (ver backend/Dockerfile).
+.git/
+.github/
+.husky/
+.atl/
+node_modules/
+frontend/
+docs/
+openspec/
+backend/target/
+db/ddl/
+db/dml/
+*.md
+.env
+.env.*

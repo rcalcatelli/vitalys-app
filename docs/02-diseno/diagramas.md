@@ -221,7 +221,83 @@ sequenceDiagram
 
 ---
 
-## 5. Diagrama de Clases del Dominio
+## 5. Diagrama de Secuencia — Registro público (rol forzado)
+
+```mermaid
+sequenceDiagram
+    actor V as Visitante
+    participant API as AuthController
+    participant AS as AuthService
+    participant DB as Base de datos
+
+    V->>API: POST /api/auth/registro {email, contraseña, [rol?]}
+    API->>AS: registrar(request)
+
+    alt body incluye "rol"
+        AS-->>API: RolNoPermitidoException
+        API-->>V: 400 "El campo rol no es válido en el registro público"
+    else body sin "rol"
+        AS->>AS: rol := SOCIO_PACIENTE (forzado en el servicio, RNF-03)
+        AS->>AS: passwordHash := bcrypt(contraseña)
+        AS->>DB: INSERT INTO usuarios (email, password_hash, rol=SOCIO_PACIENTE)
+        alt email ya existe (UNIQUE)
+            DB-->>AS: PSQLException (constraint violation)
+            AS-->>API: EmailDuplicadoException
+            API-->>V: 409 "El email ya está registrado"
+        else alta exitosa
+            DB-->>AS: usuario creado (id)
+            AS->>AS: generarJWT(usuario)
+            AS-->>API: RegistroDTO {token, usuarioId, rol}
+            API-->>V: 201 Created {token, usuarioId, rol: SOCIO_PACIENTE}
+        end
+    end
+```
+
+---
+
+## 6. Diagrama de Secuencia — ADMIN vincula ficha a usuario existente
+
+```mermaid
+sequenceDiagram
+    actor A as Admin
+    participant API as PersonaController
+    participant PS as PersonaService
+    participant DB as Base de datos
+
+    A->>API: POST /api/personas/vincular {email, nombre, apellido, dni}
+    API->>PS: vincularPersona(request, actorActual)
+
+    alt actorActual.rol != ADMIN
+        PS-->>API: AccesoDenegadoException
+        API-->>A: 403 "Solo ADMIN puede vincular personas"
+    else actor es ADMIN
+        PS->>DB: SELECT id FROM usuarios WHERE email=?
+        alt usuario no existe
+            DB-->>PS: (vacío)
+            PS-->>API: UsuarioNoEncontradoException
+            API-->>A: 404 "No existe un usuario registrado con ese email"
+        else usuario encontrado
+            DB-->>PS: usuario_id
+            PS->>DB: SELECT id FROM personas WHERE usuario_id=?
+            alt ya vinculado (usuario_id UNIQUE)
+                DB-->>PS: persona existente
+                PS-->>API: UsuarioYaVinculadoException
+                API-->>A: 409 "Este usuario ya está vinculado a una persona"
+            else libre
+                DB-->>PS: (vacío)
+                Note over PS,DB: usuario_id resuelto ANTES del INSERT (RN-13)
+                PS->>DB: INSERT INTO personas (nombre, apellido, dni, usuario_id=?)
+                DB-->>PS: persona creada (id)
+                PS-->>API: PersonaDTO
+                API-->>A: 201 Created {personaId, usuarioId}
+            end
+        end
+    end
+```
+
+---
+
+## 7. Diagrama de Clases del Dominio
 
 ```mermaid
 classDiagram
@@ -322,7 +398,7 @@ classDiagram
 
 ---
 
-## 6. Diagrama de Arquitectura y Despliegue
+## 8. Diagrama de Arquitectura y Despliegue
 
 ```mermaid
 graph TB

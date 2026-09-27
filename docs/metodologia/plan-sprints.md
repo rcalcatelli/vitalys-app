@@ -52,13 +52,13 @@
 | ID   | Tarea                                                               | Responsable        | Estimación |
 |------|---------------------------------------------------------------------|--------------------|------------|
 | T2-1 | Entidad Usuario + UserDetailsService (Spring Security)              | P. Basualdo Arcati | 4 h |
-| T2-2 | Endpoint POST /api/auth/register (hash bcrypt)                     | P. Basualdo Arcati | 3 h |
+| T2-2 | Endpoint POST /api/auth/registro (hash bcrypt, rol forzado a `SOCIO_PACIENTE`, 400 si el body incluye `rol`) | P. Basualdo Arcati | 3 h |
 | T2-3 | Endpoint POST /api/auth/login → JWT                                | P. Basualdo Arcati | 3 h |
 | T2-4 | Filtro JWT + SecurityFilterChain con roles                         | P. Basualdo Arcati | 4 h |
 | T2-5 | Endpoint GET /api/auth/me (datos del usuario autenticado)          | P. Basualdo Arcati | 1 h |
 | T2-6 | Pantalla Login (React, W-01)                                       | R. Calcatelli      | 4 h |
 | T2-7 | Contexto de auth en frontend (token en localStorage, guard por rol)| R. Calcatelli      | 3 h |
-| T2-8 | Tests de integración: registro, login, acceso sin token, CORS      | Ambos              | 3 h |
+| T2-8 | Tests de integración: registro, login, acceso sin token, CORS, y rechazo 400 de `rol` en el body de registro | Ambos              | 3 h |
 
 **Criterio de cierre:** login devuelve JWT, rutas sin token devuelven 401, rutas con rol incorrecto devuelven 403.
 
@@ -80,6 +80,7 @@
 | T3-8 | ProfesionalController: endpoints CRUD + disponibilidad                    | P. Basualdo Arcati | 3 h |
 | T3-9 | Pantalla gestión de disponibilidad (PROFESIONAL / ADMIN)                  | P. Basualdo Arcati | 5 h |
 | T3-10 | Tests de baja lógica, unicidad de DNI, anti-solapamiento de disponibilidad | Ambos             | 3 h |
+| T3-11 | Endpoint POST /api/personas/vincular (vínculo de persona con usuario existente por email, ADMIN-only, 404/409/403) | R. Calcatelli | 3 h |
 
 **Criterio de cierre:** ADMIN puede crear, editar y dar de baja personas; el trigger rechaza disponibilidades superpuestas.
 

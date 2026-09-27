@@ -1,0 +1,25 @@
+# Blueprint de despliegue para Render — backend Spring Boot (Vitalys App).
+#
+# Los secretos (DB_URL, DB_USERNAME, DB_PASSWORD, JWT_SECRET) se cargan a mano
+# en el dashboard de Render (sync: false) — nunca quedan escritos en este archivo.
+# Pasos detallados: docs/03-despliegue/runbook-deploy.md
+services:
+  - type: web
+    name: vitalys-backend
+    env: java
+    plan: free
+    rootDir: backend
+    buildCommand: mvn -B clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRATION_MS
+        value: "86400000"

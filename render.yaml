@@ -6,11 +6,17 @@
 services:
   - type: web
     name: vitalys-backend
-    env: java
+    # Render no tiene un runtime nativo de Java: sus runtimes son docker, node,
+    # python, ruby, go, rust, elixir y static. Se usa Docker, que además reutiliza
+    # exactamente la misma imagen que corre en local con docker compose.
+    runtime: docker
     plan: free
-    rootDir: backend
-    buildCommand: mvn -B clean package -DskipTests
-    startCommand: java -jar target/*.jar
+    # El contexto es la RAÍZ del repo, no backend/: el Dockerfile hace
+    # `COPY db/migration ./db/migration`, y esas migraciones viven fuera de backend/.
+    # Con rootDir: backend ese COPY no encontraría nada y el build fallaría.
+    # Es el mismo contexto que usa docker-compose.yml (`context: .`).
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
     envVars:
       - key: DB_URL

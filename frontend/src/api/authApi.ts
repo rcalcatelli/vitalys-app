@@ -1,7 +1,7 @@
 import { http } from "./http";
 import type { LoginRequest, LoginResponse, RegistroRequest, Usuario } from "../types/auth";
 
-/** POST /api/auth/login — público, sin token. */
+/** POST /api/auth/login — público, sin token. `identificador` acepta DNI o email. */
 export function login(credentials: LoginRequest): Promise<LoginResponse> {
   return http.post<LoginResponse>("/api/auth/login", credentials, false);
 }

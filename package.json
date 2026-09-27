@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Tooling de formato y pre-commit para el monorepo Vitalys (no contiene código de aplicación).",
   "scripts": {
+    "dev": "npm run dev --workspaces",
     "prepare": "husky"
   },
   "devDependencies": {

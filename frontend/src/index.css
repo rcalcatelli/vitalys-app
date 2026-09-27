@@ -1,109 +1,173 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/*
+ * Tokens del design system real de Vitalys — fuente:
+ * `docs/02-diseno/design-system/Vitalys.dc.html` (mockup hecho con Claude
+ * Design). Los valores de acá abajo son un calco literal de ese archivo, NO
+ * una interpretación: no inventamos hex ni tamaños.
+ *
+ * Mecanismo de tema: `:root`/`[data-theme="light"]` son los valores por
+ * default (no hace falta el atributo para que se vea bien), y
+ * `[data-theme="dark"]` los pisa. La app todavía no tiene un switch de tema
+ * (fuera de alcance de este batch), pero el mecanismo ya está listo para
+ * cuando lo haya — es cuestión de setear `data-theme` en `<html>`.
+ */
+:root,
+[data-theme="light"] {
+  --bg: #f3f6f4;
+  --surface: #ffffff;
+  --surface-2: #eaf0ed;
+  --border: #d8e1dc;
+  --border-2: #c3cfc9;
+  --text: #14201d;
+  --text-2: #46554f;
+  --text-3: #65746e;
+  --clin: #0b6b69;
+  --clin-ink: #0b6b69;
+  --clin-soft: #e0eeec;
+  --on-clin: #ffffff;
+  --gym: #c9601b;
+  --gym-ink: #a04a10;
+  --gym-soft: #f7e8dc;
+  --gym-past: #e3b38d;
+  --on-gym: #ffffff;
+  --ok: #2f7d50;
+  --ok-ink: #23663f;
+  --ok-soft: #e2f0e7;
+  --warn: #b7800f;
+  --warn-ink: #865c00;
+  --warn-soft: #faefd3;
+  --bad: #b42c23;
+  --bad-ink: #a0241c;
+  --bad-soft: #f8e2df;
+  --overlay: rgba(12, 22, 20, 0.45);
+  --brand: #0b6b69;
+  --shadow: 0 1px 2px rgba(20, 32, 29, 0.05), 0 4px 16px rgba(20, 32, 29, 0.04);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+[data-theme="dark"] {
+  --bg: #0e1513;
+  --surface: #151e1b;
+  --surface-2: #1c2724;
+  --border: #27352f;
+  --border-2: #34453e;
+  --text: #e4ece8;
+  --text-2: #a8b7b1;
+  --text-3: #8a9a94;
+  --clin: #35a19d;
+  --clin-ink: #6fcbc6;
+  --clin-soft: #133230;
+  --on-clin: #04201f;
+  --gym: #e0782f;
+  --gym-ink: #f2a26b;
+  --gym-soft: #3a2414;
+  --gym-past: #7a4722;
+  --on-gym: #1e0f04;
+  --ok: #57bc80;
+  --ok-ink: #7bd39f;
+  --ok-soft: #15301f;
+  --warn: #e2b347;
+  --warn-ink: #ebc46a;
+  --warn-soft: #332810;
+  --bad: #ee7a6f;
+  --bad-ink: #f39a91;
+  --bad-soft: #3a1917;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --brand: #0d3533;
+  --shadow: none;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/*
+ * Config de Tailwind v4 (CSS-first): cada entrada de acá genera una
+ * utilidad (`--color-clin` -> `bg-clin`/`text-clin`/`border-clin`, etc.).
+ * Apuntan a las custom properties de arriba, NUNCA a un hex fijo: así el
+ * cambio de tema (`data-theme`) es gratis y no hay que tocar componentes.
+ *
+ * `clin` (consultorio) y `gym` (gimnasio) son colores SEMÁNTICOS del
+ * dominio (coinciden con `tipo_turno` en la BD), no decorativos — por eso
+ * se llaman así y no `primary`/`secondary`.
+ */
+@theme {
+  --font-heading: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+
+  --color-clin: var(--clin);
+  --color-clin-ink: var(--clin-ink);
+  --color-clin-soft: var(--clin-soft);
+  --color-on-clin: var(--on-clin);
+
+  --color-gym: var(--gym);
+  --color-gym-ink: var(--gym-ink);
+  --color-gym-soft: var(--gym-soft);
+  --color-gym-past: var(--gym-past);
+  --color-on-gym: var(--on-gym);
+
+  --color-ok: var(--ok);
+  --color-ok-ink: var(--ok-ink);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-ink: var(--bad-ink);
+  --color-bad-soft: var(--bad-soft);
+  --color-brand: var(--brand);
+
+  /*
+   * Radios: el mockup usa valores de 2px a 999px repartidos sin patrón claro
+   * (2/3/6/7/8/10/12/14/999/50%). En vez de replicar los diez, los
+   * racionalizamos en una escala corta: chico (chips/dots), medio (inputs y
+   * botones — el más usado), grande y extra-grande (tarjetas), y pill.
+   */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
 }
 
+/*
+ * Reset mínimo — calco del bloque `<style>` del mockup (fuente única de
+ * verdad de este proyecto para el lenguaje visual, ver arriba).
+ */
 body {
   margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+button {
+  font: inherit;
+  cursor: pointer;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+button:disabled {
+  cursor: not-allowed;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+a {
+  color: var(--color-clin-ink);
+}
+
+a:hover {
+  color: var(--color-clin);
 }

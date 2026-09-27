@@ -43,7 +43,7 @@ jobs:
           if-no-files-found: warn
 
   frontend:
-    name: Frontend (build)
+    name: Frontend (build + Vitest coverage gate 0.90)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,3 +62,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # `vitest run --coverage` corre la suite completa y aplica el gate de cobertura
+      # (líneas >= 0.90, ver `coverage.thresholds` en vite.config.ts) — mismo umbral que
+      # el gate de JaCoCo del backend. El build falla si no se alcanza.
+      - name: Test (Vitest + coverage)
+        run: npm run test
+
+      # Publica el reporte HTML/lcov de Vitest como artifact del build, incluso cuando
+      # el gate de cobertura falla (if: always()) — mismo criterio que el artifact de
+      # JaCoCo del job `backend`.
+      - name: Upload Vitest coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-report
+          path: frontend/coverage/
+          if-no-files-found: warn

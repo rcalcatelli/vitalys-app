@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { homePathForRol } from "../router/roleHome";
 import type { RolUsuario } from "../types/auth";
+import { homePathForRol } from "./roleHome";
 
 interface RoleGuardProps {
   allowedRoles: RolUsuario[];
@@ -17,6 +17,9 @@ interface RoleGuardProps {
  * se verifica en el backend (SecurityConfig + Service, RNF-02/RNF-03) — este guard
  * solo evita que el usuario navegue a una pantalla que no le corresponde; nunca
  * debe tratarse como el mecanismo que protege datos o endpoints.
+ *
+ * Vive en `router/` (no en `components/atoms|molecules|organisms`): no es UI, es
+ * lógica de ruteo — decide qué renderizar según sesión/rol, no cómo se ve nada.
  */
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const { isAuthenticated, isLoading, rol } = useAuth();

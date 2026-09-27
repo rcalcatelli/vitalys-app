@@ -11,7 +11,14 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   /** true mientras se resuelve la sesión existente (token en localStorage) contra /api/auth/me. */
   isLoading: boolean;
-  login: (email: string, contrasena: string) => Promise<Usuario>;
+  /** `identificador` acepta DNI o email (W-01) — el backend resuelve cuál es. */
+  login: (identificador: string, contrasena: string) => Promise<Usuario>;
+  /**
+   * POST /api/auth/registro (RF-01/CA-01-5, W-06): el backend crea la cuenta con rol
+   * forzado a SOCIO_PACIENTE y devuelve un JWT ya utilizable, así que el registro deja
+   * a la persona logueada de inmediato — mismo mecanismo de sesión que `login`.
+   */
+  registrarse: (email: string, contrasena: string) => Promise<Usuario>;
   /**
    * Logout client-side (Decisión 9 / RNF-10): no existe endpoint de invalidación
    * server-side, así que solo se descarta el token y se limpia el estado. El
@@ -32,10 +39,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(() => getToken() !== null);
 
-  // Al montar (o si el token cambia), si hay token guardado se resuelve la sesión
-  // contra /api/auth/me. Si el token es inválido/expirado, se descarta.
+  // Solo se ejecuta al montar (deps vacío, a propósito): resuelve una sesión existente
+  // en localStorage (p.ej. tras un refresh) contra /api/auth/me. Si el token es
+  // inválido/expirado, se descarta.
+  //
+  // Deliberadamente NO depende de `token`: login()/registrarse() ya resuelven /me por su
+  // cuenta después de persistir el token nuevo (`iniciarSesionConToken`), así que si este
+  // efecto además reaccionara a ese cambio de `token` duplicaría la llamada a /me — y si
+  // esa segunda llamada fallara (p.ej. una respuesta lenta/errónea), borraría una sesión
+  // que se acababa de crear con éxito.
   useEffect(() => {
-    if (!token) {
+    const tokenExistente = getToken();
+    if (!tokenExistente) {
       setIsLoading(false);
       return;
     }
@@ -66,15 +81,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
-  async function login(email: string, contrasena: string): Promise<Usuario> {
-    const response = await authApi.login({ email, contrasena });
-    persistToken(response.token);
-    setTokenState(response.token);
+  // Común a login y registrarse: ambos terminan con un JWT nuevo que hay que persistir
+  // y resolver contra /api/auth/me para poblar el usuario (evita duplicar el flujo).
+  async function iniciarSesionConToken(token: string): Promise<Usuario> {
+    persistToken(token);
+    setTokenState(token);
     const usuarioAutenticado = await authApi.me();
     setUsuario(usuarioAutenticado);
     return usuarioAutenticado;
+  }
+
+  async function login(identificador: string, contrasena: string): Promise<Usuario> {
+    const response = await authApi.login({ identificador, contrasena });
+    return iniciarSesionConToken(response.token);
+  }
+
+  async function registrarse(email: string, contrasena: string): Promise<Usuario> {
+    const response = await authApi.registro({ email, contrasena });
+    return iniciarSesionConToken(response.token);
   }
 
   function logout(): void {
@@ -91,6 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAuthenticated: usuario !== null,
       isLoading,
       login,
+      registrarse,
       logout,
     }),
     [usuario, token, isLoading],

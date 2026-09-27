@@ -9,8 +9,12 @@ export interface Usuario {
   rol: RolUsuario;
 }
 
+// `identificador` acepta DNI o email (W-01 / diseño Vitalys.dc.html: "DNI o
+// email"): el backend resuelve cuál de los dos es antes de validar la
+// contraseña. El registro (`RegistroRequest`, más abajo) NO cambia — sigue
+// siendo solo `email`.
 export interface LoginRequest {
-  email: string;
+  identificador: string;
   contrasena: string;
 }
 

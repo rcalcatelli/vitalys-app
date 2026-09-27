@@ -36,7 +36,7 @@
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| POST | `/api/auth/registro` | Registro de nuevo usuario | Público |
+| POST | `/api/auth/registro` | Registro de nuevo usuario. El rol se fuerza siempre a `SOCIO_PACIENTE`; no es un input del cliente. Si el body incluye `rol`, responde 400 antes de crear el usuario (RF-01) | Público |
 | POST | `/api/auth/login` | Login; retorna token JWT | Público |
 | POST | `/api/auth/logout` | Invalida sesión | Autenticado |
 | GET  | `/api/auth/me` | Datos del usuario autenticado | Autenticado |
@@ -56,7 +56,8 @@
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET    | `/api/personas` | Listar personas (filtros: estado, nombre, DNI) | ADMIN |
-| POST   | `/api/personas` | Crear nueva persona | ADMIN |
+| POST   | `/api/personas` | Crear nueva persona (alta presencial: usuario + persona en una operación, RF-05) | ADMIN |
+| POST   | `/api/personas/vincular` | Vincular una persona nueva a un `usuario` existente, buscándolo por email; sin contraseña (RF-31) | ADMIN |
 | GET    | `/api/personas/{id}` | Obtener datos de una persona | ADMIN, propia persona |
 | PUT    | `/api/personas/{id}` | Actualizar datos | ADMIN |
 | PATCH  | `/api/personas/{id}/baja` | Baja lógica (estado → INACTIVO) | ADMIN |
@@ -77,7 +78,7 @@
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET    | `/api/profesionales` | Listar profesionales activos | Autenticado |
-| POST   | `/api/profesionales` | Registrar nuevo profesional | ADMIN |
+| POST   | `/api/profesionales` | Registrar nuevo profesional: crea `usuario` (rol `PROFESIONAL`) y `profesional` en una sola operación. No existe endpoint de vínculo para profesionales (Decisión de dominio 8, RFC-0001) | ADMIN |
 | GET    | `/api/profesionales/{id}` | Datos de un profesional | Autenticado |
 | PUT    | `/api/profesionales/{id}` | Modificar datos | ADMIN |
 | PATCH  | `/api/profesionales/{id}/desactivar` | Baja lógica | ADMIN |

@@ -48,12 +48,21 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 
 | ID    | Caso                                                      | Método y URL               | Body                                     | Respuesta esperada                            |
 |-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
-| PI-01 | Registro exitoso                                          | POST /api/auth/register    | email único, pass ≥8 chars              | 201, JWT en body                              |
-| PI-02 | Registro con email duplicado                              | POST /api/auth/register    | email ya existente                       | 409 Conflict                                  |
+| PI-01 | Registro exitoso                                          | POST /api/auth/registro    | email único, pass ≥8 chars              | 201, JWT en body, y `rol` del usuario creado = `SOCIO_PACIENTE` |
+| PI-02 | Registro con email duplicado                              | POST /api/auth/registro    | email ya existente                       | 409 Conflict                                  |
 | PI-03 | Login correcto                                            | POST /api/auth/login       | email + pass correctos                   | 200, JWT válido                               |
 | PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | pass incorrecta                          | 401                                           |
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
 | PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
+| PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
+
+### Personas — Vínculo con usuario existente
+
+| ID    | Caso                                                      | Método y URL                  | Body                                     | Respuesta esperada                            |
+|-------|-------------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
+| PI-19 | Vínculo con email sin usuario                             | POST /api/personas/vincular   | email inexistente                        | 404, ninguna `persona` creada                 |
+| PI-20 | Vínculo con usuario ya vinculado                          | POST /api/personas/vincular   | email de usuario con `persona` existente | 409                                            |
+| PI-21 | Vínculo con actor no-ADMIN                                | POST /api/personas/vincular   | JWT de `SOCIO_PACIENTE` + body con email inexistente | 403 (no 404): la autorización se verifica antes de resolver el email |
 
 ### Turnos
 
@@ -104,8 +113,12 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 | Componente                  | Cobertura objetivo (líneas) |
 |-----------------------------|----------------------------|
 | PagoService                 | 90 %                       |
-| TurnoService                | 85 %                       |
+| TurnoService                | 90 %                       |
+| AuthService                 | 90 %                       |
 | Constraints de BD (via PI)  | 100 % de los casos críticos|
-| Controladores REST          | 70 % (happy path + errores)|
+| Controladores REST          | 90 % (happy path + errores)|
 
-Las métricas de cobertura se verifican con JaCoCo en el build de CI (GitHub Actions).
+Las métricas de cobertura se verifican con JaCoCo en el build de CI (GitHub Actions —
+`.github/workflows/backend-ci.yml`, job `backend`): el gate está configurado como
+`BUNDLE`/`LINE`/`COVEREDRATIO` con mínimo `0.90`, y el build de `mvn verify` **falla** si la
+cobertura no lo alcanza (no es un reporte informativo).

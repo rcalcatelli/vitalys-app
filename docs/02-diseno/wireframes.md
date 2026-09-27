@@ -38,7 +38,45 @@ Pantallas descritas con wireframes en texto estructurado (ASCII). Representan la
 - PROFESIONAL → /profesional/agenda  
 - SOCIO_PACIENTE → /socio/turnos  
 
+El enlace "Registrarse" navega a **W-06 — Registro público**.
+
 **Validaciones:** errores en el campo correspondiente. Un único mensaje de error genérico por seguridad.
+
+---
+
+## W-06 — Registro público
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   VITALYS APP                       │
+│                                                     │
+│   ┌─────────────────────────────────────────────┐  │
+│   │  Email                                      │  │
+│   │  [________________________________]         │  │
+│   │                                             │  │
+│   │  Contraseña                                 │  │
+│   │  [________________________________]  [👁]   │  │
+│   │                                             │  │
+│   │  Confirmar contraseña                       │  │
+│   │  [________________________________]  [👁]   │  │
+│   │                                             │  │
+│   │            [ CREAR CUENTA ]                 │  │
+│   └─────────────────────────────────────────────┘  │
+│                                                     │
+│   ¿Ya tenés cuenta? → Ingresar (W-01)               │
+│                                                     │
+│   Tu ficha la completa el centro.                  │
+│                                                     │
+│   ┌─ Error (condicional) ────────────────────────┐ │
+│   │ ⚠ El email ya está registrado                │ │
+│   └──────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+**Campos:** email (requerido, formato email), contraseña (requerido, ≥8 caracteres, texto oculto), confirmar contraseña (debe coincidir). **No hay selector de rol**: el rol no es un input de esta pantalla.  
+**Acciones:** Crear cuenta → POST /api/auth/registro con `{email, contraseña}` (sin `rol`) → 201 con JWT → redirige a `/socio/turnos` (el rol asignado es siempre `SOCIO_PACIENTE`, RF-01).  
+**Validaciones:** email duplicado → 409 (mensaje de error mostrado en el bloque condicional). Contraseñas que no coinciden se validan en el cliente antes de enviar.  
+**Nota:** el footer "Tu ficha la completa el centro" comunica que la persona (nombre, apellido, DNI) se completa después, cuando el ADMIN la vincula (W-07) o la da de alta presencial (W-05).
 
 ---
 
@@ -201,6 +239,50 @@ Pantallas descritas con wireframes en texto estructurado (ASCII). Representan la
 ```
 
 **Acciones disponibles para ADMIN:** crear, ver detalle, editar, dar de baja lógica (confirma con modal), reactivar. La baja no elimina datos. Desde el panel lateral se puede navegar al historial de turnos y pagos de la persona, y registrar una excepción de morosidad.
+
+**Paso previo al alta:** al hacer clic en "+ Nueva persona" se abre primero el modal "¿Ya tiene cuenta? Buscar por email" (**W-07**). Solo si el email no tiene un `usuario` asociado (404 en W-07), el ADMIN continúa al formulario de alta presencial mostrado arriba (`POST /api/personas`, RF-05).
+
+---
+
+## W-07 — Modal "Vincular por email" (dentro de W-05)
+
+```
+┌───────────────────────────────────────────────────┐
+│  ¿Ya tiene cuenta?                            [X] │
+│                                                     │
+│  Email  [________________________________]        │
+│                              [ Buscar ]            │
+│                                                     │
+│  ┌─ Caso: encontrado y libre ─────────────────┐   │
+│  │  ✅ Usuario encontrado: juan@mail.com       │   │
+│  │  Nombre *   [____________] Apellido * [___] │   │
+│  │  DNI *      [____________]                  │   │
+│  │  (sin campo de contraseña — ya tiene una)   │   │
+│  │  [Cancelar]           [Vincular ficha]      │   │
+│  └──────────────────────────────────────────────┘  │
+│                                                     │
+│  ┌─ Caso: no encontrado (404) ────────────────┐    │
+│  │  ⚠ No existe un usuario registrado con     │    │
+│  │    ese email.                               │    │
+│  │  [Crear con credenciales nuevas →]         │    │
+│  │  (continúa al formulario de alta            │    │
+│  │   presencial de W-05, POST /api/personas)   │    │
+│  └──────────────────────────────────────────────┘  │
+│                                                     │
+│  ┌─ Caso: ya vinculado (409) ─────────────────┐    │
+│  │  ⚠ Este usuario ya está vinculado a una    │    │
+│  │    persona existente.                       │    │
+│  │  [Cerrar]                                   │    │
+│  └──────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────┘
+```
+
+**Flujo:** el ADMIN busca por email → GET/lookup interno antes de decidir la acción:
+- **Encontrado y libre:** formulario sin contraseña (nombre, apellido, DNI) → `POST /api/personas/vincular {email, nombre, apellido, dni}` → 201, la `persona` queda vinculada al `usuario_id` encontrado (RF-31, CA-07-5).
+- **No encontrado:** mensaje 404 + botón "Crear con credenciales nuevas", que lleva al formulario de alta presencial de W-05 (RF-05).
+- **Ya vinculado:** mensaje 409, no se ofrece ninguna acción de escritura — el ADMIN debe buscar otro email.
+
+**Regla:** el vínculo es ADMIN-only (403 si el actor no es ADMIN, verificado en la capa de servicio, RNF-03).
 
 ---
 

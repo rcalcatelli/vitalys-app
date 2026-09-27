@@ -55,6 +55,18 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
 | PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
 | PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
+| PI-22 | JWT expirado contra endpoint protegido                    | GET /api/auth/me           | JWT firmado con la clave real de la app, `exp` en el pasado | 401                           |
+| PI-23 | JWT malformado contra endpoint protegido                  | GET /api/auth/me           | Header `Bearer esto-no-es-un-jwt`        | 401                                           |
+| PI-24 | JWT con firma inválida contra endpoint protegido          | GET /api/auth/me           | JWT bien formado pero firmado con una clave distinta a la de la app | 401                |
+| PI-25 | Registro con contraseña de menos de 8 caracteres          | POST /api/auth/registro    | `contraseña` de 6 caracteres              | 400, `ErrorResponse` con `status=400` y `path`, ningún `usuario` creado |
+| PI-26 | Registro con email con formato inválido                   | POST /api/auth/registro    | `email` sin arroba/dominio                | 400, `ErrorResponse` con `status=400`, ningún `usuario` creado |
+
+### CORS
+
+| ID    | Caso                                                      | Método y URL               | Body                                     | Respuesta esperada                            |
+|-------|-----------------------------------------------------------|----------------------------|------------------------------------------|-----------------------------------------------|
+| PI-27 | Preflight CORS sobre ruta pública                          | OPTIONS /api/health        | Headers `Origin` + `Access-Control-Request-Method: GET` | 200, `Access-Control-Allow-Origin` refleja el origen y `Access-Control-Allow-Methods` incluye `GET` |
+| PI-28 | Preflight CORS sobre ruta protegida                       | OPTIONS /api/auth/me       | Headers `Origin` + `Access-Control-Request-Method: GET`, sin `Authorization` | 200 (no 401): la cadena de seguridad resuelve el preflight antes de exigir autenticación |
 
 ### Personas — Vínculo con usuario existente
 

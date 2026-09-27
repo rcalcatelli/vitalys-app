@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -49,6 +50,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper objectMapper) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
+                // Sin esta línea, CorsConfig (un WebMvcConfigurer) solo actúa en la capa MVC, que
+                // corre DESPUÉS de la cadena de filtros de seguridad. El preflight OPTIONS de una
+                // ruta protegida viaja sin header Authorization, así que la cadena lo rechaza con
+                // 401 y el navegador bloquea la request real: el frontend en Vercel no podría
+                // llamar a ningún endpoint autenticado. Con .cors() Spring Security agrega su
+                // CorsFilter, que resuelve el preflight antes de evaluar la autorización y
+                // reutiliza la configuración declarada en CorsConfig.
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) -> escribirError(

@@ -31,6 +31,17 @@ jobs:
       - name: mvn verify
         run: mvn -B verify
 
+      # Publica el reporte HTML/CSV de JaCoCo como artifact del build, incluso cuando el gate
+      # de cobertura falla (if: always()) — antes la única forma de ver el número real era
+      # grepear una línea de warning del log de Maven.
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: warn
+
   frontend:
     name: Frontend (build)
     runs-on: ubuntu-latest

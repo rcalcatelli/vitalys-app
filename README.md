@@ -116,6 +116,8 @@ docker compose up -d
 
 Esto levanta un Postgres propio y el backend con Flyway aplicando el esquema automáticamente, sin necesidad de instalar Java, Maven ni un Postgres a mano. Guía completa (variables de entorno, carga del seed, troubleshooting): [`docs/03-despliegue/entorno-local-docker.md`](docs/03-despliegue/entorno-local-docker.md).
 
+Con el backend arriba, la documentación interactiva de la API (Swagger UI) queda disponible en [`http://localhost:8080/swagger-ui/index.html`](http://localhost:8080/swagger-ui/index.html) (JSON crudo en `/v3/api-docs`). No requiere token para verla; para probar un endpoint protegido, hacer login, copiar el JWT devuelto y pegarlo en el botón "Authorize" (sin el prefijo `Bearer `).
+
 Para correr el frontend en desarrollo:
 
 ```bash

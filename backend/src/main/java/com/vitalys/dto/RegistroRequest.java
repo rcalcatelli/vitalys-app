@@ -1,6 +1,7 @@
 package com.vitalys.dto;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,14 +14,17 @@ import java.util.Map;
  * {@link #extras} para que {@code AuthService.registrar()} pueda detectar y rechazar un intento
  * de forzar el rol (CA-01-7) sin ignorarlo en silencio.
  */
+@Schema(description = "Body de registro. No incluye \"rol\": se fuerza siempre a SOCIO_PACIENTE.")
 public class RegistroRequest {
 
     @NotBlank
     @Email
+    @Schema(example = "socio@vitalys.test")
     private String email;
 
     @NotBlank
     @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+    @Schema(example = "contraseñaSegura123", minLength = 8)
     private String contrasena;
 
     private final Map<String, Object> extras = new LinkedHashMap<>();

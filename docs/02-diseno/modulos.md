@@ -19,6 +19,8 @@
 | 5 | Registro de Pagos | Carga de cuotas de gym y sesiones de consultorio |
 | 6 | Notificaciones | Envío de confirmaciones y recordatorios por email |
 
+> **Swagger / OpenAPI:** este documento describe el diseño completo de los seis módulos, incluyendo endpoints todavía no implementados. La documentación interactiva de Swagger UI (`/swagger-ui/index.html`, ver README) solo cubre los endpoints que **ya existen como controller** en el código — hoy, únicamente los del Módulo 1 (`/api/auth/registro`, `/api/auth/login`, `/api/auth/me`) más `/api/health`. Una cosa complementa a la otra, no la reemplaza.
+
 ---
 
 ## Módulo 1 — Autenticación y Roles

@@ -106,9 +106,10 @@
 ### Turnos de CONSULTORIO
 
 **Reglas de negocio clave:**
-- **Sin solapamientos:** un profesional no puede tener dos turnos activos en el mismo horario. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos, y bloquea contra cualquier turno `RESERVADO`, `CANCELADO_TARDE`, `AUSENTE` o `COMPLETADO` de ese profesional (el único estado que libera el slot es `CANCELADO_EN_TIEMPO`).
-- **Cancelación en tiempo:** aviso con ≥ 24 horas antes del inicio → estado `CANCELADO_EN_TIEMPO`, el slot queda libre.
-- **Cancelación tarde:** aviso con < 24 horas → estado `CANCELADO_TARDE`, el slot no se libera.
+- **Sin solapamientos:** un profesional no puede tener dos turnos activos en el mismo horario. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos, y bloquea contra todo turno de ese profesional que **ocupe su lugar** según `fn_turno_ocupa_lugar`: `RESERVADO`, `AUSENTE`, `COMPLETADO`, y cualquier cancelación registrada a partir del inicio de la franja.
+- **Cancelación en tiempo:** aviso con ≥ 24 horas antes del inicio → estado `CANCELADO_EN_TIEMPO`.
+- **Cancelación tarde:** aviso con < 24 horas → estado `CANCELADO_TARDE`.
+- **Liberación del slot:** la decide el momento de la cancelación, no el estado. Si `cancelado_en < inicio`, el slot queda libre y otra persona puede tomarlo — también cuando la cancelación fue tardía. Si la cancelación llega a partir del inicio (`cancelado_en >= inicio`), el slot permanece bloqueado, igual que con `AUSENTE` (RN-02, RN-03, RN-08).
 - **Completado / Ausente:** los marca el **PROFESIONAL** asignado al turno (o un ADMIN), a mano, desde su agenda.
 
 ### Turnos de GYM
@@ -119,7 +120,7 @@
 - **Cupo por franja:** cada franja tiene un máximo de personas configurable (tabla `configuracion_gym`, columna `cupo_por_franja`); una reserva que superaría el cupo es rechazada.
 - **Un turno por persona por día:** un socio no puede tener más de un turno de gym activo el mismo día (índice único parcial sobre `turnos`).
 - **Solo socios de gym activos:** reserva quien tiene `es_socio_gym = TRUE` y `estado = 'ACTIVO'` en `personas`.
-- **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`.
+- **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`. En ambos casos **el cupo se libera** si la cancelación llegó antes del inicio de la franja; solo queda bloqueado si se canceló con la franja ya empezada (RN-02).
 
 **Reglas de negocio comunes a ambos tipos:**
 - **Deuda en gym:** la deuda se calcula como la cantidad de períodos mensuales impagos acumulados desde `personas.fecha_inicio_membresia`, sin que un pago posterior compense un mes salteado (RN-01). Tener deuda **no bloquea por sí solo**: mientras el socio acumule menos períodos impagos que `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto) conserva el acceso y solo se lo notifica. Al alcanzar el umbral queda **suspendido** y no puede reservar turnos de gym. Los turnos de consultorio no se ven afectados en ningún caso. El ADMIN puede levantar la suspensión puntualmente con una excepción de morosidad (ver más abajo).

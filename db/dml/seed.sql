@@ -226,10 +226,13 @@ INSERT INTO turnos (
   'Surgió un imprevisto laboral.'
 );
 
--- T5: CANCELADO_TARDE — Juan con Rodrigo, canceló con 3 h de anticipación (bloqueado)
+-- T5: CANCELADO_TARDE que SÍ libera el horario — Juan con Rodrigo, avisó 3 h antes.
 -- Nota: originalmente 23/09 (miércoles); Rodrigo solo atiende Mar/Jue.
 -- Se corrige a 24/09 (jueves), dentro de su disponibilidad; se mantiene el
 -- aviso de cancelación con 3 h de margen (<24h → CANCELADO_TARDE).
+-- El aviso llegó ANTES del inicio (11:00 < 14:00), así que el horario vuelve a
+-- estar disponible pese a ser una cancelación tardía: el estado registra la
+-- anticipación del aviso, no decide la ocupación (RN-02, RN-03). Comparar con T8.
 INSERT INTO turnos (
   persona_id, profesional_id, tipo_turno, inicio, fin, estado,
   reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
@@ -268,6 +271,28 @@ VALUES (
   '2026-09-19 11:00:00-03',
   'COMPLETADO',
   (SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com')
+);
+
+-- T8: GYM — Ana canceló con la franja YA EMPEZADA (turno 09:00, aviso 09:01).
+-- Contracara de T5: acá el lugar NO se libera y sigue contando para el cupo de
+-- esa franja y para el límite de un turno de gym por día. Es el mismo criterio
+-- que rige AUSENTE: una vez iniciada la franja, el lugar se consumió (RN-02,
+-- RN-03, RN-08). Relevado en el Centro Deportivo Jerárquicos: "si el turno es a
+-- las 14:00 y a las 14:01 cancelan, quedan bloqueados para ambos".
+INSERT INTO turnos (
+  persona_id, profesional_id, tipo_turno, inicio, fin, estado,
+  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
+) VALUES (
+  (SELECT id FROM personas WHERE dni = '38100005'),
+  NULL,
+  'GYM',
+  '2026-09-23 09:00:00-03',
+  '2026-09-23 10:00:00-03',
+  'CANCELADO_TARDE',
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  '2026-09-23 09:01:00-03',
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  'Avisé cuando la franja ya había arrancado.'
 );
 
 -- ---------------------------------------------------------------------------

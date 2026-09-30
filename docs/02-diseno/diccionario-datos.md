@@ -128,13 +128,27 @@ Reservas de slots entre una persona y un profesional (consultorio) o del gimnasi
 **Ciclo de vida del estado:**
 
 ```
-RESERVADO ──► COMPLETADO         (profesional o admin, al finalizar la atención)
-          ──► AUSENTE            (profesional o admin, cuando el paciente no se presenta)
-          ──► CANCELADO_EN_TIEMPO (aviso con ≥ 24 h de anticipación; libera el slot)
-          ──► CANCELADO_TARDE    (aviso con < 24 h; el slot queda bloqueado)
+RESERVADO ──► COMPLETADO          (profesional o admin, al finalizar la atención)
+          ──► AUSENTE             (profesional o admin, cuando el paciente no se presenta)
+          ──► CANCELADO_EN_TIEMPO (aviso con ≥ 24 h en consultorio / ≥ 2 h en gym)
+          ──► CANCELADO_TARDE     (aviso con menos anticipación que el umbral)
+          ──► CANCELADO_POR_PROFESIONAL
+                                  (el profesional redujo su disponibilidad, RN-24)
 ```
 
-**Restricción de solapamiento:** `ALTER TABLE turnos ADD CONSTRAINT excl_turnos_overlap EXCLUDE USING GIST (profesional_id WITH =, tstzrange(inicio, fin, '[)') WITH &&) WHERE (profesional_id IS NOT NULL AND estado IN ('RESERVADO', 'CANCELADO_TARDE', 'AUSENTE', 'COMPLETADO'))`. Solo `CANCELADO_EN_TIEMPO` libera el horario (RN-02); `AUSENTE` y `COMPLETADO` lo mantienen bloqueado porque el slot ya fue ocupado (RN-08). Los turnos GYM no verifican este EXCLUDE (sin profesional asignado); el cupo por franja lo controla el trigger `trg_turno_gym` contra `configuracion_gym.cupo_por_franja` (ver tabla `configuracion_gym`).
+Los dos primeros estados de cancelación registran **la anticipación con la que avisó el paciente**; `CANCELADO_POR_PROFESIONAL` marca una cancelación que el paciente no decidió y que por lo tanto no le computa (RN-24). Que el lugar se libere o no lo decide un dato distinto del estado: si `cancelado_en` es anterior al `inicio` del turno, el lugar se libera — incluso siendo `CANCELADO_TARDE`.
+
+**Ocupación del lugar (`fn_turno_ocupa_lugar`):** un turno ocupa su lugar si su estado es `RESERVADO`, `COMPLETADO` o `AUSENTE`, **o** si fue cancelado a partir del inicio de la franja (`cancelado_en >= inicio`). Una cancelación registrada antes del inicio libera el lugar, sea en tiempo o tarde: el estado registra la anticipación del aviso, no decide la ocupación (RN-02, RN-03). Es el mismo criterio que ya regía para `AUSENTE` — una vez que la franja empezó, el lugar se consumió (RN-08).
+
+La función está declarada `IMMUTABLE` en `V8__ocupacion_por_inicio_del_turno.sql` y la usan los **tres** controles del motor, para que no puedan divergir entre sí:
+
+- `excl_turnos_overlap` — `EXCLUDE USING GIST (profesional_id WITH =, tstzrange(inicio, fin, '[)') WITH &&) WHERE (profesional_id IS NOT NULL AND fn_turno_ocupa_lugar(estado, inicio, cancelado_en))`. Los turnos GYM no lo verifican: no tienen profesional asignado.
+- `excl_turnos_persona_overlap` — el espejo del anterior, sobre `persona_id` y **sin filtrar por tipo**: una persona no puede tener dos turnos superpuestos, ni siquiera uno de gimnasio y otro de consultorio (RN-22). Nadie puede estar entrenando y sentado en un consultorio al mismo tiempo.
+- `trg_turno_persona_activa` — no se reservan turnos para una persona `INACTIVO`, en ningún tipo de turno (RN-21). Dar de baja no invalida los turnos ya existentes; el trigger solo actúa al insertar o modificar.
+- `trg_turno_gym` — cuenta la ocupación de la franja contra `configuracion_gym.cupo_por_franja`.
+- `uq_turno_gym_persona_dia` — índice único parcial: un solo turno de gimnasio por persona y día.
+
+> Como la función aparece en el predicado de un `EXCLUDE` y de dos índices parciales, cambiar su semántica exige recrear esos tres objetos en la misma migración: PostgreSQL no reconstruye un índice porque se haya redefinido una función.
 
 **Regla de morosidad (RN-01):** si `tipo_turno = 'GYM'` y `personas.es_socio_gym = TRUE`, la API cuenta los períodos mensuales impagos acumulados desde `personas.fecha_inicio_membresia`. Un período `P` se cuenta como impago cuando `NOW() > (P + 1 mes + 10 días)` y no existe una cuota `CUOTA_MENSUAL` registrada para ese `P`; un mes salteado sigue contando aunque se hayan pagado meses posteriores. La reserva se rechaza solo cuando ese total **alcanza o supera** `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto): por debajo del umbral el socio tiene deuda pero conserva el acceso. La validación ocurre en la capa de servicio Java, no en el motor, porque depende de `NOW()` y de la existencia de una excepción vigente (RN-09).
 

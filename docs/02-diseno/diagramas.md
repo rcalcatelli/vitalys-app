@@ -106,7 +106,7 @@ stateDiagram-v2
 
     RESERVADO --> AUSENTE : Paciente no se presentó\n(profesional / admin)
 
-    RESERVADO --> CANCELADO_EN_TIEMPO : Cancelación con ≥ 24 h\n(persona / admin)\nEl slot queda libre
+    RESERVADO --> CANCELADO_EN_TIEMPO : Aviso ≥ 24 h (consultorio) / ≥ 2 h (gym)\n(persona / admin)
 
     RESERVADO --> CANCELADO_TARDE : Cancelación con < 24 h\n(persona / admin)\nEl slot permanece bloqueado
 
@@ -116,29 +116,30 @@ stateDiagram-v2
     CANCELADO_TARDE --> [*]
 
     note right of RESERVADO
-        Estado inicial.
-        El horario está bloqueado.
+        Estado inicial. Ocupa el lugar.
     end note
 
     note right of AUSENTE
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap (RN-08).
+        Ocupa el lugar: la franja
+        ya transcurrió (RN-08).
     end note
 
     note right of COMPLETADO
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap (RN-08).
+        Ocupa el lugar: la franja
+        ya transcurrió (RN-08).
     end note
 
     note right of CANCELADO_TARDE
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap.
+        El estado registra la anticipación
+        del aviso, NO decide la ocupación.
     end note
 
     note right of CANCELADO_EN_TIEMPO
         Único estado que libera el horario (RN-02).
     end note
 ```
+
+**Lo que ocupa el lugar no es el estado, sino el momento de la cancelación.** Los estados `RESERVADO`, `COMPLETADO` y `AUSENTE` siempre ocupan. Los tres estados de cancelación ocupan **solo si `cancelado_en >= inicio`**: una cancelación registrada antes de que empiece la franja libera el lugar, sea en tiempo o tarde, y otra persona puede tomarlo. La distinción en tiempo/tarde se conserva como registro de la anticipación del aviso. Los tres controles del motor comparten esta definición en `fn_turno_ocupa_lugar` (RN-02, RN-03).
 
 ---
 
@@ -272,20 +273,71 @@ sequenceDiagram
         API-->>U: 403 "Solo podés cancelar tus propios turnos"
     end
 
-    TS->>TS: calcularAnticipacion(turno.inicio, NOW())
+    TS->>TS: umbral = 24h si CONSULTORIO, 2h si GYM (RN-02)
+    TS->>TS: anticipacion = turno.inicio - NOW()
 
-    alt anticipacion >= 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_EN_TIEMPO,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
-        DB-->>TS: ok
-        TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
-        TS-->>API: TurnoDTO {estado: CANCELADO_EN_TIEMPO}
-        API-->>U: 200 OK "Turno cancelado en tiempo. Slot liberado."
-    else anticipacion < 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_TARDE,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
-        DB-->>TS: ok
-        TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
-        TS-->>API: TurnoDTO {estado: CANCELADO_TARDE}
-        API-->>U: 200 OK "Cancelación tardía. El horario no se libera."
+    alt anticipacion >= umbral
+        TS->>TS: estadoFinal = CANCELADO_EN_TIEMPO
+    else anticipacion < umbral
+        TS->>TS: estadoFinal = CANCELADO_TARDE
+    end
+
+    Note over TS,DB: El estado solo registra la anticipación del aviso.<br/>Lo que decide si el lugar se libera es cancelado_en frente a inicio.
+
+    TS->>DB: UPDATE turnos SET estado=estadoFinal,<br/>cancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
+    DB-->>TS: ok
+    Note over DB: fn_turno_ocupa_lugar reevalúa la ocupación con el nuevo<br/>cancelado_en: el lugar vuelve a estar disponible si NOW() < inicio,<br/>y sigue ocupado si la franja ya había empezado (RN-03)
+
+    TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
+    TS-->>API: TurnoDTO {estado: estadoFinal, liberaLugar}
+
+    alt NOW() < turno.inicio
+        API-->>U: 200 OK "Turno cancelado. El lugar queda disponible."
+    else NOW() >= turno.inicio
+        API-->>U: 200 OK "Turno cancelado con la franja ya iniciada. El lugar no se libera."
+    end
+```
+
+---
+
+## 4b. Diagrama de Secuencia — Reducir la disponibilidad de un profesional
+
+Cancelar turnos de terceros es una acción destructiva, así que la operación va en **dos
+pasos**: primero se consulta el impacto, y recién con confirmación explícita se aplica
+(RN-24, cierra el hallazgo 5 del RFC-001).
+
+```mermaid
+sequenceDiagram
+    actor P as Profesional / Admin
+    participant API as ProfesionalController
+    participant DS as DisponibilidadService
+    participant NS as NotificacionService
+    participant DB as Base de datos
+
+    Note over P,DB: 1) Ver el impacto antes de tocar nada
+    P->>API: GET /api/profesionales/{id}/disponibilidad/{dId}/impacto
+    API->>DS: calcularImpacto(dId, nuevaFranja)
+    DS->>DB: SELECT turnos CONSULTORIO RESERVADO del profesional<br/>con inicio > NOW() que caen fuera de la nueva franja
+    DB-->>DS: turnos afectados
+    DS-->>API: lista {turnoId, persona, inicio}
+    API-->>P: 200 OK "3 turnos quedarían fuera de tu disponibilidad"
+
+    Note over P,DB: 2) Aplicar, ya sabiendo qué se pierde
+    P->>API: DELETE /api/profesionales/{id}/disponibilidad/{dId}?confirmar=true
+
+    alt hay turnos afectados y confirmar != true
+        API-->>P: 409 "Hay 3 turnos futuros en esa franja. Confirmá para cancelarlos."
+    end
+
+    API->>DS: reducirDisponibilidad(dId, nuevaFranja, actorActual)
+
+    rect rgb(245, 245, 245)
+        Note over DS,DB: Una sola transacción: o queda todo, o no queda nada
+        DS->>DB: UPDATE/DELETE disponibilidad_profesional
+        DS->>DB: UPDATE turnos SET estado=CANCELADO_POR_PROFESIONAL,<br/>cancelado_en=NOW(), cancelado_por_usuario=actor,<br/>motivo_cancelacion='El profesional modificó su disponibilidad'
+        Note over DS,DB: Solo turnos FUTUROS. Los ya transcurridos no se tocan:<br/>son hechos históricos. fn_turno_ocupa_lugar libera esas<br/>franjas sin necesidad de cambios (RN-02)
+        DS->>NS: avisarCancelacion(turnos afectados)
+        NS->>DB: INSERT INTO notificaciones (tipo=AVISO_CANCELACION) por cada paciente
     end
 ```
 

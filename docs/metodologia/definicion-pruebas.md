@@ -110,9 +110,12 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-07 | Reserva exitosa en slot disponible                             | 201, turno con estado RESERVADO                  |
 | PI-08 | Reserva en slot solapado → rechazada por EXCLUDE GIST         | 409 (constraint de BD capturada por API)         |
 | PI-09 | Dos reservas simultáneas al mismo slot (race condition test)  | Solo una de las dos en 201; la otra en 409       |
-| PI-10 | Reserva GYM sin excepción por moroso                          | 422 con mensaje de morosidad                     |
-| PI-11 | Cancelación en tiempo → estado CANCELADO_EN_TIEMPO            | 200, slot liberado (verificar EXCLUDE no bloquea)|
-| PI-12 | Cancelación tardía → estado CANCELADO_TARDE                   | 200, slot sigue bloqueado (EXCLUDE activo)       |
+| PI-10 | Reserva GYM de un socio suspendido y sin excepción             | 422 con mensaje de suspensión por morosidad      |
+| PI-11 | Cancelación en tiempo, antes del inicio → CANCELADO_EN_TIEMPO | 200; el slot queda libre: otra persona lo reserva y obtiene 201 |
+| PI-12 | Cancelación tardía pero **antes del inicio** → CANCELADO_TARDE | 200; el slot **también** queda libre: otra persona obtiene 201. El estado tardío no bloquea (RN-02) |
+| PI-13 | Cancelación con la franja **ya iniciada** (`cancelado_en >= inicio`) | 200; el slot sigue ocupado: otra reserva en ese horario da 409 |
+| PI-14 | Cupo de gimnasio tras una cancelación previa al inicio         | La franja vuelve a admitir una reserva: 201      |
+| PI-15 | Cupo de gimnasio tras una cancelación con la franja iniciada   | La franja sigue completa: 409 "Cupo completo"    |
 
 ### Gimnasio
 

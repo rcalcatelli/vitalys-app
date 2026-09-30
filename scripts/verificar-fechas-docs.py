@@ -77,9 +77,18 @@ def revisar(ruta):
                 problemas.append((n, texto, f"{dia:02d}/{mes:02d}/{anio} no es una fecha válida"))
                 continue
             esperado = INDICE_DIA[nombre.lower()]
-            if real != esperado:
-                problemas.append(
-                    (n, texto, f"el {dia:02d}/{mes:02d}/{anio} cae {DIAS[real]}, no {DIAS[esperado]}"))
+            if real == esperado:
+                continue
+
+            # Un texto puede CITAR una fecha mal escrita justamente para explicar que se
+            # corrigió — por ejemplo: decía "lunes 28/10/2026" cuando es miércoles. Si el día
+            # correcto aparece nombrado en la misma línea, la línea está documentando el error,
+            # no cometiéndolo. Es el mismo criterio que usan los otros dos verificadores.
+            if DIAS[real].lower() in linea.lower():
+                continue
+
+            problemas.append(
+                (n, texto, f"el {dia:02d}/{mes:02d}/{anio} cae {DIAS[real]}, no {DIAS[esperado]}"))
     return problemas
 
 

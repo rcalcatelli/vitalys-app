@@ -142,30 +142,23 @@ stateDiagram-v2
 
 ---
 
-## 3. Diagrama de Secuencia — Reservar un turno
+## 3. Diagramas de Secuencia — Reservar un turno
+
+Reservar consultorio y reservar gimnasio son **dos circuitos distintos**, con rutas propias (`POST /api/turnos` y `POST /api/turnos/gym`, ver Módulo 3), validaciones que no se comparten y capas de aplicación diferentes. Por eso se documentan por separado en lugar de como ramas de un mismo flujo: unificarlos sugiere que el turno de gimnasio pasa por la disponibilidad de un profesional que no tiene.
+
+### 3.1. Reservar un turno de CONSULTORIO
 
 ```mermaid
 sequenceDiagram
     actor U as Usuario (Socio / Admin)
     participant API as TurnoController
     participant TS as TurnoService
-    participant PS as PagoService
     participant DB as Base de datos
 
-    U->>API: POST /api/turnos {persona_id, profesional_id, inicio, tipo_turno}
+    U->>API: POST /api/turnos {persona_id, profesional_id, inicio}
+    API->>TS: reservarTurnoConsultorio(request, usuarioActual)
 
-    API->>TS: reservarTurno(request, usuarioActual)
-
-    alt tipo_turno = GYM y es_socio_gym = true
-        TS->>PS: calcularMorosidad(persona_id)
-        PS->>DB: SELECT MAX(periodo) FROM pagos WHERE persona_id=? AND concepto='CUOTA_MENSUAL'
-        DB-->>PS: ultimo_periodo
-        PS-->>TS: diasMora (int)
-        alt diasMora > 10
-            TS-->>API: MorosidadException
-            API-->>U: 422 "Cuota vencida hace X días. No puede reservar turno de gym."
-        end
-    end
+    Note over TS: No se evalúa morosidad: la deuda de la cuota de<br/>gimnasio nunca bloquea un turno de consultorio<br/>(Decisión de dominio 1, confirmada por el relevamiento)
 
     TS->>DB: SELECT disponibilidad activa del profesional para ese día/hora
     DB-->>TS: franja horaria
@@ -181,6 +174,68 @@ sequenceDiagram
         DB-->>TS: PSQLException (constraint violation)
         TS-->>API: SolapamientoException
         API-->>U: 409 "El horario ya no está disponible"
+    end
+    alt la persona está dada de baja
+        DB-->>TS: PSQLException (check_violation)
+        TS-->>API: PersonaInactivaException
+        API-->>U: 422 "La persona está dada de baja: no se le pueden reservar turnos"
+    end
+
+    DB-->>TS: turno creado (id)
+    TS->>TS: enviar email CONFIRMACION_TURNO (asíncrono)
+    TS-->>API: TurnoDTO
+    API-->>U: 201 Created {turnoId, inicio, fin, estado}
+```
+
+### 3.2. Reservar un turno de GIMNASIO
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario (Socio / Admin)
+    participant API as TurnoController
+    participant TS as TurnoService
+    participant PS as PagoService
+    participant DB as Base de datos
+
+    U->>API: POST /api/turnos/gym {persona_id, inicio}
+    API->>TS: reservarTurnoGym(request, usuarioActual)
+
+    Note over TS: No se consulta disponibilidad de profesional:<br/>el turno de gimnasio no tiene profesional asignado<br/>(profesional_id = NULL)
+
+    TS->>PS: contarPeriodosImpagos(persona_id)
+    PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
+    PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
+    DB-->>PS: períodos efectivamente pagados
+    Note over PS: Recorre mes a mes DESDE fecha_inicio_membresia.<br/>Cuenta impago todo período P con NOW() > P + 1 mes + 10 días<br/>sin cuota registrada. Un mes salteado sigue contando aunque<br/>se hayan pagado los posteriores: NO se usa el último período<br/>pagado como referencia (RN-01).
+    PS-->>TS: impagos (int)
+
+    TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
+    DB-->>TS: umbral
+
+    alt impagos >= umbral — socio SUSPENDIDO
+        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id = ?<br/>AND valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
+        DB-->>TS: excepción vigente (o vacío)
+        alt sin excepción vigente
+            TS-->>API: MorosidadException
+            API-->>U: 422 "Suspendido por N períodos impagos. Regularice para reservar."
+        else con excepción vigente
+            TS->>TS: continuar con la reserva (RN-09)
+        end
+    else 0 < impagos < umbral — CON DEUDA
+        TS->>TS: continuar: la deuda por debajo del umbral NO bloquea (RN-01)
+    end
+
+    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, profesional_id=NULL, estado=RESERVADO)
+    Note over TS,DB: El motor valida: grilla horaria y feriados, membresía de gimnasio,<br/>un turno por persona y día y cupo por franja (trg_turno_gym, con<br/>pg_advisory_xact_lock contra la condición de carrera); que la persona<br/>no esté de baja (trg_turno_persona_activa, RN-21); y que no tenga otro<br/>turno superpuesto (excl_turnos_persona_overlap, RN-22)
+    alt regla de gimnasio rechazada por el motor
+        DB-->>TS: PSQLException (raise exception)
+        TS-->>API: ReglaGymException
+        API-->>U: 409 "Cupo completo" · 422 según la regla violada
+    end
+
+    opt la reserva usó una excepción de un solo uso
+        TS->>DB: UPDATE excepciones_morosidad SET turno_id = ? — se consume
+        Note over TS,DB: turno_id se completa DESPUÉS de crear el turno:<br/>al pedir la excepción, el turno todavía no existía (RN-23)
     end
 
     DB-->>TS: turno creado (id)
@@ -340,23 +395,30 @@ sequenceDiagram
     end
 
     Note over U,DB: 2) Más tarde, el socio intenta reservar un turno de gym
-    U->>TC: POST /api/turnos {persona_id, tipo_turno=GYM, inicio}
-    TC->>TS: reservarTurno(request, usuarioActual)
+    U->>TC: POST /api/turnos/gym {persona_id, inicio}
+    TC->>TS: reservarTurnoGym(request, usuarioActual)
 
-    TS->>PS: calcularMorosidad(persona_id)
-    PS->>DB: SELECT MAX(periodo) FROM pagos WHERE persona_id=? AND concepto='CUOTA_MENSUAL'
-    DB-->>PS: ultimo_periodo
-    PS-->>TS: diasMora (int)
+    TS->>PS: contarPeriodosImpagos(persona_id)
+    PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
+    PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
+    DB-->>PS: períodos efectivamente pagados
+    Note over PS: Cuenta los períodos impagos ACUMULADOS desde el inicio de<br/>la membresía. No toma el último período pagado como referencia:<br/>un mes salteado sigue contando (RN-01).
+    PS-->>TS: impagos (int)
+
+    TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
+    DB-->>TS: umbral
 
     alt diasMora > 10
         TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id=? AND valida_hasta >= CURRENT_DATE AND (turno_id IS NULL OR turno_id=?)
         DB-->>TS: excepción vigente (o vacío)
         alt sin excepción vigente
             TS-->>TC: MorosidadException
-            TC-->>U: 422 "Cuota vencida hace X días. No puede reservar turno de gym."
+            TC-->>U: 422 "Suspendido por N períodos impagos. Regularice para reservar."
         else con excepción vigente
             TS->>TS: continuar con la reserva (excepción autorizada, RN-09)
         end
+    else impagos < umbral
+        TS->>TS: continuar: sin suspensión, la excepción no se consulta
     end
 
     TS->>DB: INSERT INTO turnos (tipo_turno=GYM, estado=RESERVADO, ...)

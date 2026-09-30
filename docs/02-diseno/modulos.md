@@ -116,7 +116,8 @@
 
 **Descripción:** el socio reserva una franja horaria del gimnasio en sí, no con un profesional puntual. Las reglas de grilla y cupo están implementadas a nivel de motor (`db/migration/V2__reglas_gimnasio.sql`), no solo en la capa de servicio:
 
-- **Grilla horaria:** franjas de 60 minutos en punto. Lunes a viernes de 07:00 a 21:00, sábados de 09:00 a 12:00. Domingo cerrado (no se puede reservar).
+- **Grilla horaria:** franjas de 60 minutos en punto, dentro del horario de apertura y terminando a más tardar a la hora de cierre. Lunes a viernes de 07:00 a 21:00 — última franja **20:00–21:00**, 14 en total. Sábados de 09:00 a 12:00 — última franja **11:00–12:00**, 3 en total. Domingos y **feriados** el gimnasio no abre: no se ofrece ninguna franja.
+- **Feriados:** se validan en el trigger `trg_turno_gym` contra la tabla `feriados`, no en el `CHECK` de la grilla — un `CHECK` no puede consultar otra tabla. El calendario **no se escribe a mano**: lo sincroniza un importador contra el dataset oficial del Ministerio del Interior publicado en `datos.gob.ar` (RF-38), porque los feriados trasladables se corren cada año y pueden declararse feriados por decreto. La reserva lee la tabla, nunca la API: una caída del servicio externo no puede impedir vender turnos. Los de tipo `NO_LABORABLE` (festividades religiosas de quien las profesa) **no** cierran el gimnasio. El ADMIN puede corregir filas o cargar cierres propios del centro con `origen = 'MANUAL'`. Declarar un feriado no cancela los turnos ya reservados para ese día.
 - **Cupo por franja:** cada franja tiene un máximo de personas configurable (tabla `configuracion_gym`, columna `cupo_por_franja`); una reserva que superaría el cupo es rechazada.
 - **Un turno por persona por día:** un socio no puede tener más de un turno de gym activo el mismo día (índice único parcial sobre `turnos`).
 - **Solo socios de gym activos:** reserva quien tiene `es_socio_gym = TRUE` y `estado = 'ACTIVO'` en `personas`.

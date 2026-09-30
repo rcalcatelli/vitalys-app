@@ -16,7 +16,9 @@
 | `tipo_turno` | `CONSULTORIO` · `GYM` |
 | `estado_turno` | `RESERVADO` · `COMPLETADO` · `AUSENTE` · `CANCELADO_EN_TIEMPO` · `CANCELADO_TARDE` |
 | `concepto_pago` | `CUOTA_MENSUAL` · `SESION_CONSULTORIO` |
-| `tipo_notificacion` | `CONFIRMACION_TURNO` · `AVISO_CANCELACION` · `RECORDATORIO` |
+| `tipo_feriado` | `INAMOVIBLE` · `TRASLADABLE` · `TURISTICO` · `NO_LABORABLE` |
+| `origen_feriado` | `OFICIAL` · `MANUAL` |
+| `tipo_notificacion` | `CONFIRMACION_TURNO` · `AVISO_CANCELACION` · `RECORDATORIO` · `AVISO_DEUDA` · `AVISO_SUSPENSION` |
 
 ---
 
@@ -168,8 +170,44 @@ Parámetros operativos del gimnasio. Tabla de fila única (`id = 1`) que central
 **Restricciones:**
 - `chk_configuracion_gym_fila_unica`: `id = 1`
 - `chk_cupo_positivo`: `cupo_por_franja > 0`
+- `chk_tolerancia_morosidad_positiva`: `meses_tolerancia_morosidad > 0`
 
-**Uso:** el trigger `trg_turno_gym` sobre `turnos` lee `cupo_por_franja` para rechazar una reserva de gimnasio si la franja ya alcanzó el cupo máximo. No tiene claves foráneas: es un parámetro global del sistema, no una entidad relacionada con personas ni turnos puntuales.
+**Uso:** el trigger `trg_turno_gym` sobre `turnos` lee `cupo_por_franja` para rechazar una reserva de gimnasio si la franja ya alcanzó el cupo máximo. `meses_tolerancia_morosidad`, en cambio, **no lo lee ningún trigger**: lo consulta la capa de servicio al evaluar RN-01, porque esa regla depende de `NOW()` y de la vigencia de una excepción. No tiene claves foráneas: son parámetros globales del sistema, no entidades relacionadas con personas ni turnos puntuales.
+
+**Por qué son parámetros y no literales:** tanto el cupo como el umbral de tolerancia son políticas comerciales del establecimiento, no invariantes del dominio. El valor por defecto de `meses_tolerancia_morosidad` (6) proviene del relevamiento de campo en el Centro Deportivo Jerárquicos (28/09/2026).
+
+---
+
+## Tabla: `feriados`
+
+Calendario de días no laborables en los que el gimnasio no abre (RN-14). Se crea **vacía**: la puebla el importador contra la fuente oficial (RF-38), y el ADMIN puede corregir filas o agregar cierres propios del centro.
+
+| Campo | Tipo | Nulable | Restricciones | Descripción |
+|-------|------|---------|---------------|-------------|
+| `fecha` | `DATE` | NO | PK | Fecha del feriado en hora de Argentina; una fila por fecha |
+| `descripcion` | `VARCHAR(200)` | NO | no vacía | Nombre del feriado, para que el aviso al socio diga por qué no hay franjas |
+| `tipo` | `tipo_feriado` | NO | ENUM | `INAMOVIBLE` · `TRASLADABLE` · `TURISTICO` · `NO_LABORABLE`, según la clasificación de la fuente oficial |
+| `cierra_gimnasio` | `BOOLEAN` | NO | — | Si el gimnasio no abre ese día |
+| `origen` | `origen_feriado` | NO | ENUM · DEFAULT 'OFICIAL' | `OFICIAL` (importado) · `MANUAL` (cargado por el ADMIN) |
+| `sincronizado_en` | `TIMESTAMPTZ` | SÍ | ligado a `origen` | Última sincronización; `NULL` en las filas manuales |
+| `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de carga |
+| `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
+
+**Restricciones:**
+- `chk_feriado_descripcion_no_vacia`: `btrim(descripcion) <> ''`
+- `chk_feriado_origen_sincronizado`: `(origen = 'OFICIAL' AND sincronizado_en IS NOT NULL) OR (origen = 'MANUAL' AND sincronizado_en IS NULL)`
+
+**Por qué el calendario no se escribe a mano:** no es deducible. En 2026 el trasladable del 17/06 (Güemes) cayó el 15/06, el del 20/11 cayó el 23/11, y el 09/11 fue feriado **por decreto** (visita papal). Ninguna lista fija puede anticipar un feriado creado por decreto ni el corrimiento anual de los trasladables, así que se sincroniza desde el dataset del Estado (RF-38).
+
+**Por qué `cierra_gimnasio` es una columna y no se deriva del tipo:** los `NO_LABORABLE` son festividades religiosas que rigen para quien las profesa, no un cierre del establecimiento — el gimnasio abre. Tenerlo explícito permite además que el ADMIN cargue un cierre propio (mantenimiento, feriado provincial) sin pelear con la clasificación oficial.
+
+**Dónde se valida:** en el trigger `trg_turno_gym`, **no** en `chk_turno_gym_grilla`. Un `CHECK` no puede consultar otra tabla —PostgreSQL lo prohíbe porque la restricción no se reevaluaría al cambiar esa tabla—, y por eso `fn_franja_gym_valida` es `IMMUTABLE` y solo mira el timestamp que recibe. El trigger es plpgsql, corre en cada `INSERT`/`UPDATE` y ya consulta `personas` y `configuracion_gym`.
+
+**La reserva nunca consulta la API:** lee esta tabla. Si el servicio externo se cae, el gimnasio tiene que poder seguir vendiendo turnos.
+
+**Limitación conocida:** declarar un feriado **no** cancela los turnos ya reservados para esa fecha. El trigger valida al insertar o modificar, no retroactivamente. Quien carga un feriado con turnos tomados tiene que cancelarlos.
+
+**Alcance:** aplica a los turnos de gimnasio. Los de consultorio dependen de la disponibilidad que carga cada profesional (RF-14), que es quien decide si atiende un feriado.
 
 ---
 

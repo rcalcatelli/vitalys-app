@@ -126,6 +126,34 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-30 | Reserva GYM fuera de grilla (hora no en punto o duración ≠ 60 min) | 422 (`chk_turno_gym_grilla` capturado por API)  |
 | PI-31 | Reserva GYM un domingo                                          | 422 (`chk_turno_gym_grilla`: el domingo no está en la grilla) |
 | PI-32 | Reserva GYM un sábado fuera de 09:00–12:00                      | 422 (`chk_turno_gym_grilla`: el sábado solo abre 09:00–12:00) |
+| PI-33 | Reserva GYM L-V en la última franja (20:00–21:00)               | 201: termina justo a la hora de cierre |
+| PI-34 | Reserva GYM L-V empezando a las 21:00 (terminaría 22:00)        | 422: la franja excede la hora de cierre (RN-14) |
+| PI-35 | Reserva GYM sábado en la última franja (11:00–12:00)            | 201 |
+| PI-36 | Reserva GYM sábado empezando a las 12:00                        | 422: el sábado cierra a las 12:00 |
+| PI-37 | Reserva GYM en un feriado `INAMOVIBLE`                          | 422 con el nombre del feriado en el mensaje |
+| PI-38 | Reserva GYM en un feriado `TRASLADABLE` **en la fecha corrida**, no en la nominal | 422 en la fecha corrida; 201 en la fecha nominal si ese año no es feriado |
+| PI-39 | Reserva GYM en un día `NO_LABORABLE`                            | 201: las festividades religiosas no cierran el gimnasio (`cierra_gimnasio = FALSE`) |
+| PI-40 | Reserva GYM en un cierre cargado por el ADMIN (`origen = 'MANUAL'`) | 422: el trigger no distingue el origen, solo `cierra_gimnasio` |
+| PI-41 | Pago `SESION_CONSULTORIO` asociado a un turno de gimnasio | 422 (`trg_pago_sesion`, RN-20 a) |
+| PI-42 | Pago `SESION_CONSULTORIO` a nombre de una persona distinta a la del turno | 422 (`trg_pago_sesion`, RN-20 b) |
+| PI-43 | El mismo pago a nombre del titular del turno | 201: el caso válido no quedó bloqueado |
+| PI-44 | Turno de consultorio para una persona `INACTIVO` | 422 (`trg_turno_persona_activa`, RN-21) |
+| PI-45 | Turno de gimnasio para una persona `INACTIVO` | 422: la regla vale para los dos tipos de turno |
+| PI-46 | Cancelar un turno de una persona dada de baja después del alta | 200: dar de baja no congela los turnos existentes |
+| PI-47 | Dos turnos de consultorio superpuestos para la misma persona, con distinto profesional | 409 (`excl_turnos_persona_overlap`, RN-22) |
+| PI-48 | Turno de gimnasio superpuesto con un turno de consultorio de la misma persona | 409: la exclusión no distingue el tipo de turno |
+| PI-49 | Turno superpuesto con uno cancelado **antes** de su inicio | 201: la cancelación previa al inicio libera la franja (RN-02) |
+| PI-50 | Excepción de morosidad cuyo `turno_id` es de otra persona | 422 (`trg_excepcion_morosidad`, RN-23) |
+| PI-51 | Alta de excepción sin `turno_id` | 201: es la forma normal de darla de alta — el turno todavía no existe |
+| PI-52 | Excepción `un_solo_uso` ya consumida (`turno_id` completado) | No se considera vigente: la segunda reserva vuelve a dar 422 por morosidad |
+| PI-53 | Consultar el impacto de quitar una franja con 3 turnos futuros reservados | 200 con los 3 turnos (persona, fecha y hora); **no** se modifica nada |
+| PI-54 | Quitar esa franja sin `confirmar=true` | 409; la disponibilidad queda intacta y los turnos siguen en `RESERVADO` |
+| PI-55 | Quitar esa franja con `confirmar=true` | 200; los 3 turnos quedan en `CANCELADO_POR_PROFESIONAL` con motivo y `cancelado_por_usuario` cargados |
+| PI-56 | Un turno **ya transcurrido** dentro de la franja quitada | No se toca: conserva su estado original (RN-24) |
+| PI-57 | Reservar en el horario liberado por una cancelación en cascada | 201: `fn_turno_ocupa_lugar` liberó la franja sin modificarse |
+| PI-58 | Notificaciones tras la cascada | Una fila `AVISO_CANCELACION` por cada paciente afectado (RF-27) |
+| PI-59 | Falla el envío de notificaciones durante la cascada | La transacción no deja la disponibilidad reducida con turnos sin cancelar: o queda todo, o no queda nada |
+| PI-60 | **Ampliar** la disponibilidad (no reducirla) | 200 sin confirmación: no hay turnos que puedan quedar afuera |
 | PI-33 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
 | PI-34 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
 | PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |

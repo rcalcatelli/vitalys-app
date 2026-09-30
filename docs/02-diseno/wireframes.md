@@ -317,6 +317,11 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  │   [Ver estado de cuenta]                                  │   │
 │  └───────────────────────────────────────────────────────────┘   │
 │                                                                  │
+│  ┌─ Día no laborable (condicional) ─────────────────────────┐   │
+│  │ 🚫 El gimnasio no abre el 25/05/2026                      │   │
+│  │   (Revolución de Mayo). Elegí otra fecha.                 │   │
+│  └───────────────────────────────────────────────────────────┘   │
+│                                                                  │
 │  ┌─ Confirmación (modal al hacer clic en RESERVAR) ─────────┐   │
 │  │  Confirmás la reserva?                                    │   │
 │  │  Gimnasio · Lunes 28/09/2026 · 09:00 – 10:00              │   │
@@ -326,7 +331,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 ```
 
 **Flujo:** elegir fecha → ver franjas de 60 minutos con el cupo ocupado/total de cada una → reservar una franja libre → confirmar.
-**Reglas:** solo se listan franjas dentro de la grilla del gimnasio (L-V 07:00–21:00, sáb 09:00–12:00; domingo no muestra franjas). Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si hay morosidad `> 10 días` sin excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Confirmar envía `POST /api/turnos {persona_id, tipo_turno: GYM, inicio}`.
+**Reglas:** solo se listan franjas dentro de la grilla del gimnasio, entendida de apertura a cierre: L-V de 07:00 a 21:00 —última franja **20:00–21:00**— y sábados de 09:00 a 12:00 —última franja **11:00–12:00**—. Domingos y feriados no muestran ninguna franja; en un feriado se indica el motivo. Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si el socio está **suspendido** —períodos impagos acumulados ≥ `configuracion_gym.meses_tolerancia_morosidad`— y no tiene excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Tener deuda **por debajo** del umbral no oculta las franjas: el socio reserva normalmente y el aviso de deuda llega por notificación (RF-37, RN-01). Confirmar envía `POST /api/turnos/gym {persona_id, inicio}` — la ruta propia del gimnasio, distinta de `POST /api/turnos`, que es la de consultorio y exige `profesional_id`.
 
 ---
 

@@ -96,7 +96,8 @@ El esquema usa **PostgreSQL** con las siguientes tablas principales:
 | `turnos`                     | Reservas de consultorio y de gimnasio, con ciclo de vida y auditoría de cancelación |
 | `configuracion_gym`          | Parámetros del gimnasio (cupo por franja, tolerancia de morosidad) |
 | `pagos`                      | Cuotas de gym y sesiones de consultorio                         |
-| `excepciones_morosidad`      | Excepciones puntuales al bloqueo por deuda en gym, autorizadas por el ADMIN |
+| `excepciones_morosidad`      | Excepciones al bloqueo por deuda en gym, autorizadas por el ADMIN |
+| `feriados`                   | Días en que el gimnasio no abre; sincronizados con el dataset oficial del Ministerio del Interior |
 | `notificaciones`             | Log de emails enviados                                          |
 
 El esquema se gestiona con **migraciones versionadas de Flyway**, en [`db/migration/`](db/migration). `V1` contiene el esquema inicial aprobado en la 2.ª entrega; los cambios posteriores (reglas de gimnasio, excepciones de morosidad, etc.) llegan como `V2`, `V3`… sin modificar las anteriores. El archivo [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql) se conserva únicamente para el flujo manual de carga del esquema en Supabase, documentado en el runbook de despliegue.

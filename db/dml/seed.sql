@@ -382,6 +382,36 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
   true
 );
 
+-- ---------------------------------------------------------------------------
+-- 10. FERIADOS — días en que el gimnasio no abre (RN-14)
+--
+--     El calendario real NO se carga acá: lo sincroniza el importador contra el
+--     dataset oficial del Ministerio del Interior (RF-38). Escribir feriados a
+--     mano no escala — los trasladables se corren cada año y aparecen feriados
+--     por decreto que ninguna lista fija puede anticipar.
+--
+--     Estas filas son datos de prueba para ejercitar los dos caminos de la
+--     tabla. Ninguna se superpone con los turnos del seed.
+-- ---------------------------------------------------------------------------
+
+-- Importados (así los deja el sincronizador). Fechas reales de 2026 tomadas de
+-- la fuente oficial; se incluye a propósito un trasladable que NO cayó en su
+-- fecha nominal y un feriado creado por decreto, que son justamente los casos
+-- que una lista escrita a mano no contempla.
+INSERT INTO feriados (fecha, descripcion, tipo, cierra_gimnasio, origen, sincronizado_en) VALUES
+  ('2026-11-23', 'Día de la Soberanía Nacional (20/11)',        'TRASLADABLE',  TRUE,  'OFICIAL', NOW()),
+  ('2026-11-09', 'Visita de Su Santidad el Papa León XIV',      'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  ('2026-12-07', 'Día no laborable con fines turísticos',       'TURISTICO',    TRUE,  'OFICIAL', NOW()),
+  ('2026-12-08', 'Inmaculada Concepción de María',              'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  ('2026-12-25', 'Navidad',                                      'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  -- NO_LABORABLE: festividad religiosa de quien la profesa. El gimnasio ABRE.
+  ('2026-09-21', 'Día del Perdón',                               'NO_LABORABLE', FALSE, 'OFICIAL', NOW());
+
+-- Cargado por el ADMIN: un cierre propio del centro, que la fuente oficial no
+-- conoce. Se clasifica con el tipo que mejor lo describe y origen MANUAL.
+INSERT INTO feriados (fecha, descripcion, tipo, cierra_gimnasio, origen) VALUES
+  ('2026-11-02', 'Cierre por mantenimiento de la sala de máquinas', 'TURISTICO', TRUE, 'MANUAL');
+
 COMMIT;
 
 -- =============================================================================

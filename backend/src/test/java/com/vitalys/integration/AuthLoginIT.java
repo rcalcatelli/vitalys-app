@@ -26,6 +26,7 @@ class AuthLoginIT extends IntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** Body de {@code POST /api/auth/login}: el identificador acepta email o DNI (RF-36). */
     private Map<String, Object> body(String identificador, String contrasena) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("identificador", identificador);
@@ -33,8 +34,34 @@ class AuthLoginIT extends IntegrationTestBase {
         return body;
     }
 
+    /**
+     * Body de {@code POST /api/auth/registro}, que es <strong>distinto</strong> al del login: el
+     * campo se llama {@code email}, no {@code identificador} (RF-01 contra RF-36). Reutilizar el
+     * body del login acá hace que {@code email} llegue nulo, que el {@code @NotBlank} devuelva 400
+     * y que el usuario nunca se cree.
+     */
+    private Map<String, Object> bodyRegistro(String email, String contrasena) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("email", email);
+        body.put("contrasena", contrasena);
+        return body;
+    }
+
+    /**
+     * Registra un usuario y <strong>verifica que se haya creado</strong>. La aserción no es
+     * decorativa: sin ella, un registro fallido no rompe acá sino más adelante, con un 401 en el
+     * login o un {@code NoSuchElementException} al buscar el usuario — síntomas que no señalan la
+     * causa. El caso bajo prueba es el login, así que el registro es precondición y debe fallar
+     * ruidosamente si no se cumple.
+     */
     private String registrarUsuario(String email, String contrasena) {
-        restTemplate.postForEntity(urlBase() + "/api/auth/registro", body(email, contrasena), LoginResponse.class);
+        ResponseEntity<LoginResponse> registro = restTemplate.postForEntity(
+                urlBase() + "/api/auth/registro", bodyRegistro(email, contrasena), LoginResponse.class);
+
+        assertThat(registro.getStatusCode())
+                .as("precondición: el registro de %s tiene que crear el usuario", email)
+                .isEqualTo(HttpStatus.CREATED);
+
         return email;
     }
 

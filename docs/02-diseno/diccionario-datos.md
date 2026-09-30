@@ -62,9 +62,14 @@ Identidad única de cada socio o paciente del centro. Una sola fila por persona 
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
 
 **Restricciones cruzadas:**
-- `chk_fecha_baja`: `fecha_baja IS NULL OR fecha_baja >= fecha_alta`
-- `chk_baja_logica`: `(estado = 'INACTIVO' AND fecha_baja IS NOT NULL) OR (estado = 'ACTIVO' AND fecha_baja IS NULL)`
+
+- `chk_fecha_baja`: `(estado = 'INACTIVO' AND fecha_baja IS NOT NULL AND fecha_baja >= fecha_alta) OR (estado = 'ACTIVO' AND fecha_baja IS NULL)`
+
+  Una sola restricción cubre **las dos** condiciones de la baja lógica: que el estado y la fecha sean coherentes entre sí, y que la baja no sea anterior al alta. No existe una `chk_baja_logica` aparte — están juntas porque describen el mismo hecho y separarlas permitiría una fila que satisface una y viola la otra.
+
 - `chk_fecha_inicio_membresia`: `(es_socio_gym = TRUE AND fecha_inicio_membresia IS NOT NULL) OR (es_socio_gym = FALSE AND fecha_inicio_membresia IS NULL)`. Evita que un socio nuevo aparezca moroso desde el día 1 y que el cálculo por "último período pagado" salte meses sin pagar.
+
+**Triggers:** `trg_personas_updated` mantiene `actualizado_en`. El efecto de la baja lógica sobre los turnos no se controla desde esta tabla sino desde `turnos`, con `trg_turno_persona_activa` (RN-21).
 
 **Normalización:** los datos de personas se mantienen separados de `usuarios` para reflejar la diferencia conceptual entre identidad (persona real) y credencial de acceso. Una persona podría existir sin acceso digital si el centro la crea internamente, aunque en el MVP toda persona requiere usuario.
 
@@ -103,7 +108,9 @@ Franjas horarias recurrentes en las que cada profesional está disponible para a
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
 
-**Anti-solapamiento:** un trigger `trg_disponibilidad_no_overlap` previene que se inserten franjas que se superpongan con una franja activa del mismo profesional en el mismo día.
+**Anti-solapamiento:** el trigger `trg_disponibilidad_overlap` —que ejecuta `fn_check_disponibilidad_overlap()`— impide insertar una franja que se superponga con otra franja **activa** del mismo profesional en el mismo día (RN-11).
+
+**Reducir una franja con turnos reservados** no es un problema de esta tabla sino del servicio: cancela en cascada los turnos futuros que quedan afuera, previa confirmación (RN-24).
 
 ---
 
@@ -255,8 +262,10 @@ Registro de pagos realizados. Maneja dos conceptos diferenciados: cuotas mensual
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 
 **Restricciones:**
-- `chk_concepto_datos`: concepto es mutuamente excluyente — cuota tiene `periodo` y `turno_id` = NULL; sesión tiene `turno_id` y `periodo` = NULL.
-- `chk_periodo_primer_dia`: `EXTRACT(DAY FROM periodo) = 1`
+- `chk_concepto_datos`: `(concepto = 'CUOTA_MENSUAL' AND periodo IS NOT NULL AND turno_id IS NULL AND EXTRACT(DAY FROM periodo) = 1) OR (concepto = 'SESION_CONSULTORIO' AND turno_id IS NOT NULL AND periodo IS NULL)`
+
+  El concepto es mutuamente excluyente, y **la regla del primer día del mes está dentro de esta misma restricción**: no existe una `chk_periodo_primer_dia` aparte. `periodo` identifica un mes, no un día — normalizarlo al día 1 es lo que hace que `uq_cuota_mensual` pueda detectar dos cuotas del mismo período.
+
 - `uq_pago_por_turno`: índice único parcial sobre `turno_id WHERE turno_id IS NOT NULL`
 - `uq_cuota_mensual`: índice único parcial sobre `(persona_id, periodo) WHERE periodo IS NOT NULL`
 

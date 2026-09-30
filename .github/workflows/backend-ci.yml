@@ -7,6 +7,27 @@ on:
     branches: [main]
 
 jobs:
+  # Devolución de la 2.ª entrega (punto 8): el README afirmaba que los nombres estaban
+  # unificados, pero la documentación citaba restricciones y triggers que no existían con
+  # esos nombres. No había forma de detectarlo salvo leyendo, así que se automatizó:
+  # el script levanta un Postgres, aplica las migraciones y contrasta cada identificador
+  # citado en los .md, .sql y .java contra el catálogo real del motor.
+  consistencia-docs:
+    name: Consistencia de la documentación (nombres de BD + fechas)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Docker es nativo en ubuntu-latest; el script levanta y elimina su propio contenedor.
+      - name: Verificar identificadores
+        run: python scripts/verificar-nombres-db.py
+
   backend:
     name: Backend (Maven verify + JaCoCo gate 0.90)
     runs-on: ubuntu-latest

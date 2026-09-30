@@ -167,7 +167,7 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-14 | Registrar segunda cuota del mismo mes                     | 409 (uq_cuota_mensual)                         |
 | PI-15 | Registrar pago de sesión para turno sin turno_id         | 422 (chk_concepto_datos)                       |
 | PI-16 | Registrar segundo pago al mismo turno                     | 409 (uq_pago_por_turno)                        |
-| PI-17 | Periodo con día distinto de 1 → rechazado                 | 422 (chk_periodo_primer_dia)                   |
+| PI-17 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte) |
 
 ---
 

@@ -85,8 +85,8 @@ El valor del relevamiento no está en confirmar lo ya definido, sino en lo que o
 1. **El perfil PR-04 (profesional de sala) no encaja en el modelo de PROFESIONAL.** El esquema asume agenda individual con `profesional_id` por turno; un entrenador de sala no atiende turnos propios y ese modelo no lo representa.
 2. **No hay forma de consultar el cupo disponible de un turno de gimnasio** antes de reservar (perfil SP-01): el esquema previo no tenía el concepto de cupo por franja.
 3. **Nadie tenía definido quién marca `COMPLETADO` o `AUSENTE` en un turno de gimnasio** (perfil PR-01): RF-22 asigna esa acción al profesional del turno, y el turno de gimnasio no tiene profesional asignado.
-4. **Falta la fecha de inicio de membresía** para calcular desde cuándo se adeuda una cuota (perfil AD-02): sin ese dato, un socio nuevo puede aparecer como moroso desde el primer día.
-5. **No está definido qué pasa con los turnos ya reservados cuando un profesional reduce su disponibilidad** (perfil PR-03).
+4. **Faltaba la fecha de inicio de membresía** para calcular desde cuándo se adeuda una cuota (perfil AD-02): sin ese dato, un socio nuevo podía aparecer como moroso desde el primer día. _Resuelto con `personas.fecha_inicio_membresia` (`V4__fecha_inicio_membresia.sql`)._
+5. **No estaba definido qué pasa con los turnos ya reservados cuando un profesional reduce su disponibilidad** (perfil PR-03). _Resuelto en RN-24 — ver el estado de los hallazgos al final de esta sección._
 6. **Reportes e indicadores agregados quedan fuera del alcance del MVP** (perfil AD-04, dirección del centro): se documenta explícitamente para que no aparezca como un olvido.
 
 Los cuatro siguientes surgen del **relevamiento de campo**, y son los que más tensionan el diseño, porque contrastan decisiones tomadas por el equipo contra la operación de un establecimiento en funcionamiento:

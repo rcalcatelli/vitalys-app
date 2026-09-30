@@ -76,7 +76,10 @@
 
 **Descripción:** ABM de los profesionales del centro y administración de sus franjas horarias de atención.
 
-**Regla de negocio clave:** La duración del turno se inicializa por especialidad (Nutrición: 30 min, Psicología: 50 min, Kinesiología: 45 min) y puede ajustarse por profesional. La disponibilidad puede ser modificada por el propio profesional o por un administrador.
+**Reglas de negocio clave:**
+- La duración del turno se inicializa por especialidad (Nutrición: 30 min, Psicología: 50 min, Kinesiología: 45 min) y puede ajustarse por profesional. La disponibilidad puede ser modificada por el propio profesional o por un administrador.
+- Las franjas de un mismo profesional en el mismo día no pueden solaparse (RN-11, `trg_disponibilidad_overlap`).
+- **Reducir la disponibilidad cancela los turnos futuros que quedan afuera (RN-24).** Es una acción destructiva sobre turnos de terceros, así que la operación va en dos pasos: primero se consulta el impacto y recién con confirmación explícita se aplica. Los turnos afectados quedan en `CANCELADO_POR_PROFESIONAL` —un estado propio, para no atribuirle al paciente una cancelación que no hizo— con motivo y autor registrados, y cada paciente recibe el aviso (RF-27). Los turnos ya transcurridos no se tocan. Todo ocurre en una única transacción del servicio: o se guarda la disponibilidad con sus cancelaciones y notificaciones, o no se guarda nada.
 
 **Endpoints principales:**
 
@@ -89,8 +92,9 @@
 | PATCH  | `/api/profesionales/{id}/desactivar` | Baja lógica | ADMIN |
 | GET    | `/api/profesionales/{id}/disponibilidad` | Ver franjas horarias | Autenticado |
 | POST   | `/api/profesionales/{id}/disponibilidad` | Agregar franja | ADMIN, PROFESIONAL (propio) |
-| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar franja | ADMIN, PROFESIONAL (propio) |
-| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar franja | ADMIN, PROFESIONAL (propio) |
+| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar franja. Si reduce la cobertura, exige `confirmar=true` cuando hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar franja. Ídem: exige `confirmar=true` si hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| GET    | `/api/profesionales/{id}/disponibilidad/{dId}/impacto` | Qué turnos futuros se cancelarían al quitar o recortar esa franja (persona, fecha y hora). Es el paso previo obligatorio de RN-24 | ADMIN, PROFESIONAL (propio) |
 
 **Entidades involucradas:** `profesionales`, `usuarios`, `disponibilidad_profesional`
 

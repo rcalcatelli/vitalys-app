@@ -14,7 +14,7 @@
 | `estado_persona` | `ACTIVO` · `INACTIVO` |
 | `especialidad` | `NUTRICION` · `PSICOLOGIA` · `KINESIOLOGIA` |
 | `tipo_turno` | `CONSULTORIO` · `GYM` |
-| `estado_turno` | `RESERVADO` · `COMPLETADO` · `AUSENTE` · `CANCELADO_EN_TIEMPO` · `CANCELADO_TARDE` |
+| `estado_turno` | `RESERVADO` · `COMPLETADO` · `AUSENTE` · `CANCELADO_EN_TIEMPO` · `CANCELADO_TARDE` · `CANCELADO_POR_PROFESIONAL` |
 | `concepto_pago` | `CUOTA_MENSUAL` · `SESION_CONSULTORIO` |
 | `tipo_feriado` | `INAMOVIBLE` · `TRASLADABLE` · `TURISTICO` · `NO_LABORABLE` |
 | `origen_feriado` | `OFICIAL` · `MANUAL` |

@@ -108,12 +108,15 @@ stateDiagram-v2
 
     RESERVADO --> CANCELADO_EN_TIEMPO : Aviso ≥ 24 h (consultorio) / ≥ 2 h (gym)\n(persona / admin)
 
-    RESERVADO --> CANCELADO_TARDE : Cancelación con < 24 h\n(persona / admin)\nEl slot permanece bloqueado
+    RESERVADO --> CANCELADO_TARDE : Aviso con menos anticipación\n(persona / admin)
+
+    RESERVADO --> CANCELADO_POR_PROFESIONAL : El profesional redujo\nsu disponibilidad (RN-24)
 
     COMPLETADO --> [*]
     AUSENTE --> [*]
     CANCELADO_EN_TIEMPO --> [*]
     CANCELADO_TARDE --> [*]
+    CANCELADO_POR_PROFESIONAL --> [*]
 
     note right of RESERVADO
         Estado inicial. Ocupa el lugar.
@@ -135,7 +138,13 @@ stateDiagram-v2
     end note
 
     note right of CANCELADO_EN_TIEMPO
-        Único estado que libera el horario (RN-02).
+        Idem: lo que libera el lugar es que
+        cancelado_en < inicio (RN-02).
+    end note
+
+    note right of CANCELADO_POR_PROFESIONAL
+        No lo decidió el paciente:
+        no computa como cancelación suya.
     end note
 ```
 
@@ -339,7 +348,16 @@ sequenceDiagram
         DS->>NS: avisarCancelacion(turnos afectados)
         NS->>DB: INSERT INTO notificaciones (tipo=AVISO_CANCELACION) por cada paciente
     end
+
+    DS-->>API: ResultadoReduccion {franja, turnosCancelados}
+    API-->>P: 200 OK "Disponibilidad actualizada. 3 turnos cancelados y pacientes notificados."
 ```
+
+**Por qué la cascada vive en el servicio y no en un trigger.** El motor no sabe quién es el
+actor —lo necesita para `cancelado_por_usuario`— ni puede disparar notificaciones. Y sobre
+todo: una cancelación automática e invisible dentro de la base es justamente lo que se
+quiere evitar. La base impone los invariantes de integridad; los efectos de una decisión de
+negocio, con su confirmación y su aviso al paciente, son del servicio.
 
 ---
 

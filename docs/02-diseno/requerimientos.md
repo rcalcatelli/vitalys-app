@@ -23,7 +23,7 @@
 | RF-11 | Profesionales | El ADMIN puede registrar un nuevo profesional: crea un `usuario` (rol `PROFESIONAL`) y un `profesional` (especialidad, duración de turno) en una sola operación. No existe endpoint de vínculo para profesionales: la Decisión de dominio 8 del RFC-0001 fija un único rol por usuario y el registro público fuerza siempre `SOCIO_PACIENTE` (RF-01); un usuario autorregistrado es por definición `SOCIO_PACIENTE`, y vincularlo como profesional exigiría promover su rol, contradiciendo la Decisión 8. |
 | RF-12 | Profesionales | El ADMIN puede listar y consultar profesionales activos. |
 | RF-13 | Profesionales | El ADMIN puede modificar datos de un profesional y dar de baja lógica. |
-| RF-14 | Profesionales | El ADMIN y el propio PROFESIONAL pueden gestionar las franjas horarias de disponibilidad. |
+| RF-14 | Profesionales | El ADMIN y el propio PROFESIONAL pueden gestionar las franjas horarias de disponibilidad. Cuando el cambio **reduce** la disponibilidad y deja fuera turnos futuros ya reservados, la operación es en dos pasos: el sistema devuelve primero el **impacto** —qué turnos se cancelarían, de qué persona y cuándo— y recién aplica el cambio con una confirmación explícita, cancelando esos turnos en cascada y notificando a cada paciente (RN-24). Sin confirmación no se guarda nada. |
 | RF-15 | Turnos | Un usuario autenticado puede consultar los slots disponibles de un profesional por fecha. |
 | RF-16 | Turnos | Un SOCIO_PACIENTE o ADMIN puede reservar un turno de consultorio para una persona. |
 | RF-17 | Turnos | Un SOCIO_PACIENTE o ADMIN puede reservar un turno de gimnasio para un socio, sujeto a la grilla horaria, el cupo por franja, el límite de un turno por día y la anticipación permitida (RN-14 a RN-18). |

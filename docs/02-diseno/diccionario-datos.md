@@ -213,17 +213,28 @@ Calendario de días no laborables en los que el gimnasio no abre (RN-14). Se cre
 
 ## Tabla: `excepciones_morosidad`
 
-Excepciones puntuales a la regla de morosidad, autorizadas explícitamente por administración.
+Excepciones a la regla de morosidad (RN-01), autorizadas explícitamente por administración. Levantan la **suspensión** de un socio; un socio con deuda por debajo del umbral no está bloqueado y no necesita excepción.
 
 | Campo | Tipo | Nulable | Restricciones | Descripción |
 |-------|------|---------|---------------|-------------|
 | `id` | `BIGSERIAL` | NO | PK | Identificador interno autoincremental |
 | `persona_id` | `BIGINT` | NO | FK personas | Persona beneficiaria de la excepción |
 | `autorizado_por` | `BIGINT` | NO | FK usuarios (rol ADMIN) | Administrador que autorizó |
-| `turno_id` | `BIGINT` | SÍ | FK turnos | Turno específico habilitado (puntual); NULL si la excepción es por período |
+| `turno_id` | `BIGINT` | SÍ | FK turnos · misma persona | **Turno que consumió** la excepción; `NULL` mientras no se usó. No es un dato de alta |
+| `un_solo_uso` | `BOOLEAN` | NO | DEFAULT FALSE | `TRUE`: habilita una sola reserva y se agota al usarse. `FALSE`: vale para cualquier turno hasta `valida_hasta` |
 | `motivo` | `TEXT` | NO | — | Justificación de la excepción |
 | `valida_hasta` | `DATE` | NO | — | La excepción expira en esta fecha |
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
+
+**Por qué `turno_id` no se carga al dar de alta la excepción (RN-23):** una excepción sirve para **poder reservar**, así que en el momento en que se la necesita el turno todavía no existe. Pedirlo como dato de entrada lo vuelve imposible de completar. La columna se invirtió: registra qué turno **consumió** la excepción, y la escribe el servicio después de crear el turno. Eso además le da un significado preciso a lo *puntual* — `un_solo_uso = TRUE` más `turno_id IS NULL` es exactamente "todavía le queda el uso".
+
+**Vigencia**, tal como la consulta el servicio:
+
+```sql
+valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
+```
+
+**Validación de pertenencia:** el trigger `trg_excepcion_morosidad` impide que `turno_id` apunte al turno de otra persona. Es una regla de integridad que cruza dos tablas, así que no puede expresarse con un `CHECK`.
 
 ---
 
@@ -248,6 +259,13 @@ Registro de pagos realizados. Maneja dos conceptos diferenciados: cuotas mensual
 - `chk_periodo_primer_dia`: `EXTRACT(DAY FROM periodo) = 1`
 - `uq_pago_por_turno`: índice único parcial sobre `turno_id WHERE turno_id IS NOT NULL`
 - `uq_cuota_mensual`: índice único parcial sobre `(persona_id, periodo) WHERE periodo IS NOT NULL`
+
+**Coherencia con el turno abonado (RN-20, `trg_pago_sesion`):** un pago `SESION_CONSULTORIO` tiene que apuntar a un turno de tipo `CONSULTORIO` y estar a nombre de la persona de ese turno.
+
+`chk_concepto_datos` ya exigía que la sesión traiga `turno_id` y la cuota no — eso es todo lo que un `CHECK` alcanza a ver, porque solo puede mirar columnas de su propia fila. Lo que faltaba es **de qué tipo** es ese turno y **de quién** es, y para eso hace falta leer `turnos`. Por qué importa cada una:
+
+- Un turno de gimnasio no genera honorarios de sesión: no hay profesional que atienda. Del gimnasio se cobra la cuota mensual.
+- Un pago a nombre de un tercero descuadra los dos estados de cuenta: a uno le figura un pago que no le corresponde y al otro le sigue faltando el suyo.
 
 ---
 

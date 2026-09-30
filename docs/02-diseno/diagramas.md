@@ -169,8 +169,8 @@ sequenceDiagram
         API-->>U: 422 "Horario fuera de la disponibilidad del profesional"
     end
 
-    TS->>DB: INSERT INTO turnos (estado=RESERVADO, reservado_por_usuario_id=...)
-    Note over TS,DB: El EXCLUDE GIST rechaza si hay solapamiento
+    TS->>DB: INSERT INTO turnos (tipo_turno=CONSULTORIO, profesional_id=..., estado=RESERVADO)
+    Note over TS,DB: El motor valida: que el profesional no tenga otro turno en esa franja<br/>(excl_turnos_overlap, RN-03); que la persona tampoco lo tenga, de ningún<br/>tipo (excl_turnos_persona_overlap, RN-22); y que la persona no esté<br/>dada de baja (trg_turno_persona_activa, RN-21)
     alt solapamiento detectado por EXCLUDE
         DB-->>TS: PSQLException (constraint violation)
         TS-->>API: SolapamientoException
@@ -433,14 +433,14 @@ sequenceDiagram
     participant DB as Base de datos
 
     Note over A,DB: 1) El ADMIN registra la excepción
-    A->>API: POST /api/excepciones-morosidad {persona_id, motivo, valida_hasta, turno_id?}
+    A->>API: POST /api/excepciones-morosidad {persona_id, motivo, valida_hasta, un_solo_uso}
     API->>ES: registrarExcepcion(request, actorActual)
 
     alt actorActual.rol != ADMIN
         ES-->>API: AccesoDenegadoException
         API-->>A: 403 "Solo ADMIN puede registrar excepciones de morosidad"
     else actor es ADMIN
-        ES->>DB: INSERT INTO excepciones_morosidad (persona_id, autorizado_por, turno_id, motivo, valida_hasta)
+        ES->>DB: INSERT INTO excepciones_morosidad (persona_id, autorizado_por,<br/>motivo, valida_hasta, un_solo_uso) — turno_id queda NULL
         DB-->>ES: excepción creada (id)
         ES-->>API: ExcepcionMorosidadDTO
         API-->>A: 201 Created {excepcionId, personaId, validaHasta}
@@ -460,8 +460,8 @@ sequenceDiagram
     TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
     DB-->>TS: umbral
 
-    alt diasMora > 10
-        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id=? AND valida_hasta >= CURRENT_DATE AND (turno_id IS NULL OR turno_id=?)
+    alt impagos >= umbral — socio SUSPENDIDO
+        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id = ?<br/>AND valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
         DB-->>TS: excepción vigente (o vacío)
         alt sin excepción vigente
             TS-->>TC: MorosidadException
@@ -473,11 +473,17 @@ sequenceDiagram
         TS->>TS: continuar: sin suspensión, la excepción no se consulta
     end
 
-    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, estado=RESERVADO, ...)
-    Note over TS,DB: Grilla horaria y cupo por franja los valida trg_turno_gym
+    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, profesional_id=NULL, estado=RESERVADO)
+    Note over TS,DB: trg_turno_gym valida grilla, feriados, membresía, un turno por día<br/>y cupo; trg_turno_persona_activa, que la persona no esté de baja
+    opt se usó una excepción de un solo uso
+        TS->>DB: UPDATE excepciones_morosidad SET turno_id = ? — la excepción se consume
+        Note over TS,DB: turno_id se completa DESPUÉS de crear el turno: al pedir la<br/>excepción el turno no existía (RN-23)
+    end
     TS-->>TC: TurnoDTO
     TC-->>U: 201 Created {turnoId, inicio, fin, estado}
 ```
+
+> **Resuelto — qué significa "excepción puntual" (RN-23).** El alta ya **no** recibe un `turno_id`: cuando la excepción hace falta, el turno todavía no existe. La columna pasó a registrar **qué turno consumió** la excepción, y la completa el servicio recién después de crear el turno. Lo *puntual* queda expresado con `un_solo_uso`: en `TRUE` la excepción habilita una sola reserva y se agota al usarse; en `FALSE` vale para cualquier turno de gimnasio hasta `valida_hasta`. Por eso la consulta de vigencia del diagrama filtra por `turno_id IS NULL` cuando la excepción es de un solo uso — es la forma de saber que todavía no se gastó. La base impide, además, que una excepción se consuma en el turno de otra persona (`trg_excepcion_morosidad`).
 
 ---
 

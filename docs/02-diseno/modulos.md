@@ -160,7 +160,15 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 
 **Descripción:** Permite al ADMIN levantar puntualmente el bloqueo por morosidad (RN-01) para un socio determinado, sin desactivar la regla en general. Cubre RF-30 y RN-09.
 
-**Regla de negocio clave:** la excepción se registra en `excepciones_morosidad` con el socio beneficiado, quién la autorizó, el motivo y una fecha de vencimiento (`valida_hasta`). Puede ser puntual (asociada a un `turno_id` concreto) o por período (válida para cualquier turno de gym hasta `valida_hasta`, si `turno_id` es `NULL`). La validación de RN-01 y la consulta de excepción vigente se resuelven en la capa de servicio, no en el motor de base de datos.
+**Regla de negocio clave:** la excepción se registra en `excepciones_morosidad` con el socio beneficiado, quién la autorizó, el motivo y una fecha de vencimiento (`valida_hasta`). Puede ser **de un solo uso** (`un_solo_uso = TRUE`: habilita una sola reserva y se agota al usarse) o **por período** (vale para cualquier turno de gym hasta `valida_hasta`).
+
+**`turno_id` no se carga al dar de alta la excepción (RN-23).** La excepción sirve para *poder* reservar, así que cuando se la necesita el turno todavía no existe. La columna registra qué turno **consumió** la excepción y la completa el servicio después de crear el turno; la base impide que apunte al turno de otra persona (`trg_excepcion_morosidad`). Una excepción está vigente cuando:
+
+```sql
+valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
+```
+
+El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de servicio —dependen de `NOW()`—; la pertenencia del turno, en el motor.
 
 **Endpoints principales:**
 
@@ -181,6 +189,7 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 - Pago único y completo por operación (sin parciales en MVP).
 - Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador (si lo cargó un admin).
 - Para cuotas de gym: se asocia al mes (`periodo`). Para sesiones: se asocia al turno (`turno_id`).
+- **Un pago de sesión tiene que corresponderse con su turno (RN-20):** el turno debe ser de tipo `CONSULTORIO` —un turno de gimnasio no genera honorarios, del gimnasio se cobra la cuota— y el pago debe estar a nombre de la persona de ese turno. Lo hace cumplir el motor (`trg_pago_sesion`), no el servicio: son invariantes que no dependen de `NOW()` ni del actor, y una regla así validada solo en la API se rompe con cualquier carga por fuera de ella.
 - El sistema expone el estado de cuenta de una persona: cuotas pagas/vencidas, sesiones abonadas.
 
 **Endpoints principales:**

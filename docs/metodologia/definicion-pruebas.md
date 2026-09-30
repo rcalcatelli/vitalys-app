@@ -18,19 +18,22 @@ Validan la lógica de negocio en la capa de servicio, sin base de datos real.
 
 ### PagoServiceTest
 
-La deuda se calcula desde `personas.fecha_inicio_membresia` (columna agregada en `db/migration/V4__fecha_inicio_membresia.sql`), no desde el último período pagado: el servicio busca el primer mes sin `pago` registrado a partir de la fecha de alta de la membresía, y ese es el mes moroso — aunque existan pagos de meses posteriores. Esto reemplaza el cálculo anterior, que tapaba meses salteados con cualquier pago más reciente.
+El servicio devuelve **la cantidad de períodos mensuales impagos acumulados** desde `personas.fecha_inicio_membresia` (columna agregada en `V4__fecha_inicio_membresia.sql`), recorriendo mes a mes: cuenta como impago todo período `P` con `NOW() > (P + 1 mes + 10 días)` sin cuota registrada, aunque existan pagos de meses posteriores. El bloqueo **no** se dispara con el primer impago: se compara el total contra `configuracion_gym.meses_tolerancia_morosidad` (`V6__tolerancia_morosidad.sql`, 6 por defecto) y se rechaza la reserva solo cuando lo **alcanza o supera** (RN-01). Los casos asumen ese umbral salvo que se indique otro.
 
 | ID    | Caso de prueba                                                                 | Entrada                                              | Resultado esperado                          |
 |-------|--------------------------------------------------------------------------------|------------------------------------------------------|---------------------------------------------|
-| PU-01 | Cuota al día (todos los meses desde el alta de la membresía, pagados hasta el actual) | fecha_inicio_membresia = 2026-07-01, pagos en 07/08/09, hoy = 2026-09-25 | diasMora = 0, bloqueado = false |
-| PU-02 | Primer mes impago desde el alta, vencido exactamente hace 10 días             | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-11 | diasMora = 10, bloqueado = false |
-| PU-03 | Mes salteado hace 11 días, con meses posteriores pagados → moroso de todos modos | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-12 | diasMora = 11, bloqueado = true (a pesar de tener agosto pagado) |
-| PU-04 | Sin ningún pago registrado desde el alta de la membresía → moroso            | fecha_inicio_membresia = 2026-01-01, sin filas en pagos, hoy = 2026-09-25 | diasMora calculado desde 2026-01 (no NULL: `fecha_inicio_membresia` es NOT NULL si `es_socio_gym = TRUE`), bloqueado = true |
+| PU-01 | Todos los períodos pagados desde el alta de la membresía                      | fecha_inicio_membresia = 2026-07-01, pagos en 07/08/09, hoy = 2026-09-25 | impagos = 0, bloqueado = false |
+| PU-02 | Período vencido hace exactamente 10 días → todavía no cuenta                  | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-11 | impagos = 0, bloqueado = false |
+| PU-03 | Mes salteado con meses posteriores pagados → suma deuda pero NO bloquea       | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-12 | impagos = 1 (el pago de agosto no compensa julio), bloqueado = **false** — 1 < 6 |
+| PU-04 | Sin ningún pago registrado desde el alta de la membresía                      | fecha_inicio_membresia = 2026-01-01, sin filas en pagos, hoy = 2026-09-25 | impagos = 8 (01 a 08; 09 aún en gracia), bloqueado = true |
 | PU-05 | Persona sin membresía gym (es_socio_gym = false) → sin bloqueo               | es_socio_gym = false                                 | bloqueado = false sin consultar pagos       |
 | PU-06 | Login con cuenta deshabilitada (RF-32)                                        | activo = false, contraseña correcta                  | CredencialesInvalidasException, no se emite token |
 | PU-07 | Contrato UserDetails de `Usuario`                                             | usuario con rol SOCIO_PACIENTE / ADMIN               | getUsername = email, autoridad `ROLE_<rol>`, isEnabled sigue a `activo` |
-| PU-08 | Mes salteado en medio del historial, con meses posteriores pagados (caso que la regla vieja pasaba por alto) | fecha_inicio_membresia = 2026-05-01, pagos en 05, 07, 08 (saltea 06), hoy = 2026-08-20 | primer mes impago = 06, diasMora > 10, bloqueado = true |
-| PU-09 | Socio nuevo: alta de la membresía este mes, sin pagos aún → no debe quedar bloqueado desde el primer día | fecha_inicio_membresia = 2026-09-01, sin pagos, hoy = 2026-09-05 | diasMora = 0 (la cuota de 09 recién vence el 2026-10-01 + 10 días), bloqueado = false |
+| PU-08 | Mes salteado en medio del historial, con meses posteriores pagados            | fecha_inicio_membresia = 2026-05-01, pagos en 05, 07, 08 (saltea 06), hoy = 2026-08-20 | impagos = 1 (período 06), bloqueado = false |
+| PU-09 | Socio nuevo: alta este mes, sin pagos → no se bloquea desde el primer día    | fecha_inicio_membresia = 2026-09-01, sin pagos, hoy = 2026-09-05 | impagos = 0 (el período 09 vence recién el 2026-10-11), bloqueado = false. **Ningún período computable no es lo mismo que un período impago**: un cálculo que genere una fila vacía y la cuente devuelve 1 y bloquea justo al socio que la regla protege |
+| PU-10 | Borde inferior: un período por debajo del umbral                              | impagos = 5, umbral = 6                              | bloqueado = false                           |
+| PU-11 | Borde exacto: la cantidad de impagos iguala el umbral                         | impagos = 6, umbral = 6                              | bloqueado = true — la condición es "alcanza o supera", no "supera" |
+| PU-12 | El umbral se lee de la configuración, no está fijo en el código               | impagos = 2, `meses_tolerancia_morosidad` = 2        | bloqueado = true con el mismo historial que en PU-03 daría false con umbral 6 |
 
 ### TurnoServiceTest
 
@@ -40,9 +43,12 @@ La deuda se calcula desde `personas.fecha_inicio_membresia` (columna agregada en
 | TU-02 | Cancelación con 23 h 59 min → TARDE                                          | inicio = T+23h59, ahora = T                          | estado = CANCELADO_TARDE                    |
 | TU-03 | SOCIO_PACIENTE cancela turno de otra persona → AccesoDenegadoException       | turno.persona_id ≠ usuario.persona_id                | excepción 403                               |
 | TU-04 | Cancelar turno ya COMPLETADO → EstadoInvalidoException                       | estado = COMPLETADO                                  | excepción 422                               |
-| TU-05 | Reservar turno GYM con morosidad → MorosidadException                        | es_socio_gym = true, diasMora = 15                   | excepción 422                               |
-| TU-06 | Reservar turno GYM con excepción vigente → permitido                         | excepcion.valida_hasta > hoy                         | turno creado                                |
+| TU-05 | Reservar turno GYM estando suspendido → MorosidadException                   | es_socio_gym = true, impagos = 6, umbral = 6         | excepción 422                               |
+| TU-06 | Reservar turno GYM suspendido pero con excepción vigente → permitido         | impagos ≥ umbral, excepcion.valida_hasta ≥ hoy       | turno creado                                |
 | TU-07 | Reservar fuera de disponibilidad del profesional → DisponibilidadException   | horario no cubre la franja                           | excepción 422                               |
+| TU-08 | Reservar turno GYM con deuda por debajo del umbral → permitido sin excepción | impagos = 2, umbral = 6, sin excepción registrada    | turno creado; no se consulta `excepciones_morosidad` |
+| TU-09 | Reservar turno de CONSULTORIO con el socio suspendido → permitido            | impagos ≥ umbral, tipo_turno = CONSULTORIO           | turno creado; la morosidad de gimnasio no se evalúa (Decisión de dominio 1) |
+| TU-10 | La reserva de gimnasio no consulta disponibilidad de profesional             | `POST /api/turnos/gym`, socio habilitado             | turno creado con `profesional_id = NULL`; no se invoca el repositorio de disponibilidad |
 
 ---
 

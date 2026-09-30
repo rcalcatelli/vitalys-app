@@ -94,7 +94,7 @@ El esquema usa **PostgreSQL** con las siguientes tablas principales:
 | `profesionales`              | Profesionales con especialidad y duración de turno              |
 | `disponibilidad_profesional` | Franjas horarias semanales por profesional                     |
 | `turnos`                     | Reservas de consultorio y de gimnasio, con ciclo de vida y auditoría de cancelación |
-| `configuracion_gym`          | Parámetros del gimnasio (cupo por franja)                       |
+| `configuracion_gym`          | Parámetros del gimnasio (cupo por franja, tolerancia de morosidad) |
 | `pagos`                      | Cuotas de gym y sesiones de consultorio                         |
 | `excepciones_morosidad`      | Excepciones puntuales al bloqueo por deuda en gym, autorizadas por el ADMIN |
 | `notificaciones`             | Log de emails enviados                                          |

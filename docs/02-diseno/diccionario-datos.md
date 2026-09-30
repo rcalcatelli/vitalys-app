@@ -136,18 +136,19 @@ RESERVADO ──► COMPLETADO         (profesional o admin, al finalizar la ate
 
 **Restricción de solapamiento:** `ALTER TABLE turnos ADD CONSTRAINT excl_turnos_overlap EXCLUDE USING GIST (profesional_id WITH =, tstzrange(inicio, fin, '[)') WITH &&) WHERE (profesional_id IS NOT NULL AND estado IN ('RESERVADO', 'CANCELADO_TARDE', 'AUSENTE', 'COMPLETADO'))`. Solo `CANCELADO_EN_TIEMPO` libera el horario (RN-02); `AUSENTE` y `COMPLETADO` lo mantienen bloqueado porque el slot ya fue ocupado (RN-08). Los turnos GYM no verifican este EXCLUDE (sin profesional asignado); el cupo por franja lo controla el trigger `trg_turno_gym` contra `configuracion_gym.cupo_por_franja` (ver tabla `configuracion_gym`).
 
-**Regla de morosidad (RN-01):** si `tipo_turno = 'GYM'` y `personas.es_socio_gym = TRUE`, la API verifica que la persona no tenga cuota mensual vencida hace más de 10 días. Una cuota del período `P` vence el día 1 del mes `P+1`; está vencida hace más de 10 días si `NOW() > (P + 1 mes + 10 días)`. La validación ocurre en la capa de servicio Java, no en el motor.
+**Regla de morosidad (RN-01):** si `tipo_turno = 'GYM'` y `personas.es_socio_gym = TRUE`, la API cuenta los períodos mensuales impagos acumulados desde `personas.fecha_inicio_membresia`. Un período `P` se cuenta como impago cuando `NOW() > (P + 1 mes + 10 días)` y no existe una cuota `CUOTA_MENSUAL` registrada para ese `P`; un mes salteado sigue contando aunque se hayan pagado meses posteriores. La reserva se rechaza solo cuando ese total **alcanza o supera** `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto): por debajo del umbral el socio tiene deuda pero conserva el acceso. La validación ocurre en la capa de servicio Java, no en el motor, porque depende de `NOW()` y de la existencia de una excepción vigente (RN-09).
 
 ---
 
 ## Tabla: `configuracion_gym`
 
-Parámetros operativos del gimnasio. Tabla de fila única (`id = 1`) que centraliza el cupo máximo de personas por franja horaria.
+Parámetros operativos del gimnasio. Tabla de fila única (`id = 1`) que centraliza las políticas configurables del establecimiento: el cupo máximo por franja horaria y la tolerancia de morosidad.
 
 | Campo | Tipo | Nulable | Restricciones | Descripción |
 |-------|------|---------|---------------|-------------|
 | `id` | `SMALLINT` | NO | PK · DEFAULT 1 | Fila única de configuración |
 | `cupo_por_franja` | `INT` | NO | > 0 | Máximo de personas con turno de gym activo en una misma franja horaria |
+| `meses_tolerancia_morosidad` | `SMALLINT` | NO | > 0 · DEFAULT 6 | Períodos mensuales impagos acumulados que se toleran antes de suspender al socio de la actividad del gimnasio (RN-01) |
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
 
 **Restricciones:**
@@ -207,7 +208,7 @@ Log de emails enviados al sistema. Registra todos los envíos para auditoría; n
 | `id` | `BIGSERIAL` | NO | PK | Identificador interno autoincremental |
 | `persona_id` | `BIGINT` | NO | FK personas | Persona destinataria |
 | `turno_id` | `BIGINT` | SÍ | FK turnos | Turno relacionado; NULL para notificaciones administrativas |
-| `tipo` | `tipo_notificacion` | NO | ENUM | CONFIRMACION_TURNO · AVISO_CANCELACION · RECORDATORIO |
+| `tipo` | `tipo_notificacion` | NO | ENUM | CONFIRMACION_TURNO · AVISO_CANCELACION · RECORDATORIO · AVISO_DEUDA · AVISO_SUSPENSION. Los dos últimos (RF-37) notifican estado de cuenta y llevan `turno_id` en NULL |
 | `enviado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Momento del intento de envío |
 | `email_destino` | `VARCHAR(255)` | NO | — | Dirección de email usada en el envío (registro histórico) |
 | `exitoso` | `BOOLEAN` | NO | DEFAULT TRUE | FALSE si el proveedor de email reportó error |

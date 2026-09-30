@@ -103,8 +103,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  │  11:00 – 11:30   [RESERVAR]                              │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
-│  ┌─ Morosidad (condicional — solo gym) ────────────────────┐   │
-│  │ ⚠ Tenés una cuota vencida hace 24 días.                 │   │
+│  ┌─ Suspensión por morosidad (condicional — solo gym) ─────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).              │   │
 │  │   No podés reservar turnos de gimnasio.                  │   │
 │  │   [Ver estado de cuenta]                                 │   │
 │  └──────────────────────────────────────────────────────────┘  │
@@ -119,7 +119,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 ```
 
 **Flujo:** seleccionar tipo → (si consultorio) elegir profesional → elegir fecha → elegir slot → confirmar.  
-**Reglas:** slots ocupados no son clicables. Si tipo=GYM y morosidad>10 días, los slots se reemplazan por el aviso. Confirmación muestra resumen antes de POSTear.
+**Reglas:** slots ocupados no son clicables. Si el turno es de gimnasio y el socio está **suspendido** (períodos impagos ≥ `configuracion_gym.meses_tolerancia_morosidad`, sin excepción vigente), los slots se reemplazan por el aviso; con deuda por debajo del umbral los slots se muestran normalmente (RN-01). Confirmación muestra resumen antes de POSTear.
 
 ---
 
@@ -168,32 +168,37 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  ← Inicio       MI ESTADO DE CUENTA          [Juan García] ▼  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌─ Alerta de morosidad ───────────────────────────────────┐   │
-│  │ ⚠ Tenés cuotas vencidas hace más de 10 días.            │   │
-│  │   No podés reservar turnos de gimnasio hasta regularizar.│   │
+│  ┌─ Suspensión por morosidad ──────────────────────────────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).              │   │
+│  │    No podés reservar turnos de gimnasio hasta            │   │
+│  │    regularizar. Tus turnos de consultorio no se ven      │   │
+│  │    afectados.                                            │   │
+│  │    ℹ Tenés una excepción autorizada hasta el 31/10/2026. │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  CUOTAS DE GIMNASIO                                             │
+│  CUOTAS DE GIMNASIO            (socio desde 01/2026)            │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  Período       Monto       Estado                        │   │
-│  │  Jul 2026      $15.000     ✅ Pagada (10/07/2026)        │   │
-│  │  Ago 2026      —           ❌ Vencida (mora 26 días)     │   │
-│  │  Sep 2026      —           🕓 Pendiente (vence 01/10)    │   │
+│  │  Ene–Jun 2026  —           ❌ 6 períodos impagos         │   │
+│  │  Jul 2026      $15.000     ✅ Pagada                     │   │
+│  │  Ago 2026      $15.000     ✅ Pagada                     │   │
+│  │  Sep 2026      —           🕓 Pendiente (vence 11/10)    │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  SESIONES DE CONSULTORIO                                        │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Fecha          Profesional    Monto     Estado          │   │
-│  │  23/09/2026     R. Almirón     $8.000    ✅ Pagada       │   │
+│  │  Sin sesiones de consultorio registradas.                │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ───────────────────────────────────────────────────────────    │
-│  Pagos registrados: 2 · Total abonado: $23.000                  │
+│  Pagos registrados: 2 · Total abonado: $30.000                  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Lógica:** una cuota figura como vencida si `NOW() > (periodo + 1 mes)`. El bloqueo para gym se muestra si la mora es `> 10 días`. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
+**Lógica:** un período figura como impago si `NOW() > (periodo + 1 mes + 10 días)` y no tiene cuota registrada; un mes salteado sigue contando aunque se hayan pagado los posteriores (RN-01). La pantalla distingue **dos estados**: con deuda por debajo de `configuracion_gym.meses_tolerancia_morosidad` muestra un aviso informativo y el socio reserva con normalidad; al alcanzar el umbral muestra la suspensión, como en el ejemplo. La suspensión **nunca alcanza a los turnos de consultorio** (Decisión de dominio 1). Si existe una excepción vigente (RN-09) se indica junto a la alerta. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
+
+> Los valores del ejemplo corresponden a Juan García en los datos de prueba (`db/dml/seed.sql`): socio desde 01/2026, cuotas de julio y agosto pagadas, seis períodos impagos acumulados y una excepción vigente hasta el 31/10/2026. No tiene sesiones de consultorio: la única del seed es de Carlos Soto.
 
 ---
 
@@ -306,8 +311,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  │  20:00 – 21:00     3 / 20          [RESERVAR]              │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
-│  ┌─ Morosidad (condicional) ────────────────────────────────┐   │
-│  │ ⚠ Tenés una cuota vencida hace 24 días.                  │   │
+│  ┌─ Suspensión por morosidad (condicional) ─────────────────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).               │   │
 │  │   No podés reservar turnos de gimnasio.                   │   │
 │  │   [Ver estado de cuenta]                                  │   │
 │  └───────────────────────────────────────────────────────────┘   │

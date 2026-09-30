@@ -122,7 +122,7 @@
 - **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`.
 
 **Reglas de negocio comunes a ambos tipos:**
-- **Deuda en gym:** un socio con cuota mensual vencida hace más de 10 días no puede reservar turnos de gym (RN-01). Los turnos de consultorio no se ven afectados. El ADMIN puede levantar esta restricción puntualmente con una excepción de morosidad (ver más abajo).
+- **Deuda en gym:** la deuda se calcula como la cantidad de períodos mensuales impagos acumulados desde `personas.fecha_inicio_membresia`, sin que un pago posterior compense un mes salteado (RN-01). Tener deuda **no bloquea por sí solo**: mientras el socio acumule menos períodos impagos que `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto) conserva el acceso y solo se lo notifica. Al alcanzar el umbral queda **suspendido** y no puede reservar turnos de gym. Los turnos de consultorio no se ven afectados en ningún caso. El ADMIN puede levantar la suspensión puntualmente con una excepción de morosidad (ver más abajo).
 - **Trazabilidad:** todo turno cancelado registra `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`.
 
 **Completado y ausente — asimetría entre CONSULTORIO y GYM (RF-22, RF-34, RF-35):**
@@ -206,6 +206,10 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 | Turno reservado | `CONFIRMACION_TURNO` | Persona |
 | Turno cancelado (por cualquier actor) | `AVISO_CANCELACION` | Persona |
 | Recordatorio previo al turno (24h antes) | `RECORDATORIO` | Persona |
+| Nuevo período mensual impago, por debajo del umbral | `AVISO_DEUDA` | Socio de gym |
+| Se alcanza el umbral de tolerancia y el socio queda suspendido | `AVISO_SUSPENSION` | Socio de gym |
+
+Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno (`turno_id` queda en `NULL`): notifican estado de cuenta, no un evento de agenda. Su disparador es el cálculo de RN-01, no una acción del usuario.
 
 **Endpoints principales:**
 
@@ -215,7 +219,7 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 
 > **Nota:** El envío es asíncrono (tarea programada o evento interno). El módulo expone únicamente el historial de logs.
 
-**Entidades involucradas:** `notificaciones`, `personas`, `turnos`
+**Entidades involucradas:** `notificaciones`, `personas`, `turnos`, `pagos` (para el cálculo de RN-01 que dispara `AVISO_DEUDA` y `AVISO_SUSPENSION`)
 
 ---
 

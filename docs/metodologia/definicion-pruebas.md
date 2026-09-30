@@ -65,7 +65,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-03 | Login correcto                                            | POST /api/auth/login       | `identificador` (email) + pass correctos | 200, JWT válido                               |
 | PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | `identificador` (email) + pass incorrecta | 401                                          |
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
-| PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
+| PI-06 | Acceso con rol insuficiente a una ruta de administración   | POST /api/admin/feriados/sincronizar | JWT de SOCIO_PACIENTE          | 403                                           |
 | PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
 | PI-22 | JWT expirado contra endpoint protegido                    | GET /api/auth/me           | JWT firmado con la clave real de la app, `exp` en el pasado | 401                           |
 | PI-23 | JWT malformado contra endpoint protegido                  | GET /api/auth/me           | Header `Bearer esto-no-es-un-jwt`        | 401                                           |
@@ -74,7 +74,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-26 | Registro con email con formato inválido                   | POST /api/auth/registro    | `email` sin arroba/dominio                | 400, `ErrorResponse` con `status=400`, ningún `usuario` creado |
 
 > **Alcance de PI-06 respecto de RNF-03.** RNF-03 exige que el control de acceso por rol se
-> verifique en la capa de servicio y no solo en la presentación. PI-06 ejercita hoy la regla
+> verifique en la capa de servicio y no solo en la presentación. PI-06 ejercita la regla
 > declarativa `/api/admin/**` → `hasRole("ADMIN")` de `SecurityConfig`, que es capa de
 > presentación: ninguno de los endpoints implementados hasta ahora necesita autorización por
 > rol en el servicio, porque el registro y el login son públicos y `GET /api/auth/me` lo puede
@@ -82,6 +82,12 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 > `POST /api/personas/vincular` (RF-31, exclusivo de ADMIN), y con él corresponde agregar el
 > caso que verifique el rechazo **desde el servicio**, no solo desde el filtro. Se deja
 > asentado para que la cobertura de RNF-03 no se dé por probada antes de tiempo.
+>
+> La ruta del caso se cambió de `GET /api/admin/personas` —que no existe— a
+> `POST /api/admin/feriados/sincronizar`, que sí está implementada y declarada (RF-38). Con una
+> ruta inexistente el test pasaba igual, porque el filtro rechaza por prefijo antes de resolver
+> el controller: **daba verde sin demostrar nada**. Ver las convenciones de ruta en
+> [`modulos.md`](../02-diseno/modulos.md).
 
 
 ### CORS

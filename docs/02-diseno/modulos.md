@@ -23,6 +23,19 @@
 
 ---
 
+## Convenciones de ruta
+
+Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener claros antes de leer las tablas de endpoints.
+
+| Método | Ruta | Qué es | Roles |
+|--------|------|--------|-------|
+| GET | `/api/health` | Liveness check de infraestructura. No consulta la base: si responde `200`, el proceso de Java está vivo aunque Postgres no lo esté. Lo usa el `HEALTHCHECK` del Dockerfile y el `healthCheckPath` de Render | Público |
+| — | `/api/admin/**` | Prefijo reservado para operaciones exclusivas de administración. `SecurityConfig` le aplica `hasRole("ADMIN")` de forma declarativa, **antes** de llegar al controller | ADMIN |
+
+**Cuándo usar `/api/admin/**` y cuándo no.** Un endpoint va bajo ese prefijo cuando *toda* la operación es de administración y no tiene contraparte para otros roles — por ejemplo `POST /api/admin/feriados/sincronizar`. Los recursos que un rol no-ADMIN también consume viven en su ruta natural (`/api/personas`, `/api/turnos`) y resuelven la autorización **en el servicio**, porque ahí la regla no es "quién entra" sino "sobre qué fila puede operar": un SOCIO_PACIENTE puede leer `/api/personas/{id}` si ese id es el suyo, y eso el filtro no lo puede decidir.
+
+---
+
 ## Módulo 1 — Autenticación y Roles
 
 **Descripción:** Gestiona el acceso seguro al sistema mediante JWT. Define tres roles con permisos diferenciados.
@@ -155,6 +168,8 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 | PATCH  | `/api/turnos/{id}/completado` | Marcar turno como completado (consultorio: PROFESIONAL propio; gym: check-in por ADMIN) | PROFESIONAL (propio, consultorio), ADMIN |
 | PATCH  | `/api/turnos/{id}/ausente` | Marcar turno como ausente | PROFESIONAL (propio, consultorio), ADMIN |
 | GET    | `/api/turnos/{id}` | Detalle de un turno | ADMIN, partes involucradas |
+| GET    | `/api/feriados` | Días en que el gimnasio no abre, por año. Lo consume la pantalla de reserva para no ofrecer franjas en un día cerrado (RN-14) | Autenticado |
+| POST   | `/api/admin/feriados/sincronizar` | Forzar la sincronización con el dataset oficial del Ministerio del Interior. Devuelve `207` si algún año no se pudo leer (RF-38) | ADMIN |
 
 **Entidades involucradas:** `turnos`, `personas`, `profesionales`, `disponibilidad_profesional`, `configuracion_gym`, `pagos` (consulta de deuda), `excepciones_morosidad`
 
@@ -191,7 +206,7 @@ El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de ser
 
 **Reglas de negocio clave:**
 - Pago único y completo por operación (sin parciales en MVP).
-- Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador (si lo cargó un admin).
+- Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador. `registrado_por_usuario` es **obligatorio** (`NOT NULL`): todo pago lo carga un ADMIN, no hay alta automática en el MVP.
 - Para cuotas de gym: se asocia al mes (`periodo`). Para sesiones: se asocia al turno (`turno_id`).
 - **Un pago de sesión tiene que corresponderse con su turno (RN-20):** el turno debe ser de tipo `CONSULTORIO` —un turno de gimnasio no genera honorarios, del gimnasio se cobra la cuota— y el pago debe estar a nombre de la persona de ese turno. Lo hace cumplir el motor (`trg_pago_sesion`), no el servicio: son invariantes que no dependen de `NOW()` ni del actor, y una regla así validada solo en la API se rompe con cualquier carga por fuera de ella.
 - El sistema expone el estado de cuenta de una persona: cuotas pagas/vencidas, sesiones abonadas.

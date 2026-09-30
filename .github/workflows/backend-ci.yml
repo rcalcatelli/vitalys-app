@@ -28,6 +28,12 @@ jobs:
       - name: Verificar identificadores
         run: python scripts/verificar-nombres-db.py
 
+      # Devolución de la 2.ª entrega (punto 9): los wireframes mostraban fechas que no
+      # caían en el día de la semana que decían. Nadie calcula días mientras lee, así que
+      # también se automatizó. No necesita Docker.
+      - name: Verificar fechas y días de la semana
+        run: python scripts/verificar-fechas-docs.py
+
   backend:
     name: Backend (Maven verify + JaCoCo gate 0.90)
     runs-on: ubuntu-latest

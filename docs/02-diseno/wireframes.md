@@ -92,7 +92,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │                                                                  │
 │  Profesional  [Valentina Méndez — Nutrición       ▼]           │
 │                                                                  │
-│  Fecha        [lun 28/10/2026  ▼]     ← → (navegación)        │
+│  Fecha        [mié 28/10/2026  ▼]     ← → (navegación)        │
 │                                                                  │
 │  Slots disponibles                                              │
 │  ┌──────────────────────────────────────────────────────────┐  │
@@ -112,7 +112,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  ┌─ Confirmación (modal al hacer clic en RESERVAR) ────────┐   │
 │  │  Confirmás la reserva?                                   │   │
 │  │  Valentina Méndez · Nutrición                           │   │
-│  │  Lunes 28/10/2026 · 09:00 – 09:30                       │   │
+│  │  Miércoles 28/10/2026 · 09:00 – 09:30                   │   │
 │  │  [Cancelar]                    [Confirmar reserva]       │   │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -130,10 +130,10 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  VITALYS          MI AGENDA                [Rodrigo Almirón] ▼ │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ← Semana del 27/10 al 31/10/2026 →                            │
+│  ← Semana del 26/10 al 30/10/2026 →                            │
 │                                                                  │
 │  ┌────────┬────────────────────────────────────────────────┐   │
-│  │ Hora   │ MAR 28/10      JUE 30/10                       │   │
+│  │ Hora   │ MAR 27/10      JUE 29/10                       │   │
 │  ├────────┼────────────────────────────────────────────────┤   │
 │  │ 14:00  │ Carlos Soto    [libre]                         │   │
 │  │        │ [COMPLETAR ▼]                                  │   │

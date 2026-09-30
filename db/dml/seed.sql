@@ -168,7 +168,8 @@ INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario)
 -- 6. TURNOS — todos los estados representados
 -- ---------------------------------------------------------------------------
 
--- T1: RESERVADO — María con Valentina (Nutrición) el lunes 28/10/2026 09:00
+-- T1: RESERVADO — María con Valentina (Nutrición) el miércoles 28/10/2026 09:00.
+-- Valentina atiende lunes y miércoles de 09:00 a 13:00, así que la franja es válida.
 INSERT INTO turnos (persona_id, profesional_id, tipo_turno, inicio, fin, estado, reservado_por_usuario_id)
 VALUES (
   (SELECT id FROM personas WHERE dni = '38100001'),

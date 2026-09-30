@@ -60,10 +60,11 @@ de las variables de entorno que hay que cargar en cada plataforma.
 ### 1.1 El esquema lo crea Flyway, no se pega a mano
 
 > **No ejecutes `db/ddl/vitalys_ddl.sql` en Supabase.** Ese archivo es el esquema inicial
-> histórico y hoy está incompleto: le faltan las reglas del gimnasio, la tabla
-> `excepciones_morosidad`, `personas.fecha_inicio_membresia` y la restricción de solapamiento
-> ampliada. Pegarlo dejaría la base en un estado intermedio y, peor, Flyway fallaría después al
-> encontrar tablas que él no creó y sin su tabla de historial.
+> histórico —equivale a `V1__esquema_inicial.sql`— y le falta todo lo que vino después: las
+> reglas del gimnasio, `excepciones_morosidad`, `feriados`, `personas.fecha_inicio_membresia`,
+> el umbral de tolerancia de morosidad y las restricciones de ocupación y validación agregadas
+> de `V5` en adelante. Pegarlo dejaría la base en un estado intermedio y, peor, Flyway fallaría
+> después al encontrar tablas que él no creó y sin su tabla de historial.
 
 **La base de Supabase queda VACÍA.** Al arrancar, el backend aplica en orden todas las
 migraciones de [`db/migration/`](../../db/migration/) y registra cada una en

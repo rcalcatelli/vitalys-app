@@ -59,7 +59,7 @@ vitalys-app/
 ├── frontend/              → Cliente web (Vite + React + TypeScript)
 ├── db/
 │   ├── ddl/
-│   │   └── vitalys_ddl.sql       → Script de esquema para el flujo manual de Supabase (ver runbook)
+│   │   └── vitalys_ddl.sql       → Esquema inicial HISTÓRICO (= V1). No es el esquema vigente
 │   ├── dml/
 │   │   └── seed.sql              → Datos de prueba
 │   └── migration/                → Migraciones versionadas de Flyway (V1, V2, V3…)
@@ -100,7 +100,7 @@ El esquema usa **PostgreSQL** con las siguientes tablas principales:
 | `feriados`                   | Días en que el gimnasio no abre; sincronizados con el dataset oficial del Ministerio del Interior |
 | `notificaciones`             | Log de emails enviados                                          |
 
-El esquema se gestiona con **migraciones versionadas de Flyway**, en [`db/migration/`](db/migration). `V1` contiene el esquema inicial aprobado en la 2.ª entrega; los cambios posteriores (reglas de gimnasio, excepciones de morosidad, etc.) llegan como `V2`, `V3`… sin modificar las anteriores. El archivo [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql) se conserva únicamente para el flujo manual de carga del esquema en Supabase, documentado en el runbook de despliegue.
+El esquema se gestiona con **migraciones versionadas de Flyway**, en [`db/migration/`](db/migration). `V1` contiene el esquema inicial aprobado en la 2.ª entrega; los cambios posteriores (reglas de gimnasio, excepciones de morosidad, etc.) llegan como `V2`, `V3`… sin modificar las anteriores. El archivo [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql) se conserva como **registro histórico** del esquema aprobado el 21/09 —su contenido es el de `V1__esquema_inicial.sql`— y **no debe ejecutarse contra ninguna base**: está incompleto respecto del esquema actual, y pegarlo a mano dejaría a Flyway sin su tabla de historial frente a tablas que él no creó (ver el [runbook de despliegue](docs/03-despliegue/runbook-deploy.md)).
 
 Ver diagrama ER: [`docs/02-diseno/diagrama-er.mermaid`](docs/02-diseno/diagrama-er.mermaid)
 
@@ -131,10 +131,11 @@ npm run dev
 
 ## 🌐 Despliegue
 
-| Servicio | URL         | Estado |
-| -------- | ----------- | ------ |
-| Frontend | _pendiente_ | 🔜     |
-| Backend  | _pendiente_ | 🔜     |
+| Servicio | URL | Estado |
+| -------- | --- | ------ |
+| Frontend | [vitalys-app-ayk2.vercel.app](https://vitalys-app-ayk2.vercel.app) | ✅ |
+| Backend  | [vitalys-backend-039u.onrender.com](https://vitalys-backend-039u.onrender.com) | ✅ |
+| Swagger UI | [/swagger-ui/index.html](https://vitalys-backend-039u.onrender.com/swagger-ui/index.html) | ✅ |
 
 Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).
 

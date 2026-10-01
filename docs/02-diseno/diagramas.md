@@ -106,66 +106,69 @@ stateDiagram-v2
 
     RESERVADO --> AUSENTE : Paciente no se presentó\n(profesional / admin)
 
-    RESERVADO --> CANCELADO_EN_TIEMPO : Cancelación con ≥ 24 h\n(persona / admin)\nEl slot queda libre
+    RESERVADO --> CANCELADO_EN_TIEMPO : Aviso ≥ 24 h (consultorio) / ≥ 2 h (gym)\n(persona / admin)
 
-    RESERVADO --> CANCELADO_TARDE : Cancelación con < 24 h\n(persona / admin)\nEl slot permanece bloqueado
+    RESERVADO --> CANCELADO_TARDE : Aviso con menos anticipación\n(persona / admin)
+
+    RESERVADO --> CANCELADO_POR_PROFESIONAL : El profesional redujo\nsu disponibilidad (RN-24)
 
     COMPLETADO --> [*]
     AUSENTE --> [*]
     CANCELADO_EN_TIEMPO --> [*]
     CANCELADO_TARDE --> [*]
+    CANCELADO_POR_PROFESIONAL --> [*]
 
     note right of RESERVADO
-        Estado inicial.
-        El horario está bloqueado.
+        Estado inicial. Ocupa el lugar.
     end note
 
     note right of AUSENTE
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap (RN-08).
+        Ocupa el lugar: la franja
+        ya transcurrió (RN-08).
     end note
 
     note right of COMPLETADO
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap (RN-08).
+        Ocupa el lugar: la franja
+        ya transcurrió (RN-08).
     end note
 
     note right of CANCELADO_TARDE
-        El horario sigue bloqueado.
-        Incluido en excl_turnos_overlap.
+        El estado registra la anticipación
+        del aviso, NO decide la ocupación.
     end note
 
     note right of CANCELADO_EN_TIEMPO
-        Único estado que libera el horario (RN-02).
+        Idem: lo que libera el lugar es que
+        cancelado_en < inicio (RN-02).
+    end note
+
+    note right of CANCELADO_POR_PROFESIONAL
+        No lo decidió el paciente:
+        no computa como cancelación suya.
     end note
 ```
 
+**Lo que ocupa el lugar no es el estado, sino el momento de la cancelación.** Los estados `RESERVADO`, `COMPLETADO` y `AUSENTE` siempre ocupan. Los tres estados de cancelación ocupan **solo si `cancelado_en >= inicio`**: una cancelación registrada antes de que empiece la franja libera el lugar, sea en tiempo o tarde, y otra persona puede tomarlo. La distinción en tiempo/tarde se conserva como registro de la anticipación del aviso. Los tres controles del motor comparten esta definición en `fn_turno_ocupa_lugar` (RN-02, RN-03).
+
 ---
 
-## 3. Diagrama de Secuencia — Reservar un turno
+## 3. Diagramas de Secuencia — Reservar un turno
+
+Reservar consultorio y reservar gimnasio son **dos circuitos distintos**, con rutas propias (`POST /api/turnos` y `POST /api/turnos/gym`, ver Módulo 3), validaciones que no se comparten y capas de aplicación diferentes. Por eso se documentan por separado en lugar de como ramas de un mismo flujo: unificarlos sugiere que el turno de gimnasio pasa por la disponibilidad de un profesional que no tiene.
+
+### 3.1. Reservar un turno de CONSULTORIO
 
 ```mermaid
 sequenceDiagram
     actor U as Usuario (Socio / Admin)
     participant API as TurnoController
     participant TS as TurnoService
-    participant PS as PagoService
     participant DB as Base de datos
 
-    U->>API: POST /api/turnos {persona_id, profesional_id, inicio, tipo_turno}
+    U->>API: POST /api/turnos {persona_id, profesional_id, inicio}
+    API->>TS: reservarTurnoConsultorio(request, usuarioActual)
 
-    API->>TS: reservarTurno(request, usuarioActual)
-
-    alt tipo_turno = GYM y es_socio_gym = true
-        TS->>PS: calcularMorosidad(persona_id)
-        PS->>DB: SELECT MAX(periodo) FROM pagos WHERE persona_id=? AND concepto='CUOTA_MENSUAL'
-        DB-->>PS: ultimo_periodo
-        PS-->>TS: diasMora (int)
-        alt diasMora > 10
-            TS-->>API: MorosidadException
-            API-->>U: 422 "Cuota vencida hace X días. No puede reservar turno de gym."
-        end
-    end
+    Note over TS: No se evalúa morosidad: la deuda de la cuota de<br/>gimnasio nunca bloquea un turno de consultorio<br/>(Decisión de dominio 1, confirmada por el relevamiento)
 
     TS->>DB: SELECT disponibilidad activa del profesional para ese día/hora
     DB-->>TS: franja horaria
@@ -175,12 +178,74 @@ sequenceDiagram
         API-->>U: 422 "Horario fuera de la disponibilidad del profesional"
     end
 
-    TS->>DB: INSERT INTO turnos (estado=RESERVADO, reservado_por_usuario_id=...)
-    Note over TS,DB: El EXCLUDE GIST rechaza si hay solapamiento
+    TS->>DB: INSERT INTO turnos (tipo_turno=CONSULTORIO, profesional_id=..., estado=RESERVADO)
+    Note over TS,DB: El motor valida: que el profesional no tenga otro turno en esa franja<br/>(excl_turnos_overlap, RN-03); que la persona tampoco lo tenga, de ningún<br/>tipo (excl_turnos_persona_overlap, RN-22); y que la persona no esté<br/>dada de baja (trg_turno_persona_activa, RN-21)
     alt solapamiento detectado por EXCLUDE
         DB-->>TS: PSQLException (constraint violation)
         TS-->>API: SolapamientoException
         API-->>U: 409 "El horario ya no está disponible"
+    end
+    alt la persona está dada de baja
+        DB-->>TS: PSQLException (check_violation)
+        TS-->>API: PersonaInactivaException
+        API-->>U: 422 "La persona está dada de baja: no se le pueden reservar turnos"
+    end
+
+    DB-->>TS: turno creado (id)
+    TS->>TS: enviar email CONFIRMACION_TURNO (asíncrono)
+    TS-->>API: TurnoDTO
+    API-->>U: 201 Created {turnoId, inicio, fin, estado}
+```
+
+### 3.2. Reservar un turno de GIMNASIO
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario (Socio / Admin)
+    participant API as TurnoController
+    participant TS as TurnoService
+    participant PS as PagoService
+    participant DB as Base de datos
+
+    U->>API: POST /api/turnos/gym {persona_id, inicio}
+    API->>TS: reservarTurnoGym(request, usuarioActual)
+
+    Note over TS: No se consulta disponibilidad de profesional:<br/>el turno de gimnasio no tiene profesional asignado<br/>(profesional_id = NULL)
+
+    TS->>PS: contarPeriodosImpagos(persona_id)
+    PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
+    PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
+    DB-->>PS: períodos efectivamente pagados
+    Note over PS: Recorre mes a mes DESDE fecha_inicio_membresia.<br/>Cuenta impago todo período P con NOW() > P + 1 mes + 10 días<br/>sin cuota registrada. Un mes salteado sigue contando aunque<br/>se hayan pagado los posteriores: NO se usa el último período<br/>pagado como referencia (RN-01).
+    PS-->>TS: impagos (int)
+
+    TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
+    DB-->>TS: umbral
+
+    alt impagos >= umbral — socio SUSPENDIDO
+        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id = ?<br/>AND valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
+        DB-->>TS: excepción vigente (o vacío)
+        alt sin excepción vigente
+            TS-->>API: MorosidadException
+            API-->>U: 422 "Suspendido por N períodos impagos. Regularice para reservar."
+        else con excepción vigente
+            TS->>TS: continuar con la reserva (RN-09)
+        end
+    else 0 < impagos < umbral — CON DEUDA
+        TS->>TS: continuar: la deuda por debajo del umbral NO bloquea (RN-01)
+    end
+
+    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, profesional_id=NULL, estado=RESERVADO)
+    Note over TS,DB: El motor valida: grilla horaria y feriados, membresía de gimnasio,<br/>un turno por persona y día y cupo por franja (trg_turno_gym, con<br/>pg_advisory_xact_lock contra la condición de carrera); que la persona<br/>no esté de baja (trg_turno_persona_activa, RN-21); y que no tenga otro<br/>turno superpuesto (excl_turnos_persona_overlap, RN-22)
+    alt regla de gimnasio rechazada por el motor
+        DB-->>TS: PSQLException (raise exception)
+        TS-->>API: ReglaGymException
+        API-->>U: 409 "Cupo completo" · 422 según la regla violada
+    end
+
+    opt la reserva usó una excepción de un solo uso
+        TS->>DB: UPDATE excepciones_morosidad SET turno_id = ? — se consume
+        Note over TS,DB: turno_id se completa DESPUÉS de crear el turno:<br/>al pedir la excepción, el turno todavía no existía (RN-23)
     end
 
     DB-->>TS: turno creado (id)
@@ -217,22 +282,82 @@ sequenceDiagram
         API-->>U: 403 "Solo podés cancelar tus propios turnos"
     end
 
-    TS->>TS: calcularAnticipacion(turno.inicio, NOW())
+    TS->>TS: umbral = 24h si CONSULTORIO, 2h si GYM (RN-02)
+    TS->>TS: anticipacion = turno.inicio - NOW()
 
-    alt anticipacion >= 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_EN_TIEMPO,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
-        DB-->>TS: ok
-        TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
-        TS-->>API: TurnoDTO {estado: CANCELADO_EN_TIEMPO}
-        API-->>U: 200 OK "Turno cancelado en tiempo. Slot liberado."
-    else anticipacion < 24h
-        TS->>DB: UPDATE turnos SET estado=CANCELADO_TARDE,\ncancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
-        DB-->>TS: ok
-        TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
-        TS-->>API: TurnoDTO {estado: CANCELADO_TARDE}
-        API-->>U: 200 OK "Cancelación tardía. El horario no se libera."
+    alt anticipacion >= umbral
+        TS->>TS: estadoFinal = CANCELADO_EN_TIEMPO
+    else anticipacion < umbral
+        TS->>TS: estadoFinal = CANCELADO_TARDE
+    end
+
+    Note over TS,DB: El estado solo registra la anticipación del aviso.<br/>Lo que decide si el lugar se libera es cancelado_en frente a inicio.
+
+    TS->>DB: UPDATE turnos SET estado=estadoFinal,<br/>cancelado_en=NOW(), cancelado_por_usuario=?, motivo=?
+    DB-->>TS: ok
+    Note over DB: fn_turno_ocupa_lugar reevalúa la ocupación con el nuevo<br/>cancelado_en: el lugar vuelve a estar disponible si NOW() < inicio,<br/>y sigue ocupado si la franja ya había empezado (RN-03)
+
+    TS->>TS: enviar email AVISO_CANCELACION (asíncrono)
+    TS-->>API: TurnoDTO {estado: estadoFinal, liberaLugar}
+
+    alt NOW() < turno.inicio
+        API-->>U: 200 OK "Turno cancelado. El lugar queda disponible."
+    else NOW() >= turno.inicio
+        API-->>U: 200 OK "Turno cancelado con la franja ya iniciada. El lugar no se libera."
     end
 ```
+
+---
+
+## 4b. Diagrama de Secuencia — Reducir la disponibilidad de un profesional
+
+Cancelar turnos de terceros es una acción destructiva, así que la operación va en **dos
+pasos**: primero se consulta el impacto, y recién con confirmación explícita se aplica
+(RN-24, cierra el hallazgo 5 del RFC-001).
+
+```mermaid
+sequenceDiagram
+    actor P as Profesional / Admin
+    participant API as ProfesionalController
+    participant DS as DisponibilidadService
+    participant NS as NotificacionService
+    participant DB as Base de datos
+
+    Note over P,DB: 1) Ver el impacto antes de tocar nada
+    P->>API: GET /api/profesionales/{id}/disponibilidad/{dId}/impacto
+    API->>DS: calcularImpacto(dId, nuevaFranja)
+    DS->>DB: SELECT turnos CONSULTORIO RESERVADO del profesional<br/>con inicio > NOW() que caen fuera de la nueva franja
+    DB-->>DS: turnos afectados
+    DS-->>API: lista {turnoId, persona, inicio}
+    API-->>P: 200 OK "3 turnos quedarían fuera de tu disponibilidad"
+
+    Note over P,DB: 2) Aplicar, ya sabiendo qué se pierde
+    P->>API: DELETE /api/profesionales/{id}/disponibilidad/{dId}?confirmar=true
+
+    alt hay turnos afectados y confirmar != true
+        API-->>P: 409 "Hay 3 turnos futuros en esa franja. Confirmá para cancelarlos."
+    end
+
+    API->>DS: reducirDisponibilidad(dId, nuevaFranja, actorActual)
+
+    rect rgb(245, 245, 245)
+        Note over DS,DB: Una sola transacción: o queda todo, o no queda nada
+        DS->>DB: UPDATE/DELETE disponibilidad_profesional
+        DS->>DB: UPDATE turnos SET estado=CANCELADO_POR_PROFESIONAL,<br/>cancelado_en=NOW(), cancelado_por_usuario=actor,<br/>motivo_cancelacion='El profesional modificó su disponibilidad'
+        Note over DS,DB: Solo turnos FUTUROS. Los ya transcurridos no se tocan:<br/>son hechos históricos. fn_turno_ocupa_lugar libera esas<br/>franjas sin necesidad de cambios (RN-02)
+        DS->>NS: avisarCancelacion(turnos afectados)
+        NS->>DB: INSERT INTO notificaciones (tipo=AVISO_CANCELACION) por cada paciente
+    end
+
+    DS-->>API: ResultadoReduccion {franja, turnosCancelados}
+    API-->>P: 200 OK "Disponibilidad actualizada. 3 turnos cancelados y pacientes notificados."
+```
+
+**Por qué la cascada vive en el servicio y no en un trigger.** El motor no sabe quién es el
+actor —lo necesita para `cancelado_por_usuario`— ni puede disparar notificaciones. Y sobre
+todo: una cancelación automática e invisible dentro de la base es justamente lo que se
+quiere evitar. La base impone los invariantes de integridad; los efectos de una decisión de
+negocio, con su confirmación y su aviso al paciente, son del servicio.
 
 ---
 
@@ -326,44 +451,57 @@ sequenceDiagram
     participant DB as Base de datos
 
     Note over A,DB: 1) El ADMIN registra la excepción
-    A->>API: POST /api/excepciones-morosidad {persona_id, motivo, valida_hasta, turno_id?}
+    A->>API: POST /api/excepciones-morosidad {persona_id, motivo, valida_hasta, un_solo_uso}
     API->>ES: registrarExcepcion(request, actorActual)
 
     alt actorActual.rol != ADMIN
         ES-->>API: AccesoDenegadoException
         API-->>A: 403 "Solo ADMIN puede registrar excepciones de morosidad"
     else actor es ADMIN
-        ES->>DB: INSERT INTO excepciones_morosidad (persona_id, autorizado_por, turno_id, motivo, valida_hasta)
+        ES->>DB: INSERT INTO excepciones_morosidad (persona_id, autorizado_por,<br/>motivo, valida_hasta, un_solo_uso) — turno_id queda NULL
         DB-->>ES: excepción creada (id)
         ES-->>API: ExcepcionMorosidadDTO
         API-->>A: 201 Created {excepcionId, personaId, validaHasta}
     end
 
     Note over U,DB: 2) Más tarde, el socio intenta reservar un turno de gym
-    U->>TC: POST /api/turnos {persona_id, tipo_turno=GYM, inicio}
-    TC->>TS: reservarTurno(request, usuarioActual)
+    U->>TC: POST /api/turnos/gym {persona_id, inicio}
+    TC->>TS: reservarTurnoGym(request, usuarioActual)
 
-    TS->>PS: calcularMorosidad(persona_id)
-    PS->>DB: SELECT MAX(periodo) FROM pagos WHERE persona_id=? AND concepto='CUOTA_MENSUAL'
-    DB-->>PS: ultimo_periodo
-    PS-->>TS: diasMora (int)
+    TS->>PS: contarPeriodosImpagos(persona_id)
+    PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
+    PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
+    DB-->>PS: períodos efectivamente pagados
+    Note over PS: Cuenta los períodos impagos ACUMULADOS desde el inicio de<br/>la membresía. No toma el último período pagado como referencia:<br/>un mes salteado sigue contando (RN-01).
+    PS-->>TS: impagos (int)
 
-    alt diasMora > 10
-        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id=? AND valida_hasta >= CURRENT_DATE AND (turno_id IS NULL OR turno_id=?)
+    TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
+    DB-->>TS: umbral
+
+    alt impagos >= umbral — socio SUSPENDIDO
+        TS->>DB: SELECT * FROM excepciones_morosidad WHERE persona_id = ?<br/>AND valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
         DB-->>TS: excepción vigente (o vacío)
         alt sin excepción vigente
             TS-->>TC: MorosidadException
-            TC-->>U: 422 "Cuota vencida hace X días. No puede reservar turno de gym."
+            TC-->>U: 422 "Suspendido por N períodos impagos. Regularice para reservar."
         else con excepción vigente
             TS->>TS: continuar con la reserva (excepción autorizada, RN-09)
         end
+    else impagos < umbral
+        TS->>TS: continuar: sin suspensión, la excepción no se consulta
     end
 
-    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, estado=RESERVADO, ...)
-    Note over TS,DB: Grilla horaria y cupo por franja los valida trg_turno_gym
+    TS->>DB: INSERT INTO turnos (tipo_turno=GYM, profesional_id=NULL, estado=RESERVADO)
+    Note over TS,DB: trg_turno_gym valida grilla, feriados, membresía, un turno por día<br/>y cupo; trg_turno_persona_activa, que la persona no esté de baja
+    opt se usó una excepción de un solo uso
+        TS->>DB: UPDATE excepciones_morosidad SET turno_id = ? — la excepción se consume
+        Note over TS,DB: turno_id se completa DESPUÉS de crear el turno: al pedir la<br/>excepción el turno no existía (RN-23)
+    end
     TS-->>TC: TurnoDTO
     TC-->>U: 201 Created {turnoId, inicio, fin, estado}
 ```
+
+> **Resuelto — qué significa "excepción puntual" (RN-23).** El alta ya **no** recibe un `turno_id`: cuando la excepción hace falta, el turno todavía no existe. La columna pasó a registrar **qué turno consumió** la excepción, y la completa el servicio recién después de crear el turno. Lo *puntual* queda expresado con `un_solo_uso`: en `TRUE` la excepción habilita una sola reserva y se agota al usarse; en `FALSE` vale para cualquier turno de gimnasio hasta `valida_hasta`. Por eso la consulta de vigencia del diagrama filtra por `turno_id IS NULL` cuando la excepción es de un solo uso — es la forma de saber que todavía no se gastó. La base impide, además, que una excepción se consuma en el turno de otra persona (`trg_excepcion_morosidad`).
 
 ---
 

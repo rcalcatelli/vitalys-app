@@ -50,31 +50,49 @@ INSERT INTO profesionales (usuario_id, nombre, apellido, especialidad, duracion_
 
 -- ---------------------------------------------------------------------------
 -- 3. PERSONAS
---    - María Pérez: socio gym AL DÍA (cuota septiembre pagada)
---    - Juan García: socio gym MOROSO (última cuota julio; hoy 25/09 → >10 días)
---    - Lucía Rojas: socio gym AL DÍA pero con excepción ya usada
---    - Carlos Soto: SOLO paciente de consultorio (es_socio_gym = false)
---    - Ana Fernández: socio gym, cuota agosto pagada (mora exacta <10 días)
---    - Pedro Gómez: dado de BAJA LÓGICA
+--    Los cuatro socios de gimnasio cubren los cuatro caminos de RN-01, tomando
+--    como referencia el 28/09/2026 y el umbral por defecto de 6 períodos
+--    (configuracion_gym.meses_tolerancia_morosidad):
+--
+--    - María Pérez:    AL DÍA — socia desde 07/2026, cuotas 07, 08 y 09 pagadas.
+--                      0 períodos impagos.
+--    - Lucía Rojas:    AL DÍA — socia desde 09/2026, sin cuotas registradas. Su
+--                      primer período todavía no lleva 10 días de vencido, así
+--                      que NO acumula deuda: verifica que RN-01 no bloquea a un
+--                      socio desde el primer día.
+--    - Ana Fernández:  CON DEUDA POR DEBAJO DEL UMBRAL — socia desde 03/2026,
+--                      salteó 03 y 04 y pagó de 05 a 08. Acumula 2 impagos: los
+--                      pagos posteriores NO compensan los meses salteados, pero
+--                      con 2 < 6 conserva el acceso y solo se la notifica.
+--    - Juan García:    SUSPENDIDO — socio desde 01/2026, pagó solo 07 y 08.
+--                      Acumula exactamente 6 impagos (01 a 06): alcanza el
+--                      umbral y queda bloqueado para gym. Es el único con una
+--                      excepción de morosidad autorizada por el ADMIN (sección 8).
+--
+--    - Carlos Soto:    SOLO paciente de consultorio (es_socio_gym = false)
+--    - Pedro Gómez:    dado de BAJA LÓGICA
 -- ---------------------------------------------------------------------------
 
--- fecha_inicio_membresia: solo para socios de gym (es_socio_gym = true). Se
--- asume igual a fecha_alta: son socios de gym desde que se dieron de alta.
+-- fecha_inicio_membresia: solo para socios de gym (es_socio_gym = true). NO
+-- coincide con fecha_alta, y es justamente el motivo por el que V4 agregó la
+-- columna: una persona puede ser cliente del centro desde hace años y haberse
+-- asociado al gimnasio hace pocos meses. Derivar la mora de fecha_alta haría
+-- aparecer como deudores a socios que recién se incorporaron.
 INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimiento, estado, es_socio_gym, fecha_alta, fecha_inicio_membresia, fecha_baja) VALUES
   ((SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com'),
-   'María', 'Pérez', '38100001', '11-2001-0001', '1995-03-12', 'ACTIVO', true,  '2024-01-10', '2024-01-10', NULL),
+   'María', 'Pérez', '38100001', '11-2001-0001', '1995-03-12', 'ACTIVO', true,  '2024-01-10', '2026-07-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
-   'Juan', 'García', '38100002', '11-2002-0002', '1990-07-22', 'ACTIVO', true,  '2023-05-15', '2023-05-15', NULL),
+   'Juan', 'García', '38100002', '11-2002-0002', '1990-07-22', 'ACTIVO', true,  '2023-05-15', '2026-01-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com'),
-   'Lucía', 'Rojas', '38100003', '11-2003-0003', '1998-11-05', 'ACTIVO', true,  '2024-03-01', '2024-03-01', NULL),
+   'Lucía', 'Rojas', '38100003', '11-2003-0003', '1998-11-05', 'ACTIVO', true,  '2024-03-01', '2026-09-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'carlos.soto@mail.com'),
    'Carlos', 'Soto', '38100004', '11-2004-0004', '1985-04-18', 'ACTIVO', false, '2025-02-20', NULL, NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
-   'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', '2025-06-01', NULL),
+   'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', '2026-03-01', NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@mail.com'),
    'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15');
@@ -103,7 +121,13 @@ INSERT INTO disponibilidad_profesional (profesional_id, dia_semana, hora_inicio,
 --    (registrado_por_usuario = admin)
 -- ---------------------------------------------------------------------------
 
--- María Pérez: cuotas jul/ago/sep 2026 — AL DÍA
+-- Referencia de cálculo (RN-01), tomando el 28/09/2026 como "hoy": un período P
+-- se cuenta como impago si NOW() > (P + 1 mes + 10 días). Por eso el período
+-- 2026-09 todavía NO se evalúa (vence el 11/10/2026), y el último período
+-- computable es 2026-08.
+
+-- María Pérez: socia desde 07/2026, cuotas 07, 08 y 09 pagadas.
+-- Períodos evaluados: 07 y 08 → 0 impagos. AL DÍA.
 INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 15000.00, '2026-07-01',
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
@@ -112,23 +136,29 @@ INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario)
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 16000.00, '2026-09-01',
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
 
--- Juan García: solo cuota julio — MOROSO (agosto y septiembre sin pagar)
--- Hoy 25/09 → cuota agosto venció el 01/09, mora 24 días > 10 → bloqueado para gym
+-- Juan García: socio desde 01/2026, pagó solo 07 y 08.
+-- Períodos evaluados: 01 a 08 → impagos 01, 02, 03, 04, 05 y 06 = 6.
+-- Alcanza exactamente el umbral (6) → SUSPENDIDO para gym. Caso de borde: el
+-- bloqueo se dispara con "alcanza o supera", no con "supera".
 INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
   ((SELECT id FROM personas WHERE dni = '38100002'), 'CUOTA_MENSUAL', 15000.00, '2026-07-01',
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+  ((SELECT id FROM personas WHERE dni = '38100002'), 'CUOTA_MENSUAL', 15000.00, '2026-08-01',
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
 
--- Lucía Rojas: cuotas jul/ago/sep — AL DÍA
-INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
-  ((SELECT id FROM personas WHERE dni = '38100003'), 'CUOTA_MENSUAL', 15000.00, '2026-07-01',
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
-  ((SELECT id FROM personas WHERE dni = '38100003'), 'CUOTA_MENSUAL', 15000.00, '2026-08-01',
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
-  ((SELECT id FROM personas WHERE dni = '38100003'), 'CUOTA_MENSUAL', 16000.00, '2026-09-01',
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
+-- Lucía Rojas: socia desde 09/2026, SIN cuotas registradas.
+-- Su único período (09) vence el 11/10/2026 → todavía no se evalúa: 0 impagos.
+-- Verifica que un socio recién incorporado no queda bloqueado desde el primer día.
 
--- Ana Fernández: cuotas jul/ago — mora <10 días (sep sin pagar; vence 01/10; hoy 25/09 → sin mora aún)
+-- Ana Fernández: socia desde 03/2026, salteó 03 y 04 y pagó de 05 a 08.
+-- Períodos evaluados: 03 a 08 → impagos 03 y 04 = 2. Los pagos de 05 a 08 NO
+-- compensan los meses salteados (RN-01), pero 2 < 6 → CON DEUDA sin bloqueo:
+-- conserva el acceso al gym y solo se la notifica.
 INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
+  ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 14000.00, '2026-05-01',
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+  ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 14000.00, '2026-06-01',
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, '2026-07-01',
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, '2026-08-01',
@@ -138,7 +168,8 @@ INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario)
 -- 6. TURNOS — todos los estados representados
 -- ---------------------------------------------------------------------------
 
--- T1: RESERVADO — María con Valentina (Nutrición) el lunes 28/10/2026 09:00
+-- T1: RESERVADO — María con Valentina (Nutrición) el miércoles 28/10/2026 09:00.
+-- Valentina atiende lunes y miércoles de 09:00 a 13:00, así que la franja es válida.
 INSERT INTO turnos (persona_id, profesional_id, tipo_turno, inicio, fin, estado, reservado_por_usuario_id)
 VALUES (
   (SELECT id FROM personas WHERE dni = '38100001'),
@@ -196,10 +227,13 @@ INSERT INTO turnos (
   'Surgió un imprevisto laboral.'
 );
 
--- T5: CANCELADO_TARDE — Juan con Rodrigo, canceló con 3 h de anticipación (bloqueado)
+-- T5: CANCELADO_TARDE que SÍ libera el horario — Juan con Rodrigo, avisó 3 h antes.
 -- Nota: originalmente 23/09 (miércoles); Rodrigo solo atiende Mar/Jue.
 -- Se corrige a 24/09 (jueves), dentro de su disponibilidad; se mantiene el
 -- aviso de cancelación con 3 h de margen (<24h → CANCELADO_TARDE).
+-- El aviso llegó ANTES del inicio (11:00 < 14:00), así que el horario vuelve a
+-- estar disponible pese a ser una cancelación tardía: el estado registra la
+-- anticipación del aviso, no decide la ocupación (RN-02, RN-03). Comparar con T8.
 INSERT INTO turnos (
   persona_id, profesional_id, tipo_turno, inicio, fin, estado,
   reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
@@ -240,6 +274,28 @@ VALUES (
   (SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com')
 );
 
+-- T8: GYM — Ana canceló con la franja YA EMPEZADA (turno 09:00, aviso 09:01).
+-- Contracara de T5: acá el lugar NO se libera y sigue contando para el cupo de
+-- esa franja y para el límite de un turno de gym por día. Es el mismo criterio
+-- que rige AUSENTE: una vez iniciada la franja, el lugar se consumió (RN-02,
+-- RN-03, RN-08). Relevado en el Centro Deportivo Jerárquicos: "si el turno es a
+-- las 14:00 y a las 14:01 cancelan, quedan bloqueados para ambos".
+INSERT INTO turnos (
+  persona_id, profesional_id, tipo_turno, inicio, fin, estado,
+  reservado_por_usuario_id, cancelado_en, cancelado_por_usuario, motivo_cancelacion
+) VALUES (
+  (SELECT id FROM personas WHERE dni = '38100005'),
+  NULL,
+  'GYM',
+  '2026-09-23 09:00:00-03',
+  '2026-09-23 10:00:00-03',
+  'CANCELADO_TARDE',
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  '2026-09-23 09:01:00-03',
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  'Avisé cuando la franja ya había arrancado.'
+);
+
 -- ---------------------------------------------------------------------------
 -- 7. PAGOS — sesiones de consultorio
 -- ---------------------------------------------------------------------------
@@ -256,15 +312,30 @@ INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario
 
 -- ---------------------------------------------------------------------------
 -- 8. EXCEPCIONES DE MOROSIDAD
---    Juan García tiene una excepción puntual vigente hasta 30/09/2026
---    para poder asistir a una clase de gym mientras regulariza su cuota.
+--    Juan García es el ÚNICO socio con excepción. Es coherente con su estado:
+--    acumula 6 períodos impagos, alcanzó el umbral y quedó SUSPENDIDO para gym
+--    (RN-01). La excepción es el mecanismo por el que el ADMIN levanta esa
+--    suspensión sin desactivar la regla (RN-09).
+--
+--    Ningún otro socio tiene excepción, y ninguno la necesita: María y Lucía no
+--    tienen deuda computable, y Ana tiene deuda pero por debajo del umbral, así
+--    que nunca estuvo bloqueada.
+--
+--    Es POR PERÍODO (un_solo_uso = FALSE, el valor por defecto): vale para
+--    cualquier turno de gimnasio hasta valida_hasta. La alternativa sería
+--    un_solo_uso = TRUE, que habilita una sola reserva y se agota al usarse.
+--
+--    turno_id queda en NULL a propósito, y NO porque falte el dato: no es un
+--    dato de alta (RN-23). La excepción sirve para PODER reservar, así que en el
+--    momento en que se la otorga el turno todavía no existe. Esa columna la
+--    completa el servicio cuando la excepción se consume.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta) VALUES (
   (SELECT id FROM personas WHERE dni = '38100002'),
   (SELECT id FROM usuarios WHERE email  = 'admin@vitalys.com'),
-  'El socio se comprometió a abonar las cuotas adeudadas antes del 30/09/2026. Se autoriza acceso temporario al gym.',
-  '2026-09-30'
+  'El socio se comprometió a abonar las cuotas adeudadas antes del 31/10/2026. Se autoriza acceso temporario al gym.',
+  '2026-10-31'
 );
 
 -- ---------------------------------------------------------------------------
@@ -311,6 +382,36 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
   'maria.perez@mail.com',
   true
 );
+
+-- ---------------------------------------------------------------------------
+-- 10. FERIADOS — días en que el gimnasio no abre (RN-14)
+--
+--     El calendario real NO se carga acá: lo sincroniza el importador contra el
+--     dataset oficial del Ministerio del Interior (RF-38). Escribir feriados a
+--     mano no escala — los trasladables se corren cada año y aparecen feriados
+--     por decreto que ninguna lista fija puede anticipar.
+--
+--     Estas filas son datos de prueba para ejercitar los dos caminos de la
+--     tabla. Ninguna se superpone con los turnos del seed.
+-- ---------------------------------------------------------------------------
+
+-- Importados (así los deja el sincronizador). Fechas reales de 2026 tomadas de
+-- la fuente oficial; se incluye a propósito un trasladable que NO cayó en su
+-- fecha nominal y un feriado creado por decreto, que son justamente los casos
+-- que una lista escrita a mano no contempla.
+INSERT INTO feriados (fecha, descripcion, tipo, cierra_gimnasio, origen, sincronizado_en) VALUES
+  ('2026-11-23', 'Día de la Soberanía Nacional (20/11)',        'TRASLADABLE',  TRUE,  'OFICIAL', NOW()),
+  ('2026-11-09', 'Visita de Su Santidad el Papa León XIV',      'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  ('2026-12-07', 'Día no laborable con fines turísticos',       'TURISTICO',    TRUE,  'OFICIAL', NOW()),
+  ('2026-12-08', 'Inmaculada Concepción de María',              'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  ('2026-12-25', 'Navidad',                                      'INAMOVIBLE',   TRUE,  'OFICIAL', NOW()),
+  -- NO_LABORABLE: festividad religiosa de quien la profesa. El gimnasio ABRE.
+  ('2026-09-21', 'Día del Perdón',                               'NO_LABORABLE', FALSE, 'OFICIAL', NOW());
+
+-- Cargado por el ADMIN: un cierre propio del centro, que la fuente oficial no
+-- conoce. Se clasifica con el tipo que mejor lo describe y origen MANUAL.
+INSERT INTO feriados (fecha, descripcion, tipo, cierra_gimnasio, origen) VALUES
+  ('2026-11-02', 'Cierre por mantenimiento de la sala de máquinas', 'TURISTICO', TRUE, 'MANUAL');
 
 COMMIT;
 

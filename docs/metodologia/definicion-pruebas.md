@@ -18,19 +18,22 @@ Validan la lógica de negocio en la capa de servicio, sin base de datos real.
 
 ### PagoServiceTest
 
-La deuda se calcula desde `personas.fecha_inicio_membresia` (columna agregada en `db/migration/V4__fecha_inicio_membresia.sql`), no desde el último período pagado: el servicio busca el primer mes sin `pago` registrado a partir de la fecha de alta de la membresía, y ese es el mes moroso — aunque existan pagos de meses posteriores. Esto reemplaza el cálculo anterior, que tapaba meses salteados con cualquier pago más reciente.
+El servicio devuelve **la cantidad de períodos mensuales impagos acumulados** desde `personas.fecha_inicio_membresia` (columna agregada en `V4__fecha_inicio_membresia.sql`), recorriendo mes a mes: cuenta como impago todo período `P` con `NOW() > (P + 1 mes + 10 días)` sin cuota registrada, aunque existan pagos de meses posteriores. El bloqueo **no** se dispara con el primer impago: se compara el total contra `configuracion_gym.meses_tolerancia_morosidad` (`V6__tolerancia_morosidad.sql`, 6 por defecto) y se rechaza la reserva solo cuando lo **alcanza o supera** (RN-01). Los casos asumen ese umbral salvo que se indique otro.
 
 | ID    | Caso de prueba                                                                 | Entrada                                              | Resultado esperado                          |
 |-------|--------------------------------------------------------------------------------|------------------------------------------------------|---------------------------------------------|
-| PU-01 | Cuota al día (todos los meses desde el alta de la membresía, pagados hasta el actual) | fecha_inicio_membresia = 2026-07-01, pagos en 07/08/09, hoy = 2026-09-25 | diasMora = 0, bloqueado = false |
-| PU-02 | Primer mes impago desde el alta, vencido exactamente hace 10 días             | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-11 | diasMora = 10, bloqueado = false |
-| PU-03 | Mes salteado hace 11 días, con meses posteriores pagados → moroso de todos modos | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-12 | diasMora = 11, bloqueado = true (a pesar de tener agosto pagado) |
-| PU-04 | Sin ningún pago registrado desde el alta de la membresía → moroso            | fecha_inicio_membresia = 2026-01-01, sin filas en pagos, hoy = 2026-09-25 | diasMora calculado desde 2026-01 (no NULL: `fecha_inicio_membresia` es NOT NULL si `es_socio_gym = TRUE`), bloqueado = true |
+| PU-01 | Todos los períodos pagados desde el alta de la membresía                      | fecha_inicio_membresia = 2026-07-01, pagos en 07/08/09, hoy = 2026-09-25 | impagos = 0, bloqueado = false |
+| PU-02 | Período vencido hace exactamente 10 días → todavía no cuenta                  | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-11 | impagos = 0, bloqueado = false |
+| PU-03 | Mes salteado con meses posteriores pagados → suma deuda pero NO bloquea       | fecha_inicio_membresia = 2026-06-01, pagos en 06 y 08 (saltea 07), hoy = 2026-08-12 | impagos = 1 (el pago de agosto no compensa julio), bloqueado = **false** — 1 < 6 |
+| PU-04 | Sin ningún pago registrado desde el alta de la membresía                      | fecha_inicio_membresia = 2026-01-01, sin filas en pagos, hoy = 2026-09-25 | impagos = 8 (01 a 08; 09 aún en gracia), bloqueado = true |
 | PU-05 | Persona sin membresía gym (es_socio_gym = false) → sin bloqueo               | es_socio_gym = false                                 | bloqueado = false sin consultar pagos       |
 | PU-06 | Login con cuenta deshabilitada (RF-32)                                        | activo = false, contraseña correcta                  | CredencialesInvalidasException, no se emite token |
 | PU-07 | Contrato UserDetails de `Usuario`                                             | usuario con rol SOCIO_PACIENTE / ADMIN               | getUsername = email, autoridad `ROLE_<rol>`, isEnabled sigue a `activo` |
-| PU-08 | Mes salteado en medio del historial, con meses posteriores pagados (caso que la regla vieja pasaba por alto) | fecha_inicio_membresia = 2026-05-01, pagos en 05, 07, 08 (saltea 06), hoy = 2026-08-20 | primer mes impago = 06, diasMora > 10, bloqueado = true |
-| PU-09 | Socio nuevo: alta de la membresía este mes, sin pagos aún → no debe quedar bloqueado desde el primer día | fecha_inicio_membresia = 2026-09-01, sin pagos, hoy = 2026-09-05 | diasMora = 0 (la cuota de 09 recién vence el 2026-10-01 + 10 días), bloqueado = false |
+| PU-08 | Mes salteado en medio del historial, con meses posteriores pagados            | fecha_inicio_membresia = 2026-05-01, pagos en 05, 07, 08 (saltea 06), hoy = 2026-08-20 | impagos = 1 (período 06), bloqueado = false |
+| PU-09 | Socio nuevo: alta este mes, sin pagos → no se bloquea desde el primer día    | fecha_inicio_membresia = 2026-09-01, sin pagos, hoy = 2026-09-05 | impagos = 0 (el período 09 vence recién el 2026-10-11), bloqueado = false. **Ningún período computable no es lo mismo que un período impago**: un cálculo que genere una fila vacía y la cuente devuelve 1 y bloquea justo al socio que la regla protege |
+| PU-10 | Borde inferior: un período por debajo del umbral                              | impagos = 5, umbral = 6                              | bloqueado = false                           |
+| PU-11 | Borde exacto: la cantidad de impagos iguala el umbral                         | impagos = 6, umbral = 6                              | bloqueado = true — la condición es "alcanza o supera", no "supera" |
+| PU-12 | El umbral se lee de la configuración, no está fijo en el código               | impagos = 2, `meses_tolerancia_morosidad` = 2        | bloqueado = true con el mismo historial que en PU-03 daría false con umbral 6 |
 
 ### TurnoServiceTest
 
@@ -40,9 +43,12 @@ La deuda se calcula desde `personas.fecha_inicio_membresia` (columna agregada en
 | TU-02 | Cancelación con 23 h 59 min → TARDE                                          | inicio = T+23h59, ahora = T                          | estado = CANCELADO_TARDE                    |
 | TU-03 | SOCIO_PACIENTE cancela turno de otra persona → AccesoDenegadoException       | turno.persona_id ≠ usuario.persona_id                | excepción 403                               |
 | TU-04 | Cancelar turno ya COMPLETADO → EstadoInvalidoException                       | estado = COMPLETADO                                  | excepción 422                               |
-| TU-05 | Reservar turno GYM con morosidad → MorosidadException                        | es_socio_gym = true, diasMora = 15                   | excepción 422                               |
-| TU-06 | Reservar turno GYM con excepción vigente → permitido                         | excepcion.valida_hasta > hoy                         | turno creado                                |
+| TU-05 | Reservar turno GYM estando suspendido → MorosidadException                   | es_socio_gym = true, impagos = 6, umbral = 6         | excepción 422                               |
+| TU-06 | Reservar turno GYM suspendido pero con excepción vigente → permitido         | impagos ≥ umbral, excepcion.valida_hasta ≥ hoy       | turno creado                                |
 | TU-07 | Reservar fuera de disponibilidad del profesional → DisponibilidadException   | horario no cubre la franja                           | excepción 422                               |
+| TU-08 | Reservar turno GYM con deuda por debajo del umbral → permitido sin excepción | impagos = 2, umbral = 6, sin excepción registrada    | turno creado; no se consulta `excepciones_morosidad` |
+| TU-09 | Reservar turno de CONSULTORIO con el socio suspendido → permitido            | impagos ≥ umbral, tipo_turno = CONSULTORIO           | turno creado; la morosidad de gimnasio no se evalúa (Decisión de dominio 1) |
+| TU-10 | La reserva de gimnasio no consulta disponibilidad de profesional             | `POST /api/turnos/gym`, socio habilitado             | turno creado con `profesional_id = NULL`; no se invoca el repositorio de disponibilidad |
 
 ---
 
@@ -59,7 +65,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-03 | Login correcto                                            | POST /api/auth/login       | `identificador` (email) + pass correctos | 200, JWT válido                               |
 | PI-04 | Login con contraseña incorrecta                           | POST /api/auth/login       | `identificador` (email) + pass incorrecta | 401                                          |
 | PI-05 | Acceso sin token a endpoint protegido                     | GET /api/personas          | —                                        | 401                                           |
-| PI-06 | Acceso con rol insuficiente (SOCIO_PACIENTE a /admin/)    | GET /api/admin/personas    | JWT de SOCIO_PACIENTE                    | 403                                           |
+| PI-06 | Acceso con rol insuficiente a una ruta de administración   | POST /api/admin/feriados/sincronizar | JWT de SOCIO_PACIENTE          | 403                                           |
 | PI-18 | Registro con `rol` explícito en el body                  | POST /api/auth/registro    | `{email, contraseña, rol: "ADMIN"}`      | 400, ningún `usuario` creado                  |
 | PI-22 | JWT expirado contra endpoint protegido                    | GET /api/auth/me           | JWT firmado con la clave real de la app, `exp` en el pasado | 401                           |
 | PI-23 | JWT malformado contra endpoint protegido                  | GET /api/auth/me           | Header `Bearer esto-no-es-un-jwt`        | 401                                           |
@@ -68,7 +74,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-26 | Registro con email con formato inválido                   | POST /api/auth/registro    | `email` sin arroba/dominio                | 400, `ErrorResponse` con `status=400`, ningún `usuario` creado |
 
 > **Alcance de PI-06 respecto de RNF-03.** RNF-03 exige que el control de acceso por rol se
-> verifique en la capa de servicio y no solo en la presentación. PI-06 ejercita hoy la regla
+> verifique en la capa de servicio y no solo en la presentación. PI-06 ejercita la regla
 > declarativa `/api/admin/**` → `hasRole("ADMIN")` de `SecurityConfig`, que es capa de
 > presentación: ninguno de los endpoints implementados hasta ahora necesita autorización por
 > rol en el servicio, porque el registro y el login son públicos y `GET /api/auth/me` lo puede
@@ -76,6 +82,12 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 > `POST /api/personas/vincular` (RF-31, exclusivo de ADMIN), y con él corresponde agregar el
 > caso que verifique el rechazo **desde el servicio**, no solo desde el filtro. Se deja
 > asentado para que la cobertura de RNF-03 no se dé por probada antes de tiempo.
+>
+> La ruta del caso se cambió de `GET /api/admin/personas` —que no existe— a
+> `POST /api/admin/feriados/sincronizar`, que sí está implementada y declarada (RF-38). Con una
+> ruta inexistente el test pasaba igual, porque el filtro rechaza por prefijo antes de resolver
+> el controller: **daba verde sin demostrar nada**. Ver las convenciones de ruta en
+> [`modulos.md`](../02-diseno/modulos.md).
 
 
 ### CORS
@@ -104,9 +116,12 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-07 | Reserva exitosa en slot disponible                             | 201, turno con estado RESERVADO                  |
 | PI-08 | Reserva en slot solapado → rechazada por EXCLUDE GIST         | 409 (constraint de BD capturada por API)         |
 | PI-09 | Dos reservas simultáneas al mismo slot (race condition test)  | Solo una de las dos en 201; la otra en 409       |
-| PI-10 | Reserva GYM sin excepción por moroso                          | 422 con mensaje de morosidad                     |
-| PI-11 | Cancelación en tiempo → estado CANCELADO_EN_TIEMPO            | 200, slot liberado (verificar EXCLUDE no bloquea)|
-| PI-12 | Cancelación tardía → estado CANCELADO_TARDE                   | 200, slot sigue bloqueado (EXCLUDE activo)       |
+| PI-10 | Reserva GYM de un socio suspendido y sin excepción             | 422 con mensaje de suspensión por morosidad      |
+| PI-11 | Cancelación en tiempo, antes del inicio → CANCELADO_EN_TIEMPO | 200; el slot queda libre: otra persona lo reserva y obtiene 201 |
+| PI-12 | Cancelación tardía pero **antes del inicio** → CANCELADO_TARDE | 200; el slot **también** queda libre: otra persona obtiene 201. El estado tardío no bloquea (RN-02) |
+| PI-13 | Cancelación con la franja **ya iniciada** (`cancelado_en >= inicio`) | 200; el slot sigue ocupado: otra reserva en ese horario da 409 |
+| PI-14 | Cupo de gimnasio tras una cancelación previa al inicio         | La franja vuelve a admitir una reserva: 201      |
+| PI-15 | Cupo de gimnasio tras una cancelación con la franja iniciada   | La franja sigue completa: 409 "Cupo completo"    |
 
 ### Gimnasio
 
@@ -117,6 +132,34 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-30 | Reserva GYM fuera de grilla (hora no en punto o duración ≠ 60 min) | 422 (`chk_turno_gym_grilla` capturado por API)  |
 | PI-31 | Reserva GYM un domingo                                          | 422 (`chk_turno_gym_grilla`: el domingo no está en la grilla) |
 | PI-32 | Reserva GYM un sábado fuera de 09:00–12:00                      | 422 (`chk_turno_gym_grilla`: el sábado solo abre 09:00–12:00) |
+| PI-33 | Reserva GYM L-V en la última franja (20:00–21:00)               | 201: termina justo a la hora de cierre |
+| PI-34 | Reserva GYM L-V empezando a las 21:00 (terminaría 22:00)        | 422: la franja excede la hora de cierre (RN-14) |
+| PI-35 | Reserva GYM sábado en la última franja (11:00–12:00)            | 201 |
+| PI-36 | Reserva GYM sábado empezando a las 12:00                        | 422: el sábado cierra a las 12:00 |
+| PI-37 | Reserva GYM en un feriado `INAMOVIBLE`                          | 422 con el nombre del feriado en el mensaje |
+| PI-38 | Reserva GYM en un feriado `TRASLADABLE` **en la fecha corrida**, no en la nominal | 422 en la fecha corrida; 201 en la fecha nominal si ese año no es feriado |
+| PI-39 | Reserva GYM en un día `NO_LABORABLE`                            | 201: las festividades religiosas no cierran el gimnasio (`cierra_gimnasio = FALSE`) |
+| PI-40 | Reserva GYM en un cierre cargado por el ADMIN (`origen = 'MANUAL'`) | 422: el trigger no distingue el origen, solo `cierra_gimnasio` |
+| PI-41 | Pago `SESION_CONSULTORIO` asociado a un turno de gimnasio | 422 (`trg_pago_sesion`, RN-20 a) |
+| PI-42 | Pago `SESION_CONSULTORIO` a nombre de una persona distinta a la del turno | 422 (`trg_pago_sesion`, RN-20 b) |
+| PI-43 | El mismo pago a nombre del titular del turno | 201: el caso válido no quedó bloqueado |
+| PI-44 | Turno de consultorio para una persona `INACTIVO` | 422 (`trg_turno_persona_activa`, RN-21) |
+| PI-45 | Turno de gimnasio para una persona `INACTIVO` | 422: la regla vale para los dos tipos de turno |
+| PI-46 | Cancelar un turno de una persona dada de baja después del alta | 200: dar de baja no congela los turnos existentes |
+| PI-47 | Dos turnos de consultorio superpuestos para la misma persona, con distinto profesional | 409 (`excl_turnos_persona_overlap`, RN-22) |
+| PI-48 | Turno de gimnasio superpuesto con un turno de consultorio de la misma persona | 409: la exclusión no distingue el tipo de turno |
+| PI-49 | Turno superpuesto con uno cancelado **antes** de su inicio | 201: la cancelación previa al inicio libera la franja (RN-02) |
+| PI-50 | Excepción de morosidad cuyo `turno_id` es de otra persona | 422 (`trg_excepcion_morosidad`, RN-23) |
+| PI-51 | Alta de excepción sin `turno_id` | 201: es la forma normal de darla de alta — el turno todavía no existe |
+| PI-52 | Excepción `un_solo_uso` ya consumida (`turno_id` completado) | No se considera vigente: la segunda reserva vuelve a dar 422 por morosidad |
+| PI-53 | Consultar el impacto de quitar una franja con 3 turnos futuros reservados | 200 con los 3 turnos (persona, fecha y hora); **no** se modifica nada |
+| PI-54 | Quitar esa franja sin `confirmar=true` | 409; la disponibilidad queda intacta y los turnos siguen en `RESERVADO` |
+| PI-55 | Quitar esa franja con `confirmar=true` | 200; los 3 turnos quedan en `CANCELADO_POR_PROFESIONAL` con motivo y `cancelado_por_usuario` cargados |
+| PI-56 | Un turno **ya transcurrido** dentro de la franja quitada | No se toca: conserva su estado original (RN-24) |
+| PI-57 | Reservar en el horario liberado por una cancelación en cascada | 201: `fn_turno_ocupa_lugar` liberó la franja sin modificarse |
+| PI-58 | Notificaciones tras la cascada | Una fila `AVISO_CANCELACION` por cada paciente afectado (RF-27) |
+| PI-59 | Falla el envío de notificaciones durante la cascada | La transacción no deja la disponibilidad reducida con turnos sin cancelar: o queda todo, o no queda nada |
+| PI-60 | **Ampliar** la disponibilidad (no reducirla) | 200 sin confirmación: no hay turnos que puedan quedar afuera |
 | PI-33 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
 | PI-34 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
 | PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
@@ -130,7 +173,7 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-14 | Registrar segunda cuota del mismo mes                     | 409 (uq_cuota_mensual)                         |
 | PI-15 | Registrar pago de sesión para turno sin turno_id         | 422 (chk_concepto_datos)                       |
 | PI-16 | Registrar segundo pago al mismo turno                     | 409 (uq_pago_por_turno)                        |
-| PI-17 | Periodo con día distinto de 1 → rechazado                 | 422 (chk_periodo_primer_dia)                   |
+| PI-17 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte) |
 
 ---
 

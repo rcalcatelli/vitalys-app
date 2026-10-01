@@ -23,6 +23,19 @@
 
 ---
 
+## Convenciones de ruta
+
+Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener claros antes de leer las tablas de endpoints.
+
+| Método | Ruta | Qué es | Roles |
+|--------|------|--------|-------|
+| GET | `/api/health` | Liveness check de infraestructura. No consulta la base: si responde `200`, el proceso de Java está vivo aunque Postgres no lo esté. Lo usa el `HEALTHCHECK` del Dockerfile y el `healthCheckPath` de Render | Público |
+| — | `/api/admin/**` | Prefijo reservado para operaciones exclusivas de administración. `SecurityConfig` le aplica `hasRole("ADMIN")` de forma declarativa, **antes** de llegar al controller | ADMIN |
+
+**Cuándo usar `/api/admin/**` y cuándo no.** Un endpoint va bajo ese prefijo cuando *toda* la operación es de administración y no tiene contraparte para otros roles — por ejemplo `POST /api/admin/feriados/sincronizar`. Los recursos que un rol no-ADMIN también consume viven en su ruta natural (`/api/personas`, `/api/turnos`) y resuelven la autorización **en el servicio**, porque ahí la regla no es "quién entra" sino "sobre qué fila puede operar": un SOCIO_PACIENTE puede leer `/api/personas/{id}` si ese id es el suyo, y eso el filtro no lo puede decidir.
+
+---
+
 ## Módulo 1 — Autenticación y Roles
 
 **Descripción:** Gestiona el acceso seguro al sistema mediante JWT. Define tres roles con permisos diferenciados.
@@ -76,7 +89,10 @@
 
 **Descripción:** ABM de los profesionales del centro y administración de sus franjas horarias de atención.
 
-**Regla de negocio clave:** La duración del turno se inicializa por especialidad (Nutrición: 30 min, Psicología: 50 min, Kinesiología: 45 min) y puede ajustarse por profesional. La disponibilidad puede ser modificada por el propio profesional o por un administrador.
+**Reglas de negocio clave:**
+- La duración del turno se inicializa por especialidad (Nutrición: 30 min, Psicología: 50 min, Kinesiología: 45 min) y puede ajustarse por profesional. La disponibilidad puede ser modificada por el propio profesional o por un administrador.
+- Las franjas de un mismo profesional en el mismo día no pueden solaparse (RN-11, `trg_disponibilidad_overlap`).
+- **Reducir la disponibilidad cancela los turnos futuros que quedan afuera (RN-24).** Es una acción destructiva sobre turnos de terceros, así que la operación va en dos pasos: primero se consulta el impacto y recién con confirmación explícita se aplica. Los turnos afectados quedan en `CANCELADO_POR_PROFESIONAL` —un estado propio, para no atribuirle al paciente una cancelación que no hizo— con motivo y autor registrados, y cada paciente recibe el aviso (RF-27). Los turnos ya transcurridos no se tocan. Todo ocurre en una única transacción del servicio: o se guarda la disponibilidad con sus cancelaciones y notificaciones, o no se guarda nada.
 
 **Endpoints principales:**
 
@@ -89,8 +105,9 @@
 | PATCH  | `/api/profesionales/{id}/desactivar` | Baja lógica | ADMIN |
 | GET    | `/api/profesionales/{id}/disponibilidad` | Ver franjas horarias | Autenticado |
 | POST   | `/api/profesionales/{id}/disponibilidad` | Agregar franja | ADMIN, PROFESIONAL (propio) |
-| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar franja | ADMIN, PROFESIONAL (propio) |
-| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar franja | ADMIN, PROFESIONAL (propio) |
+| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar franja. Si reduce la cobertura, exige `confirmar=true` cuando hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar franja. Ídem: exige `confirmar=true` si hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| GET    | `/api/profesionales/{id}/disponibilidad/{dId}/impacto` | Qué turnos futuros se cancelarían al quitar o recortar esa franja (persona, fecha y hora). Es el paso previo obligatorio de RN-24 | ADMIN, PROFESIONAL (propio) |
 
 **Entidades involucradas:** `profesionales`, `usuarios`, `disponibilidad_profesional`
 
@@ -106,23 +123,25 @@
 ### Turnos de CONSULTORIO
 
 **Reglas de negocio clave:**
-- **Sin solapamientos:** un profesional no puede tener dos turnos activos en el mismo horario. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos, y bloquea contra cualquier turno `RESERVADO`, `CANCELADO_TARDE`, `AUSENTE` o `COMPLETADO` de ese profesional (el único estado que libera el slot es `CANCELADO_EN_TIEMPO`).
-- **Cancelación en tiempo:** aviso con ≥ 24 horas antes del inicio → estado `CANCELADO_EN_TIEMPO`, el slot queda libre.
-- **Cancelación tarde:** aviso con < 24 horas → estado `CANCELADO_TARDE`, el slot no se libera.
+- **Sin solapamientos:** un profesional no puede tener dos turnos activos en el mismo horario. La restricción se garantiza con un `EXCLUDE USING GIST` en la base de datos, y bloquea contra todo turno de ese profesional que **ocupe su lugar** según `fn_turno_ocupa_lugar`: `RESERVADO`, `AUSENTE`, `COMPLETADO`, y cualquier cancelación registrada a partir del inicio de la franja.
+- **Cancelación en tiempo:** aviso con ≥ 24 horas antes del inicio → estado `CANCELADO_EN_TIEMPO`.
+- **Cancelación tarde:** aviso con < 24 horas → estado `CANCELADO_TARDE`.
+- **Liberación del slot:** la decide el momento de la cancelación, no el estado. Si `cancelado_en < inicio`, el slot queda libre y otra persona puede tomarlo — también cuando la cancelación fue tardía. Si la cancelación llega a partir del inicio (`cancelado_en >= inicio`), el slot permanece bloqueado, igual que con `AUSENTE` (RN-02, RN-03, RN-08).
 - **Completado / Ausente:** los marca el **PROFESIONAL** asignado al turno (o un ADMIN), a mano, desde su agenda.
 
 ### Turnos de GYM
 
 **Descripción:** el socio reserva una franja horaria del gimnasio en sí, no con un profesional puntual. Las reglas de grilla y cupo están implementadas a nivel de motor (`db/migration/V2__reglas_gimnasio.sql`), no solo en la capa de servicio:
 
-- **Grilla horaria:** franjas de 60 minutos en punto. Lunes a viernes de 07:00 a 21:00, sábados de 09:00 a 12:00. Domingo cerrado (no se puede reservar).
+- **Grilla horaria:** franjas de 60 minutos en punto, dentro del horario de apertura y terminando a más tardar a la hora de cierre. Lunes a viernes de 07:00 a 21:00 — última franja **20:00–21:00**, 14 en total. Sábados de 09:00 a 12:00 — última franja **11:00–12:00**, 3 en total. Domingos y **feriados** el gimnasio no abre: no se ofrece ninguna franja.
+- **Feriados:** se validan en el trigger `trg_turno_gym` contra la tabla `feriados`, no en el `CHECK` de la grilla — un `CHECK` no puede consultar otra tabla. El calendario **no se escribe a mano**: lo sincroniza un importador contra el dataset oficial del Ministerio del Interior publicado en `datos.gob.ar` (RF-38), porque los feriados trasladables se corren cada año y pueden declararse feriados por decreto. La reserva lee la tabla, nunca la API: una caída del servicio externo no puede impedir vender turnos. Los de tipo `NO_LABORABLE` (festividades religiosas de quien las profesa) **no** cierran el gimnasio. El ADMIN puede corregir filas o cargar cierres propios del centro con `origen = 'MANUAL'`. Declarar un feriado no cancela los turnos ya reservados para ese día.
 - **Cupo por franja:** cada franja tiene un máximo de personas configurable (tabla `configuracion_gym`, columna `cupo_por_franja`); una reserva que superaría el cupo es rechazada.
 - **Un turno por persona por día:** un socio no puede tener más de un turno de gym activo el mismo día (índice único parcial sobre `turnos`).
 - **Solo socios de gym activos:** reserva quien tiene `es_socio_gym = TRUE` y `estado = 'ACTIVO'` en `personas`.
-- **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`.
+- **Cancelación:** aviso con ≥ 2 horas antes del inicio → `CANCELADO_EN_TIEMPO` (contra las 24 horas de consultorio); con menos anticipación → `CANCELADO_TARDE`. En ambos casos **el cupo se libera** si la cancelación llegó antes del inicio de la franja; solo queda bloqueado si se canceló con la franja ya empezada (RN-02).
 
 **Reglas de negocio comunes a ambos tipos:**
-- **Deuda en gym:** un socio con cuota mensual vencida hace más de 10 días no puede reservar turnos de gym (RN-01). Los turnos de consultorio no se ven afectados. El ADMIN puede levantar esta restricción puntualmente con una excepción de morosidad (ver más abajo).
+- **Deuda en gym:** la deuda se calcula como la cantidad de períodos mensuales impagos acumulados desde `personas.fecha_inicio_membresia`, sin que un pago posterior compense un mes salteado (RN-01). Tener deuda **no bloquea por sí solo**: mientras el socio acumule menos períodos impagos que `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto) conserva el acceso y solo se lo notifica. Al alcanzar el umbral queda **suspendido** y no puede reservar turnos de gym. Los turnos de consultorio no se ven afectados en ningún caso. El ADMIN puede levantar la suspensión puntualmente con una excepción de morosidad (ver más abajo).
 - **Trazabilidad:** todo turno cancelado registra `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`.
 
 **Completado y ausente — asimetría entre CONSULTORIO y GYM (RF-22, RF-34, RF-35):**
@@ -149,6 +168,8 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 | PATCH  | `/api/turnos/{id}/completado` | Marcar turno como completado (consultorio: PROFESIONAL propio; gym: check-in por ADMIN) | PROFESIONAL (propio, consultorio), ADMIN |
 | PATCH  | `/api/turnos/{id}/ausente` | Marcar turno como ausente | PROFESIONAL (propio, consultorio), ADMIN |
 | GET    | `/api/turnos/{id}` | Detalle de un turno | ADMIN, partes involucradas |
+| GET    | `/api/feriados` | Días en que el gimnasio no abre, por año. Lo consume la pantalla de reserva para no ofrecer franjas en un día cerrado (RN-14) | Autenticado |
+| POST   | `/api/admin/feriados/sincronizar` | Forzar la sincronización con el dataset oficial del Ministerio del Interior. Devuelve `207` si algún año no se pudo leer (RF-38) | ADMIN |
 
 **Entidades involucradas:** `turnos`, `personas`, `profesionales`, `disponibilidad_profesional`, `configuracion_gym`, `pagos` (consulta de deuda), `excepciones_morosidad`
 
@@ -158,7 +179,15 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 
 **Descripción:** Permite al ADMIN levantar puntualmente el bloqueo por morosidad (RN-01) para un socio determinado, sin desactivar la regla en general. Cubre RF-30 y RN-09.
 
-**Regla de negocio clave:** la excepción se registra en `excepciones_morosidad` con el socio beneficiado, quién la autorizó, el motivo y una fecha de vencimiento (`valida_hasta`). Puede ser puntual (asociada a un `turno_id` concreto) o por período (válida para cualquier turno de gym hasta `valida_hasta`, si `turno_id` es `NULL`). La validación de RN-01 y la consulta de excepción vigente se resuelven en la capa de servicio, no en el motor de base de datos.
+**Regla de negocio clave:** la excepción se registra en `excepciones_morosidad` con el socio beneficiado, quién la autorizó, el motivo y una fecha de vencimiento (`valida_hasta`). Puede ser **de un solo uso** (`un_solo_uso = TRUE`: habilita una sola reserva y se agota al usarse) o **por período** (vale para cualquier turno de gym hasta `valida_hasta`).
+
+**`turno_id` no se carga al dar de alta la excepción (RN-23).** La excepción sirve para *poder* reservar, así que cuando se la necesita el turno todavía no existe. La columna registra qué turno **consumió** la excepción y la completa el servicio después de crear el turno; la base impide que apunte al turno de otra persona (`trg_excepcion_morosidad`). Una excepción está vigente cuando:
+
+```sql
+valida_hasta >= CURRENT_DATE AND (NOT un_solo_uso OR turno_id IS NULL)
+```
+
+El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de servicio —dependen de `NOW()`—; la pertenencia del turno, en el motor.
 
 **Endpoints principales:**
 
@@ -177,8 +206,9 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 
 **Reglas de negocio clave:**
 - Pago único y completo por operación (sin parciales en MVP).
-- Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador (si lo cargó un admin).
+- Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador. `registrado_por_usuario` es **obligatorio** (`NOT NULL`): todo pago lo carga un ADMIN, no hay alta automática en el MVP.
 - Para cuotas de gym: se asocia al mes (`periodo`). Para sesiones: se asocia al turno (`turno_id`).
+- **Un pago de sesión tiene que corresponderse con su turno (RN-20):** el turno debe ser de tipo `CONSULTORIO` —un turno de gimnasio no genera honorarios, del gimnasio se cobra la cuota— y el pago debe estar a nombre de la persona de ese turno. Lo hace cumplir el motor (`trg_pago_sesion`), no el servicio: son invariantes que no dependen de `NOW()` ni del actor, y una regla así validada solo en la API se rompe con cualquier carga por fuera de ella.
 - El sistema expone el estado de cuenta de una persona: cuotas pagas/vencidas, sesiones abonadas.
 
 **Endpoints principales:**
@@ -206,6 +236,10 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 | Turno reservado | `CONFIRMACION_TURNO` | Persona |
 | Turno cancelado (por cualquier actor) | `AVISO_CANCELACION` | Persona |
 | Recordatorio previo al turno (24h antes) | `RECORDATORIO` | Persona |
+| Nuevo período mensual impago, por debajo del umbral | `AVISO_DEUDA` | Socio de gym |
+| Se alcanza el umbral de tolerancia y el socio queda suspendido | `AVISO_SUSPENSION` | Socio de gym |
+
+Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno (`turno_id` queda en `NULL`): notifican estado de cuenta, no un evento de agenda. Su disparador es el cálculo de RN-01, no una acción del usuario.
 
 **Endpoints principales:**
 
@@ -215,7 +249,7 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 
 > **Nota:** El envío es asíncrono (tarea programada o evento interno). El módulo expone únicamente el historial de logs.
 
-**Entidades involucradas:** `notificaciones`, `personas`, `turnos`
+**Entidades involucradas:** `notificaciones`, `personas`, `turnos`, `pagos` (para el cálculo de RN-01 que dispara `AVISO_DEUDA` y `AVISO_SUSPENSION`)
 
 ---
 

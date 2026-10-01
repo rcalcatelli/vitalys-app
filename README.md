@@ -59,7 +59,7 @@ vitalys-app/
 ├── frontend/              → Cliente web (Vite + React + TypeScript)
 ├── db/
 │   ├── ddl/
-│   │   └── vitalys_ddl.sql       → Script de esquema para el flujo manual de Supabase (ver runbook)
+│   │   └── vitalys_ddl.sql       → Esquema inicial HISTÓRICO (= V1). No es el esquema vigente
 │   ├── dml/
 │   │   └── seed.sql              → Datos de prueba
 │   └── migration/                → Migraciones versionadas de Flyway (V1, V2, V3…)
@@ -94,12 +94,13 @@ El esquema usa **PostgreSQL** con las siguientes tablas principales:
 | `profesionales`              | Profesionales con especialidad y duración de turno              |
 | `disponibilidad_profesional` | Franjas horarias semanales por profesional                     |
 | `turnos`                     | Reservas de consultorio y de gimnasio, con ciclo de vida y auditoría de cancelación |
-| `configuracion_gym`          | Parámetros del gimnasio (cupo por franja)                       |
+| `configuracion_gym`          | Parámetros del gimnasio (cupo por franja, tolerancia de morosidad) |
 | `pagos`                      | Cuotas de gym y sesiones de consultorio                         |
-| `excepciones_morosidad`      | Excepciones puntuales al bloqueo por deuda en gym, autorizadas por el ADMIN |
+| `excepciones_morosidad`      | Excepciones al bloqueo por deuda en gym, autorizadas por el ADMIN |
+| `feriados`                   | Días en que el gimnasio no abre; sincronizados con el dataset oficial del Ministerio del Interior |
 | `notificaciones`             | Log de emails enviados                                          |
 
-El esquema se gestiona con **migraciones versionadas de Flyway**, en [`db/migration/`](db/migration). `V1` contiene el esquema inicial aprobado en la 2.ª entrega; los cambios posteriores (reglas de gimnasio, excepciones de morosidad, etc.) llegan como `V2`, `V3`… sin modificar las anteriores. El archivo [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql) se conserva únicamente para el flujo manual de carga del esquema en Supabase, documentado en el runbook de despliegue.
+El esquema se gestiona con **migraciones versionadas de Flyway**, en [`db/migration/`](db/migration). `V1` contiene el esquema inicial aprobado en la 2.ª entrega; los cambios posteriores (reglas de gimnasio, excepciones de morosidad, etc.) llegan como `V2`, `V3`… sin modificar las anteriores. El archivo [`db/ddl/vitalys_ddl.sql`](db/ddl/vitalys_ddl.sql) se conserva como **registro histórico** del esquema aprobado el 21/09 —su contenido es el de `V1__esquema_inicial.sql`— y **no debe ejecutarse contra ninguna base**: está incompleto respecto del esquema actual, y pegarlo a mano dejaría a Flyway sin su tabla de historial frente a tablas que él no creó (ver el [runbook de despliegue](docs/03-despliegue/runbook-deploy.md)).
 
 Ver diagrama ER: [`docs/02-diseno/diagrama-er.mermaid`](docs/02-diseno/diagrama-er.mermaid)
 
@@ -130,10 +131,11 @@ npm run dev
 
 ## 🌐 Despliegue
 
-| Servicio | URL         | Estado |
-| -------- | ----------- | ------ |
-| Frontend | _pendiente_ | 🔜     |
-| Backend  | _pendiente_ | 🔜     |
+| Servicio | URL | Estado |
+| -------- | --- | ------ |
+| Frontend | [vitalys-app-ayk2.vercel.app](https://vitalys-app-ayk2.vercel.app) | ✅ |
+| Backend  | [vitalys-backend-039u.onrender.com](https://vitalys-backend-039u.onrender.com) | ✅ |
+| Swagger UI | [/swagger-ui/index.html](https://vitalys-backend-039u.onrender.com/swagger-ui/index.html) | ✅ |
 
 Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).
 
@@ -163,7 +165,7 @@ Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-dep
 | 6 | Sin fecha de inicio de membresía y cálculo de mora incorrecto | `db/migration/V4__fecha_inicio_membresia.sql` y RN-01 reescrita |
 | 7 | RF-01 permitía elegir el rol en el registro público | RF-01, CA-01-4 y CA-01-7; RF-31 para el vínculo por email; Decisión de dominio 10 |
 | 8 | La restricción de solapamiento no cubría ausentes ni completados | `db/migration/V5__ensanchar_excl_turnos_overlap.sql` y RN-03 |
-| 9 | Nombres de columna desunificados | `cancelado_por_usuario` unificado en todos los documentos y en el seed |
+| 9 | Nombres de columna desunificados | `cancelado_por_usuario` unificado en todos los documentos y en el seed. La unificación alcanzaba a los **nombres de columna**, no a los de restricciones y triggers: esos se corrigieron después, contrastando cada identificador citado en la documentación contra el catálogo real de PostgreSQL |
 | 10 | `modulos.md` y README desactualizados | Ambos archivos |
 | 11 | Seis inconsistencias en el RFC-0001 y los documentos de diseño | RFC-0001, `diagramas.md` y `wireframes.md` |
 | 12 | Riesgo de los tipos enumerados fuera de la matriz | RG-13 en la matriz de riesgos, con la solución ya implementada y verificada (`@JdbcTypeCode(SqlTypes.NAMED_ENUM)`) |
@@ -172,5 +174,5 @@ Las desviaciones deliberadas respecto del mockup de diseño están documentadas,
 
 **Avance real (no altera las fechas de arriba):**
 
-- **Sprint 2 completo.** Backend con autenticación JWT (registro con rol forzado, login por DNI o email, `/api/auth/me`), frontend con las pantallas de login y registro siguiendo el sistema de diseño, y documentación de la API con Swagger. CI en verde: 25 tests unitarios y 18 de integración en el backend con 95,5 % de cobertura, y 83 tests en el frontend con 97,4 %. Ambos con un gate del 90 % que rompe el build.
-- **Sprint 1 parcial.** Falta crear el proyecto en Supabase, ejecutar las migraciones contra esa base y los despliegues de backend (Render) y frontend (Vercel). Dependen de las cuentas del equipo, todavía no disponibles. El paso a paso está en [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).
+- **Sprint 2 completo.** Backend con autenticación JWT (registro con rol forzado, login por DNI o email, `/api/auth/me`), frontend con las pantallas de login y registro siguiendo el sistema de diseño, y documentación de la API con Swagger. CI en verde: **70 tests unitarios y 21 de integración** en el backend con **92,7 % de cobertura de líneas**, y **83 tests** en el frontend con **97,4 %**. Ambos con un gate del 90 % que rompe el build. La cobertura del backend bajó respecto de la medición anterior (95,5 %) porque el módulo de feriados sumó bastante código; sigue holgadamente sobre el umbral.
+- **Sprint 1 completo.** Base en Supabase con las migraciones aplicadas por Flyway al arrancar, backend desplegado en Render y frontend en Vercel; las tres URLs están arriba. El paso a paso está en [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).

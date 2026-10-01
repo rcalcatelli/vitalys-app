@@ -60,10 +60,11 @@ de las variables de entorno que hay que cargar en cada plataforma.
 ### 1.1 El esquema lo crea Flyway, no se pega a mano
 
 > **No ejecutes `db/ddl/vitalys_ddl.sql` en Supabase.** Ese archivo es el esquema inicial
-> histórico y hoy está incompleto: le faltan las reglas del gimnasio, la tabla
-> `excepciones_morosidad`, `personas.fecha_inicio_membresia` y la restricción de solapamiento
-> ampliada. Pegarlo dejaría la base en un estado intermedio y, peor, Flyway fallaría después al
-> encontrar tablas que él no creó y sin su tabla de historial.
+> histórico —equivale a `V1__esquema_inicial.sql`— y le falta todo lo que vino después: las
+> reglas del gimnasio, `excepciones_morosidad`, `feriados`, `personas.fecha_inicio_membresia`,
+> el umbral de tolerancia de morosidad y las restricciones de ocupación y validación agregadas
+> de `V5` en adelante. Pegarlo dejaría la base en un estado intermedio y, peor, Flyway fallaría
+> después al encontrar tablas que él no creó y sin su tabla de historial.
 
 **La base de Supabase queda VACÍA.** Al arrancar, el backend aplica en orden todas las
 migraciones de [`db/migration/`](../../db/migration/) y registra cada una en
@@ -173,3 +174,61 @@ Deben aparecer todas las versiones con `success = true`, y las tablas en **Table
 
 Este runbook no despliega nada por sí mismo — cada paso lo ejecuta una persona con sus propias
 credenciales en Supabase, Render y Vercel.
+
+---
+
+## Sincronización del calendario de feriados (RF-38)
+
+El backend sincroniza los feriados contra el dataset oficial del Ministerio del Interior
+(`datos.gob.ar`) **todos los días a las 03:00 de Argentina**.
+
+No requiere ninguna variable de entorno: los valores por defecto de
+`application.properties` ya apuntan a la fuente correcta.
+
+| Propiedad | Valor por defecto | Para qué |
+|---|---|---|
+| `vitalys.feriados.habilitado` | `true` | Apaga el job sin tocar el código |
+| `vitalys.feriados.cron` | `0 0 3 * * *` | Horario de la corrida |
+| `vitalys.feriados.zona` | `America/Argentina/Buenos_Aires` | Zona en que se interpreta el cron |
+| `vitalys.feriados.anios-a-sincronizar` | `2` | Año en curso y el siguiente |
+
+### Forzar una sincronización
+
+Cuando se declara un feriado por decreto y no puede esperar a las 03:00:
+
+```
+POST /api/admin/feriados/sincronizar     (requiere token de ADMIN)
+```
+
+Devuelve `200` si sincronizó todos los años y `207` si alguno no se pudo leer. **Un `207`
+por el año siguiente es esperable durante buena parte del año**: el Estado publica el
+archivo del año que viene recién sobre fin de año. No indica una falla del sistema — el
+calendario del año en curso quedó sincronizado igual.
+
+### Verificar que quedó sincronizado
+
+En el log de arranque o de la corrida:
+
+```
+Calendario oficial 2026: 34 feriados leídos de https://www.argentina.gob.ar/...
+Calendario de feriados actualizado — años=[2026, 2027] altas=31 ... errores=1
+```
+
+Y contra la base:
+
+```sql
+SELECT tipo, count(*), count(*) FILTER (WHERE cierra_gimnasio) AS cierran
+FROM feriados GROUP BY tipo ORDER BY 1;
+```
+
+### Nota sobre planes que suspenden el servicio
+
+Un `@Scheduled` solo dispara si el proceso está vivo a esa hora. En un plan que suspende el
+servicio por inactividad —como el gratuito de Render— la corrida de las 03:00 puede no
+ejecutarse.
+
+Es una limitación **del hosting, no del sistema**: el job está implementado para un servicio
+que corre de forma continua, que es como va a operar en producción. Mientras tanto, el
+endpoint de sincronización manual cubre cualquier urgencia, y el calendario cargado sigue
+siendo válido — un feriado que ya estaba sincronizado no deja de estarlo porque el servicio
+se haya dormido.

@@ -92,7 +92,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │                                                                  │
 │  Profesional  [Valentina Méndez — Nutrición       ▼]           │
 │                                                                  │
-│  Fecha        [lun 28/10/2026  ▼]     ← → (navegación)        │
+│  Fecha        [mié 28/10/2026  ▼]     ← → (navegación)        │
 │                                                                  │
 │  Slots disponibles                                              │
 │  ┌──────────────────────────────────────────────────────────┐  │
@@ -103,8 +103,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  │  11:00 – 11:30   [RESERVAR]                              │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
-│  ┌─ Morosidad (condicional — solo gym) ────────────────────┐   │
-│  │ ⚠ Tenés una cuota vencida hace 24 días.                 │   │
+│  ┌─ Suspensión por morosidad (condicional — solo gym) ─────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).              │   │
 │  │   No podés reservar turnos de gimnasio.                  │   │
 │  │   [Ver estado de cuenta]                                 │   │
 │  └──────────────────────────────────────────────────────────┘  │
@@ -112,14 +112,14 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  ┌─ Confirmación (modal al hacer clic en RESERVAR) ────────┐   │
 │  │  Confirmás la reserva?                                   │   │
 │  │  Valentina Méndez · Nutrición                           │   │
-│  │  Lunes 28/10/2026 · 09:00 – 09:30                       │   │
+│  │  Miércoles 28/10/2026 · 09:00 – 09:30                   │   │
 │  │  [Cancelar]                    [Confirmar reserva]       │   │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 **Flujo:** seleccionar tipo → (si consultorio) elegir profesional → elegir fecha → elegir slot → confirmar.  
-**Reglas:** slots ocupados no son clicables. Si tipo=GYM y morosidad>10 días, los slots se reemplazan por el aviso. Confirmación muestra resumen antes de POSTear.
+**Reglas:** slots ocupados no son clicables. Si el turno es de gimnasio y el socio está **suspendido** (períodos impagos ≥ `configuracion_gym.meses_tolerancia_morosidad`, sin excepción vigente), los slots se reemplazan por el aviso; con deuda por debajo del umbral los slots se muestran normalmente (RN-01). Confirmación muestra resumen antes de POSTear.
 
 ---
 
@@ -130,10 +130,10 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  VITALYS          MI AGENDA                [Rodrigo Almirón] ▼ │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ← Semana del 27/10 al 31/10/2026 →                            │
+│  ← Semana del 26/10 al 30/10/2026 →                            │
 │                                                                  │
 │  ┌────────┬────────────────────────────────────────────────┐   │
-│  │ Hora   │ MAR 28/10      JUE 30/10                       │   │
+│  │ Hora   │ MAR 27/10      JUE 29/10                       │   │
 │  ├────────┼────────────────────────────────────────────────┤   │
 │  │ 14:00  │ Carlos Soto    [libre]                         │   │
 │  │        │ [COMPLETAR ▼]                                  │   │
@@ -168,32 +168,37 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  ← Inicio       MI ESTADO DE CUENTA          [Juan García] ▼  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌─ Alerta de morosidad ───────────────────────────────────┐   │
-│  │ ⚠ Tenés cuotas vencidas hace más de 10 días.            │   │
-│  │   No podés reservar turnos de gimnasio hasta regularizar.│   │
+│  ┌─ Suspensión por morosidad ──────────────────────────────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).              │   │
+│  │    No podés reservar turnos de gimnasio hasta            │   │
+│  │    regularizar. Tus turnos de consultorio no se ven      │   │
+│  │    afectados.                                            │   │
+│  │    ℹ Tenés una excepción autorizada hasta el 31/10/2026. │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  CUOTAS DE GIMNASIO                                             │
+│  CUOTAS DE GIMNASIO            (socio desde 01/2026)            │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  Período       Monto       Estado                        │   │
-│  │  Jul 2026      $15.000     ✅ Pagada (10/07/2026)        │   │
-│  │  Ago 2026      —           ❌ Vencida (mora 26 días)     │   │
-│  │  Sep 2026      —           🕓 Pendiente (vence 01/10)    │   │
+│  │  Ene–Jun 2026  —           ❌ 6 períodos impagos         │   │
+│  │  Jul 2026      $15.000     ✅ Pagada                     │   │
+│  │  Ago 2026      $15.000     ✅ Pagada                     │   │
+│  │  Sep 2026      —           🕓 Pendiente (vence 11/10)    │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  SESIONES DE CONSULTORIO                                        │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Fecha          Profesional    Monto     Estado          │   │
-│  │  23/09/2026     R. Almirón     $8.000    ✅ Pagada       │   │
+│  │  Sin sesiones de consultorio registradas.                │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ───────────────────────────────────────────────────────────    │
-│  Pagos registrados: 2 · Total abonado: $23.000                  │
+│  Pagos registrados: 2 · Total abonado: $30.000                  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Lógica:** una cuota figura como vencida si `NOW() > (periodo + 1 mes)`. El bloqueo para gym se muestra si la mora es `> 10 días`. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
+**Lógica:** un período figura como impago si `NOW() > (periodo + 1 mes + 10 días)` y no tiene cuota registrada; un mes salteado sigue contando aunque se hayan pagado los posteriores (RN-01). La pantalla distingue **dos estados**: con deuda por debajo de `configuracion_gym.meses_tolerancia_morosidad` muestra un aviso informativo y el socio reserva con normalidad; al alcanzar el umbral muestra la suspensión, como en el ejemplo. La suspensión **nunca alcanza a los turnos de consultorio** (Decisión de dominio 1). Si existe una excepción vigente (RN-09) se indica junto a la alerta. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
+
+> Los valores del ejemplo corresponden a Juan García en los datos de prueba (`db/dml/seed.sql`): socio desde 01/2026, cuotas de julio y agosto pagadas, seis períodos impagos acumulados y una excepción vigente hasta el 31/10/2026. No tiene sesiones de consultorio: la única del seed es de Carlos Soto.
 
 ---
 
@@ -306,10 +311,15 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 │  │  20:00 – 21:00     3 / 20          [RESERVAR]              │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
-│  ┌─ Morosidad (condicional) ────────────────────────────────┐   │
-│  │ ⚠ Tenés una cuota vencida hace 24 días.                  │   │
+│  ┌─ Suspensión por morosidad (condicional) ─────────────────┐   │
+│  │ ⛔ Acumulás 6 períodos impagos (límite: 6).               │   │
 │  │   No podés reservar turnos de gimnasio.                   │   │
 │  │   [Ver estado de cuenta]                                  │   │
+│  └───────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌─ Día no laborable (condicional) ─────────────────────────┐   │
+│  │ 🚫 El gimnasio no abre el 25/05/2026                      │   │
+│  │   (Revolución de Mayo). Elegí otra fecha.                 │   │
 │  └───────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌─ Confirmación (modal al hacer clic en RESERVAR) ─────────┐   │
@@ -321,7 +331,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 ```
 
 **Flujo:** elegir fecha → ver franjas de 60 minutos con el cupo ocupado/total de cada una → reservar una franja libre → confirmar.
-**Reglas:** solo se listan franjas dentro de la grilla del gimnasio (L-V 07:00–21:00, sáb 09:00–12:00; domingo no muestra franjas). Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si hay morosidad `> 10 días` sin excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Confirmar envía `POST /api/turnos {persona_id, tipo_turno: GYM, inicio}`.
+**Reglas:** solo se listan franjas dentro de la grilla del gimnasio, entendida de apertura a cierre: L-V de 07:00 a 21:00 —última franja **20:00–21:00**— y sábados de 09:00 a 12:00 —última franja **11:00–12:00**—. Domingos y feriados no muestran ninguna franja; en un feriado se indica el motivo. Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si el socio está **suspendido** —períodos impagos acumulados ≥ `configuracion_gym.meses_tolerancia_morosidad`— y no tiene excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Tener deuda **por debajo** del umbral no oculta las franjas: el socio reserva normalmente y el aviso de deuda llega por notificación (RF-37, RN-01). Confirmar envía `POST /api/turnos/gym {persona_id, inicio}` — la ruta propia del gimnasio, distinta de `POST /api/turnos`, que es la de consultorio y exige `profesional_id`.
 
 ---
 

@@ -158,12 +158,22 @@ numerado en orden:
 
 ```
 db/migration/
-├── V1__esquema_inicial.sql              esquema aprobado el 21/09
-├── V2__reglas_gimnasio.sql              grilla, cupo y validaciones de gym
-├── V3__excepciones_morosidad.sql        tabla que faltaba
-├── V4__fecha_inicio_membresia.sql       columna en personas
-└── V5__ensanchar_excl_turnos_overlap.sql  AUSENTE y COMPLETADO bloquean
+├── V1__esquema_inicial.sql                 esquema aprobado el 21/09
+├── V2__reglas_gimnasio.sql                 grilla, cupo y validaciones de gym
+├── V3__excepciones_morosidad.sql           tabla que faltaba
+├── V4__fecha_inicio_membresia.sql          columna en personas
+├── V5__ensanchar_excl_turnos_overlap.sql   AUSENTE y COMPLETADO bloquean
+├── V6__tolerancia_morosidad.sql            umbral de períodos impagos
+├── V7__notificacion_morosidad.sql          avisos de deuda y suspensión
+├── V8__ocupacion_por_inicio_del_turno.sql  el lugar se ocupa si el turno empezó
+├── V9__grilla_gym_hora_de_cierre.sql       21:00 y 12:00 son hora de cierre
+├── V10__feriados_gimnasio.sql              calendario oficial de feriados
+├── V11__validaciones_pendientes.sql        las cinco validaciones que faltaban
+└── V12__cancelacion_por_profesional.sql    cancelación en cascada por disponibilidad
 ```
+
+> El orden lo da el **número de versión**, no el orden alfabético. `V10` va después de
+> `V9`, aunque un `ls` del shell lo ponga entre `V1` y `V2`.
 
 El nombre sigue una convención estricta: `V<número>__<descripción>.sql` (dos guiones bajos
 después del número). Flyway lee esa carpeta, mira qué versiones ya se aplicaron contra la
@@ -266,9 +276,18 @@ agregues ahí se empaqueta y se ejecuta automáticamente.
 | `V2__reglas_gimnasio.sql` | Grilla de turnos de gym (60 min en punto, L-V 07-21, sáb 09-12), tabla `configuracion_gym` con el cupo por franja, un turno por persona y día, y validación de que sea socio activo. |
 | `V3__excepciones_morosidad.sql` | Tabla `excepciones_morosidad`, que figuraba en todos los documentos pero no en el esquema. |
 | `V4__fecha_inicio_membresia.sql` | Columna `personas.fecha_inicio_membresia`, necesaria para saber desde qué mes se adeudan cuotas. |
-| `V5__ensanchar_excl_turnos_overlap.sql` | La restricción de solapamiento ahora bloquea también `AUSENTE` y `COMPLETADO`. Solo `CANCELADO_EN_TIEMPO` libera el horario. |
+| `V5__ensanchar_excl_turnos_overlap.sql` | La restricción de solapamiento pasa a bloquear también `AUSENTE` y `COMPLETADO`. |
+| `V6__tolerancia_morosidad.sql` | Parámetro `configuracion_gym.meses_tolerancia_morosidad` (6 por defecto): períodos impagos que se toleran antes de suspender al socio. Relevado en el Centro Deportivo Jerárquicos. |
+| `V7__notificacion_morosidad.sql` | Valores `AVISO_DEUDA` y `AVISO_SUSPENSION` en el enum `tipo_notificacion`, para el aviso de estado de cuenta (RF-37). |
+| `V8__ocupacion_por_inicio_del_turno.sql` | Función `fn_turno_ocupa_lugar`: el lugar se libera si la cancelación llegó antes del inicio del turno, y queda bloqueado si llegó con la franja ya empezada. Reemplaza la lista de estados en el `EXCLUDE`, en el cupo de gimnasio y en el índice de un turno por persona y día. |
+| `V9__grilla_gym_hora_de_cierre.sql` | El horario del gimnasio se lee de apertura a cierre: última franja 20:00–21:00 de lunes a viernes y 11:00–12:00 los sábados. Antes se aceptaba un turno que empezaba a la hora de cierre y terminaba una hora después. |
+| `V10__feriados_gimnasio.sql` | Tabla `feriados` y validación en el trigger del gimnasio. La puebla el importador contra el dataset oficial del Ministerio del Interior (RF-38); nunca se consulta la API al reservar. |
+| `V12__cancelacion_por_profesional.sql` | Estado `CANCELADO_POR_PROFESIONAL`: cuando un profesional reduce su disponibilidad, los turnos futuros afectados se cancelan en cascada (RN-24) y quedan distinguibles de una cancelación del paciente. `fn_turno_ocupa_lugar` no necesitó cambios. |
+| `V11__validaciones_pendientes.sql` | Cierra las cinco validaciones que la base aceptaba: pago de sesión sobre un turno de gimnasio o a nombre de otra persona, turno para alguien dado de baja, turnos superpuestos de la misma persona, y excepción de morosidad apuntando al turno de otro. Además invierte el sentido de `excepciones_morosidad.turno_id`: pasa a registrar qué turno consumió la excepción (RN-23). |
 
-Ninguna de estas cuatro tocó `V1`, el `Dockerfile` ni el `docker-compose.yml`: cada una es un
+> **Ojo con el orden al aplicarlas a mano.** Flyway ordena por número de versión, pero un `ls db/migration/V*.sql` del shell ordena alfabéticamente y pone `V10` entre `V1` y `V2`. Si las corrés sueltas, usá `ls db/migration/V*.sql | sort -V`. Con `docker compose` no hace falta: lo resuelve Flyway.
+
+Ninguna de estas tocó `V1`, el `Dockerfile` ni el `docker-compose.yml`: cada una es un
 archivo nuevo y nada más. Esa es exactamente la propiedad por la que se adoptó Flyway.
 
 ---

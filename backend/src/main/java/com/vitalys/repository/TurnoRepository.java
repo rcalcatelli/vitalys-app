@@ -1,5 +1,7 @@
 package com.vitalys.repository;
 
+import com.vitalys.domain.EstadoTurno;
+import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Turno;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -41,13 +43,24 @@ public interface TurnoRepository extends JpaRepository<Turno, Long>, JpaSpecific
             join fetch t.persona p
             join fetch p.usuario
             where t.profesionalId = :profesionalId
-              and t.tipoTurno = com.vitalys.domain.TipoTurno.CONSULTORIO
-              and t.estado = com.vitalys.domain.EstadoTurno.RESERVADO
+              and t.tipoTurno = :tipo
+              and t.estado = :estado
               and t.inicio > :desde
             order by t.inicio
             """)
-    List<Turno> futurosReservadosDeConsultorio(
-            @Param("profesionalId") Long profesionalId, @Param("desde") OffsetDateTime desde);
+    List<Turno> buscarFuturos(
+            @Param("profesionalId") Long profesionalId,
+            @Param("tipo") TipoTurno tipo,
+            @Param("estado") EstadoTurno estado,
+            @Param("desde") OffsetDateTime desde);
+
+    /**
+     * Los literales de enum van como parámetros y no escritos en el JPQL: con ENUM nativo de
+     * PostgreSQL (NAMED_ENUM), Hibernate castea un literal al nombre de la clase Java y falla.
+     */
+    default List<Turno> futurosReservadosDeConsultorio(Long profesionalId, OffsetDateTime desde) {
+        return buscarFuturos(profesionalId, TipoTurno.CONSULTORIO, EstadoTurno.RESERVADO, desde);
+    }
 
     /** Usuario del profesional a cargo, para saber si quien marca el turno es el propio. */
     @Query(value = "SELECT usuario_id FROM profesionales WHERE id = :profesionalId", nativeQuery = true)

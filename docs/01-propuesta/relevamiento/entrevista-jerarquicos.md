@@ -13,9 +13,9 @@ Guía utilizada: [`guia-entrevista.md`](./guia-entrevista.md)
 | Establecimiento | Centro Deportivo Jerárquicos |
 | Naturaleza | **RELEVAMIENTO DE CAMPO** — respuestas de una persona del establecimiento |
 | Fecha | 28/09/2026 |
-| Rol de quien responde | _a completar_ |
+| Rol de quien responde | Encargado/a del centro (coordinación de la operación del gimnasio) |
 | Modalidad | Presencial |
-| Autorización para nombrar el establecimiento | _a completar_ |
+| Autorización para nombrar el establecimiento | Sí — autorizada verbalmente por quien respondió durante la entrevista |
 
 > A diferencia de [`perfiles-usuario.json`](./perfiles-usuario.json), que es un artefacto de
 > diseño elaborado por el equipo y está rotulado `"naturaleza": "SINTETICO"`, este documento

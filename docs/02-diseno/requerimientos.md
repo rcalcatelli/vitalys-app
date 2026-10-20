@@ -200,7 +200,7 @@
 - CA-06-1: El endpoint devuelve el listado de cuotas mensuales con estado (pagada / vencida) y el listado de sesiones abonadas.
 - CA-06-2: Una cuota figura como vencida si `NOW() > (periodo + 1 mes)`.
 - CA-06-3: Un SOCIO_PACIENTE solo puede ver su propio estado de cuenta; un ADMIN puede ver el de cualquier persona.
-- CA-06-4: Si la persona tiene cuotas vencidas hace más de 10 días, el sistema indica explícitamente que no puede reservar turnos GYM.
+- CA-06-4: El estado de cuenta informa la cantidad de períodos impagos según RN-01 (un período es impago a los 10 días de vencido sin cuota registrada). Si esa cantidad alcanza `configuracion_gym.meses_tolerancia_morosidad`, el sistema indica explícitamente que la persona está suspendida y no puede reservar turnos GYM; por debajo del umbral indica que tiene deuda pero conserva el acceso.
 
 ---
 

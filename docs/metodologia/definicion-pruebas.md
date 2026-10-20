@@ -177,12 +177,25 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-56 | Un turno **ya transcurrido** dentro de la franja quitada | No se toca: conserva su estado original (RN-24) |
 | PI-57 | Reservar en el horario liberado por una cancelación en cascada | 201: `fn_turno_ocupa_lugar` liberó la franja sin modificarse |
 | PI-58 | Notificaciones tras la cascada | Una fila `AVISO_CANCELACION` por cada paciente afectado (RF-27) |
-| PI-59 | Falla el envío de notificaciones durante la cascada | La transacción no deja la disponibilidad reducida con turnos sin cancelar: o queda todo, o no queda nada |
+| PI-59 | Falla el proveedor de email durante la cascada (reinterpretado, ver nota) | La cascada **queda confirmada**: disponibilidad reducida, turnos en `CANCELADO_POR_PROFESIONAL` y filas de notificación creadas. El email sale recién después del commit; si falla se reintenta una vez a los 10 s y, si vuelve a fallar, la notificación queda con `intentos = 2` y `exitoso = false` y aparece en la alerta del ADMIN. No se hace rollback de la cascada |
 | PI-60 | **Ampliar** la disponibilidad (no reducirla) | 200 sin confirmación: no hay turnos que puedan quedar afuera |
 | PI-33 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
 | PI-34 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
 | PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
 | PI-36 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
+
+> **PI-59, reinterpretación aceptada.** El enunciado original ("o queda todo, o no queda nada") mezclaba dos cosas. La **cascada es atómica sobre los datos**: disponibilidad, cancelaciones y filas de notificación se guardan juntas o no se guarda nada (lo cubre `siElCambioDeDisponibilidadFalla_laCascadaSeRevierteCompleta`). El **email, en cambio, es un efecto externo** que no puede participar de la transacción: se despacha después del commit y su falla no deshace una cancelación ya decidida —sería peor dejar turnos de terceros vivos en un horario que el profesional ya no atiende—. Por eso la falla se resuelve con reintento y alerta, no con rollback.
+
+| ID    | Caso | Resultado esperado | Cubierto por |
+|-------|------|--------------------|--------------|
+| PI-71 | Franja que se solapa con otra del mismo profesional y día (parcial, contenida, mismo inicio, o por modificación); también dentro de un reemplazo total | 409 y no se aplica ningún cambio; las contiguas se aceptan (RN-11) | `DisponibilidadIT` (`solapamientoConLasFranjasDelSeed_devuelve409YNoModificaNada`, `solapamientoParcialYContenido_enValentinaYFlorencia_devuelve409`, `batch_conSolapamientoInterno_devuelve409YNoDejaCambiosParciales`, `franjaContigua_seAcepta`); en la base, `MigracionV13IT.solapamiento_lanzaExclusionViolation` |
+| PI-72 | Reintento y alerta de notificaciones: el primer fallo agenda un reintento; el segundo la deja `DEFINITIVA`; las `DEFINITIVA` y `HUERFANA` se listan | `intentos = 2`, `exitoso = false`; `GET /api/admin/notificaciones?fallidas=true` solo para ADMIN (socio → 403, sin token → 401) | `CascadaEmailFallidoIT.siElProveedorDeEmailFalla_laCascadaQuedaConfirmadaYLaNotificacionFallida`, `NotificacionIT.lista_definitivasYHuerfanas_peroNoExitosasNiEnCursoRecientes`, `NotificacionIT.eventoDeUnaTransaccionRevertida_noEnviaNada`; unitarios en `DespachadorNotificacionesTest` |
+| PI-73 | Baja de profesional en dos pasos (RN-25): consultar el impacto y recién después confirmar | `GET .../baja/impacto` no modifica nada; `DELETE` sin `confirmar=true` y con turnos futuros → 409 con el impacto; con `confirmar=true` cancela en cascada, borra las franjas y deshabilita el usuario; sin turnos futuros se aplica directo | `CascadaDisponibilidadIT.bajaEnDosPasos_primeroElImpacto_despuesLaConfirmacion`, `CascadaDisponibilidadIT.bajaSinTurnosFuturos_noPideConfirmacion`, `ProfesionalIT.baja_conTurnoFuturoReservado_devuelve409YNoTocaNada`, `ProfesionalIT.baja_sinTurnosFuturos_desactivaProfesionalYUsuarioYBorraFranjas` |
+| PI-74 | JWT todavía vigente de un usuario deshabilitado (`usuarios.activo = false`), por ejemplo un profesional dado de baja | 401: el token no autentica aunque no haya vencido | `ProfesionalIT.tokenVigenteDeUsuarioDeshabilitado_devuelve401`; unitario en `JwtAuthenticationFilterTest.usuarioDeshabilitado_noAutenticaYLaCadenaSigue` |
+
+> **Implementación (Sprint 5, Profesionales).** PI-53 a PI-60 los ejercita `CascadaDisponibilidadIT`
+> (PI-59 en su variante de email, `CascadaEmailFallidoIT`), con fechas calculadas relativas a "ahora"
+> para que el escenario no caduque. Estos ITs corren solo contra Postgres real (Testcontainers) en CI.
 
 > **Implementación (Sprint 4, gimnasio).** `TurnoServiceTest` cubre TU-03 a TU-06, TU-08 y
 > TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09 quedan

@@ -108,7 +108,7 @@ Franjas horarias recurrentes en las que cada profesional está disponible para a
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
 
-**Anti-solapamiento:** el trigger `trg_disponibilidad_overlap` —que ejecuta `fn_check_disponibilidad_overlap()`— impide insertar una franja que se superponga con otra franja **activa** del mismo profesional en el mismo día (RN-11).
+**Anti-solapamiento:** el trigger `trg_disponibilidad_overlap` —que ejecuta `fn_check_disponibilidad_overlap()`— impide insertar una franja que se superponga con otra franja **activa** del mismo profesional en el mismo día (RN-11). Desde `V13__profesionales_disponibilidad.sql` el trigger lanza el error con `ERRCODE = 'exclusion_violation'` (SQLSTATE `23P01`, el mismo que `excl_turnos_overlap`) en lugar del `P0001` genérico, de modo que el backend lo traduce a 409 sin comparar el texto del mensaje, y además ignora las franjas inactivas (una fila inactiva no ocupa horario).
 
 **Reducir una franja con turnos reservados** no es un problema de esta tabla sino del servicio: cancela en cascada los turnos futuros que quedan afuera, previa confirmación (RN-24).
 
@@ -146,6 +146,8 @@ RESERVADO ──► COMPLETADO          (profesional o admin, al finalizar la at
 ```
 
 Los dos primeros estados de cancelación registran **la anticipación con la que avisó el paciente**; `CANCELADO_POR_PROFESIONAL` marca una cancelación que el paciente no decidió y que por lo tanto no le computa (RN-24). Que el lugar se libere o no lo decide un dato distinto del estado: si `cancelado_en` es anterior al `inicio` del turno, el lugar se libera — incluso siendo `CANCELADO_TARDE`.
+
+**Información de la cancelación (`chk_cancelacion_info`):** los tres estados de cancelación —`CANCELADO_EN_TIEMPO`, `CANCELADO_TARDE` y, desde `V13`, `CANCELADO_POR_PROFESIONAL`— exigen `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`. Hasta V12 el CHECK enumeraba solo los dos primeros y un turno cancelado por el profesional podía guardarse "sin firma"; como `cancelado_en` es lo que decide si el lugar se libera, no podía quedar vacío.
 
 **Ocupación del lugar (`fn_turno_ocupa_lugar`):** un turno ocupa su lugar si su estado es `RESERVADO`, `COMPLETADO` o `AUSENTE`, **o** si fue cancelado a partir del inicio de la franja (`cancelado_en >= inicio`). Una cancelación registrada antes del inicio libera el lugar, sea en tiempo o tarde: el estado registra la anticipación del aviso, no decide la ocupación (RN-02, RN-03). Es el mismo criterio que ya regía para `AUSENTE` — una vez que la franja empezó, el lugar se consumió (RN-08).
 
@@ -292,6 +294,10 @@ Log de emails enviados al sistema. Registra todos los envíos para auditoría; n
 | `email_destino` | `VARCHAR(255)` | NO | — | Dirección de email usada en el envío (registro histórico) |
 | `exitoso` | `BOOLEAN` | NO | DEFAULT TRUE | FALSE si el proveedor de email reportó error |
 | `detalle_error` | `TEXT` | SÍ | — | Mensaje de error del proveedor; NULL si exitoso = TRUE |
+| `intentos` | `INT` | NO | DEFAULT 0 | Intentos de envío realizados (0 a 2): el envío se reintenta una sola vez (`V13`) |
+| `ultimo_intento_en` | `TIMESTAMPTZ` | SÍ | — | Momento del último intento; NULL si todavía no hubo ninguno (`V13`) |
+
+**Estado del envío sin columna `estado`:** se deduce de `exitoso`, `intentos` y `ultimo_intento_en`, para no tener dos fuentes de verdad. `exitoso` → enviada; `NOT exitoso AND intentos < 2` → en curso con reintento pendiente; `NOT exitoso AND intentos >= 2` → alerta definitiva para el ADMIN (`DEFINITIVA`); en curso por más que el umbral `vitalys.email.umbral-huerfanas` → `HUERFANA` (la instancia se reinició entre el fallo y el reintento). Hay una fila por notificación y cada reintento la actualiza.
 
 ---
 

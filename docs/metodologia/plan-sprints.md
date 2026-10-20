@@ -88,6 +88,19 @@
 
 **Criterio de cierre:** ADMIN puede crear, editar y dar de baja personas; el trigger rechaza disponibilidades superpuestas.
 
+**Estado real del módulo de Profesionales (cambio `profesionales-disponibilidad`, rama `feat/5-s3-profesionales`, PR #20):** backend completo, falta solo la pantalla.
+
+| Tarea | Estado | Evidencia |
+|-------|--------|-----------|
+| T3-5 | ✅ | Entidades `Profesional` y `DisponibilidadProfesional`; migración `V13__profesionales_disponibilidad.sql` |
+| T3-6 | ✅ | `ProfesionalService` (alta, edición, `/me`, baja lógica en dos pasos, RN-25) |
+| T3-7 | ✅ | `DisponibilidadService` (franja a franja y reemplazo total) y `CascadaDisponibilidadService` (RN-24); anti-solapamiento por `trg_disponibilidad_overlap` |
+| T3-8 | ✅ | `ProfesionalController` y `NotificacionController` (`GET /api/admin/notificaciones?fallidas=true`) |
+| T3-9 | ⏳ Pendiente | Pantalla de disponibilidad (PROFESIONAL / ADMIN): el frontend queda para la última slice del cambio |
+| T3-10 | ✅ | `DisponibilidadIT`, `ProfesionalIT`, `CascadaDisponibilidadIT`, `CascadaEmailFallidoIT`, `MigracionV13IT` (PI-53 a PI-60 y PI-71 a PI-74) |
+
+Además del alcance original se incorporó el envío de emails por Brevo (API HTTP) con un reintento y alerta al ADMIN, que el plan ubicaba en T5-6/T5-7: la cancelación en cascada de RN-24 necesita avisar a los pacientes y no podía esperar al Sprint 5. El proveedor es Brevo y no Resend/SendGrid (ver `docs/02-diseno/modulos.md`, Módulo 6).
+
 ---
 
 ## Sprint 4 — Agenda de Turnos (12/10 – 25/10)

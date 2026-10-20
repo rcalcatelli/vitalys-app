@@ -60,10 +60,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String email = jwtService.extraerEmail(token);
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Un token vigente de un usuario deshabilitado (p.ej. un profesional dado de baja)
+                    // no autentica: sin esto la baja solo bloquearía el login y el token ya emitido
+                    // seguiría funcionando hasta expirar. Queda sin autenticar -> el entry point da 401.
+                    if (userDetails.isEnabled()) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        log.warn("JWT de un usuario deshabilitado: {}", email);
+                    }
                 }
             } catch (RuntimeException ex) {
                 log.warn("No se pudo autenticar el JWT recibido: {}", ex.getMessage());

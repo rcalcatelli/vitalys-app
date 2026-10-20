@@ -1,5 +1,6 @@
 package com.vitalys.repository;
 
+import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Turno;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -30,6 +31,9 @@ public interface TurnoRepository extends JpaRepository<Turno, Long>, JpaSpecific
             value = "UPDATE turnos SET estado = 'AUSENTE' WHERE tipo_turno = 'GYM' AND estado = 'RESERVADO' AND fin <= :ahora",
             nativeQuery = true)
     int marcarAusentesGym(@Param("ahora") OffsetDateTime ahora);
+
+    /** ¿Tiene el profesional turnos en ese estado que empiezan después de {@code desde}? */
+    boolean existsByProfesionalIdAndEstadoAndInicioAfter(Long profesionalId, EstadoTurno estado, OffsetDateTime desde);
 
     /** Usuario del profesional a cargo, para saber si quien marca el turno es el propio. */
     @Query(value = "SELECT usuario_id FROM profesionales WHERE id = :profesionalId", nativeQuery = true)

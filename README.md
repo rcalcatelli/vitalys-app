@@ -149,7 +149,7 @@ Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-dep
 
 - [x] Conformación del equipo y elección de tutora
 - [x] **1.ª entrega** — Propuesta y repositorio (30/08)
-- [ ] **2.ª entrega** — Esquema de BD y módulos (27/09): **las 12 observaciones de la devolución están resueltas** (ver detalle abajo). Pendiente de confirmación de la tutora.
+- [x] **2.ª entrega** — Esquema de BD y módulos (27/09): aprobada por la tutora tras resolver las 12 observaciones de la primera devolución (detalle abajo) y los 4 puntos de cierre (Decisiones 1 y 2 del RFC-001, CA-06-4, datos de la entrevista de relevamiento y ruta de PI-06).
 - [ ] **Entrega final** — Informe, video y despliegue (14/11)
 - [ ] Defensa oral
 
@@ -174,5 +174,7 @@ Las desviaciones deliberadas respecto del mockup de diseño están documentadas,
 
 **Avance real (no altera las fechas de arriba):**
 
+- **Sprint 4 en curso — Turnos (#6).** Terminada la parte de gimnasio: consulta de cupo por franja, reserva con la regla de morosidad (RN-01, umbral de tolerancia) y excepciones de un solo uso o por período (RN-09, RN-23), cancelación con anticipación de 2 h / 24 h (RN-02), check-in del ADMIN y marca automática de ausentes al cerrar la franja. La reserva de consultorio se completa cuando entre el módulo de Profesionales (#5).
+- **Sprint 3 — Personas (#4) completo.** ABM con baja lógica y reactivación, unicidad de DNI garantizada por la base, control de rol en el servicio (RNF-03) y pantalla W-05. Profesionales y disponibilidad (#5) en curso.
 - **Sprint 2 completo.** Backend con autenticación JWT (registro con rol forzado, login por DNI o email, `/api/auth/me`), frontend con las pantallas de login y registro siguiendo el sistema de diseño, y documentación de la API con Swagger. CI en verde: **70 tests unitarios y 21 de integración** en el backend con **92,7 % de cobertura de líneas**, y **83 tests** en el frontend con **97,4 %**. Ambos con un gate del 90 % que rompe el build. La cobertura del backend bajó respecto de la medición anterior (95,5 %) porque el módulo de feriados sumó bastante código; sigue holgadamente sobre el umbral.
 - **Sprint 1 completo.** Base en Supabase con las migraciones aplicadas por Flyway al arrancar, backend desplegado en Render y frontend en Vercel; las tres URLs están arriba. El paso a paso está en [`docs/03-despliegue/runbook-deploy.md`](docs/03-despliegue/runbook-deploy.md).

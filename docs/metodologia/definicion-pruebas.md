@@ -184,6 +184,12 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
 | PI-36 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
 
+> **Implementación (Sprint 4, gimnasio).** `TurnoServiceTest` cubre TU-03 a TU-06, TU-08 y
+> TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09 quedan
+> para la reserva de consultorio, que depende del Módulo 3. `MorosidadServiceTest` cubre PU-01
+> a PU-05 y PU-08 a PU-12. `TurnoGymIT` ejercita PI-07, PI-10, PI-11, PI-14, PI-30, PI-34,
+> PI-35, PI-45, PI-51 y PI-52 contra Postgres real.
+
 ### Pagos
 
 | ID    | Caso                                                      | Resultado esperado                              |

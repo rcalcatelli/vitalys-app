@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -59,6 +60,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
     }
 
+    @ExceptionHandler(ReglaDeNegocioException.class)
+    public ResponseEntity<ErrorResponse> handleReglaDeNegocio(ReglaDeNegocioException ex, HttpServletRequest req) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException ex, HttpServletRequest req) {
@@ -70,7 +76,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Datos de entrada inválidos", req);
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
+    @ExceptionHandler({
+        MethodArgumentTypeMismatchException.class,
+        HttpMessageNotReadableException.class,
+        MissingServletRequestParameterException.class
+    })
     public ResponseEntity<ErrorResponse> handleFormatoInvalido(Exception ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "Formato de datos inválido", req);
     }

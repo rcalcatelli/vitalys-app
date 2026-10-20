@@ -1,5 +1,6 @@
 package com.vitalys;
 
+import com.vitalys.config.EmailProperties;
 import com.vitalys.config.FeriadosProperties;
 import com.vitalys.config.JwtProperties;
 import org.springframework.boot.SpringApplication;
@@ -14,7 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
-@EnableConfigurationProperties({JwtProperties.class, FeriadosProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, FeriadosProperties.class, EmailProperties.class})
 public class VitalysApplication {
 
     public static void main(String[] args) {

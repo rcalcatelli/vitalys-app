@@ -36,3 +36,9 @@ services:
         sync: false
       - key: JWT_EXPIRATION_MS
         value: "86400000"
+      - key: EMAIL_PROVEEDOR
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_REMITENTE_EMAIL
+        sync: false

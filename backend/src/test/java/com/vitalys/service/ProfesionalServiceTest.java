@@ -116,9 +116,19 @@ class ProfesionalServiceTest {
     }
 
     @Test
-    void listar_comoProfesional_esRechazadoEnElServicio() {
-        assertThatThrownBy(() -> service.listar(usuarioProfesional, null)).isInstanceOf(AccesoDenegadoException.class);
-        verifyNoInteractions(profesionalRepository);
+    void listar_comoNoAdmin_soloActivosYSinEmail() {
+        when(profesionalRepository.findByActivo(eq(true), any(Sort.class)))
+                .thenReturn(List.of(profesional(10L, usuarioProfesional)));
+
+        // el filtro pedido por un no-ADMIN se ignora: solo ve activos
+        List<ProfesionalResponse> lista = service.listar(socio, false);
+
+        assertThat(lista).singleElement().satisfies(r -> {
+            assertThat(r.apellido()).isEqualTo("Méndez");
+            assertThat(r.email()).isNull();
+            assertThat(r.usuarioId()).isNull();
+        });
+        verify(profesionalRepository, never()).findAll(any(Sort.class));
     }
 
     // --- obtener ---
@@ -131,11 +141,37 @@ class ProfesionalServiceTest {
     }
 
     @Test
-    void obtener_fichaAjena_comoProfesional_esRechazado() {
+    void obtener_fichaAjena_comoProfesional_esVistaPublicaSinEmail() {
         Usuario otro = usuario(9L, "otro@vitalys.com", RolUsuario.PROFESIONAL);
         when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, otro)));
 
-        assertThatThrownBy(() -> service.obtener(usuarioProfesional, 10L)).isInstanceOf(AccesoDenegadoException.class);
+        ProfesionalResponse r = service.obtener(usuarioProfesional, 10L);
+
+        assertThat(r.nombre()).isEqualTo("Valentina");
+        assertThat(r.email()).isNull();
+    }
+
+    @Test
+    void obtener_comoSocio_noExponeElEmail() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, usuarioProfesional)));
+
+        assertThat(service.obtener(socio, 10L).email()).isNull();
+    }
+
+    @Test
+    void obtener_propiaFicha_incluyeEmail() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, usuarioProfesional)));
+
+        assertThat(service.obtener(usuarioProfesional, 10L).email()).isEqualTo("valentina@vitalys.com");
+    }
+
+    @Test
+    void obtener_deBaja_comoNoAdmin_esNoEncontrado() {
+        Profesional deBaja = profesional(10L, usuarioProfesional);
+        deBaja.darDeBaja();
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(deBaja));
+
+        assertThatThrownBy(() -> service.obtener(socio, 10L)).isInstanceOf(RecursoNoEncontradoException.class);
     }
 
     @Test

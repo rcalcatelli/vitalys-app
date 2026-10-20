@@ -140,16 +140,19 @@ class ProfesionalIT extends IntegrationTestBase {
     }
 
     @Test
-    void noAdmin_recibe403EnListadoYAlta() {
+    void noAdmin_recibe403EnAlta_peroPuedeListarSinVerEmail() {
         String email = emailNuevo();
         crearProfesional(email);
         String tokenProfesional = login(email);
 
-        assertThat(llamar(HttpMethod.GET, "/api/profesionales", null, tokenProfesional, String.class).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(llamar(HttpMethod.POST, "/api/profesionales", alta(emailNuevo(), "X"), tokenProfesional, String.class)
                         .getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<ProfesionalResponse[]> lista =
+                llamar(HttpMethod.GET, "/api/profesionales", null, tokenProfesional, ProfesionalResponse[].class);
+        assertThat(lista.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(lista.getBody()).isNotEmpty().allSatisfy(p -> assertThat(p.email()).isNull());
     }
 
     @Test
@@ -180,18 +183,37 @@ class ProfesionalIT extends IntegrationTestBase {
     }
 
     @Test
-    void profesional_leeSuFichaPeroNoLaAjena() {
+    void profesional_veSuFichaConEmailYLaAjenaSinEmail() {
         String email = emailNuevo();
         ProfesionalResponse propio = crearProfesional(email);
         ProfesionalResponse ajeno = crearProfesional(emailNuevo());
         String token = login(email);
 
-        assertThat(llamar(HttpMethod.GET, "/api/profesionales/" + propio.id(), null, token, String.class).getStatusCode())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(llamar(HttpMethod.GET, "/api/profesionales/" + ajeno.id(), null, token, String.class).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(llamar(HttpMethod.GET, "/api/profesionales/" + propio.id(), null, token, ProfesionalResponse.class)
+                        .getBody()
+                        .email())
+                .isEqualTo(email);
+        ResponseEntity<ProfesionalResponse> vistaAjena =
+                llamar(HttpMethod.GET, "/api/profesionales/" + ajeno.id(), null, token, ProfesionalResponse.class);
+        assertThat(vistaAjena.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(vistaAjena.getBody().email()).isNull();
         assertThat(llamar(HttpMethod.GET, "/api/profesionales/999999", null, tokenAdmin, String.class).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void paciente_puedeVerProfesionalesParaElegir_sinEmail() {
+        ProfesionalResponse creado = crearProfesional(emailNuevo());
+        String emailSocio = "socio-" + UUID.randomUUID() + "@mail.test";
+        usuarioRepository.save(new Usuario(emailSocio, passwordEncoder.encode(CLAVE), RolUsuario.SOCIO_PACIENTE));
+        String token = login(emailSocio);
+
+        ResponseEntity<ProfesionalResponse> r =
+                llamar(HttpMethod.GET, "/api/profesionales/" + creado.id(), null, token, ProfesionalResponse.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody().email()).isNull();
+        assertThat(r.getBody().nombre()).isEqualTo("Ana");
     }
 
     @Test

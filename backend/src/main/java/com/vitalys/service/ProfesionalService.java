@@ -26,8 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * ABM de profesionales (Módulo 3). Igual que {@link PersonaService}, la autorización por rol se
- * verifica acá y no solo en el filtro (RNF-03): un PROFESIONAL puede leer su propia ficha, pero el
- * resto de las operaciones es exclusivo del ADMIN.
+ * verifica acá y no solo en el filtro (RNF-03). Cualquier usuario autenticado puede consultar el
+ * listado y la ficha (un paciente necesita elegir con quién sacar turno), pero el email solo lo ve
+ * el ADMIN o el propio profesional; el resto de las operaciones es exclusivo del ADMIN.
  */
 @Service
 public class ProfesionalService {
@@ -56,24 +57,35 @@ public class ProfesionalService {
         this.clock = clock;
     }
 
-    /** RF-12: listado para el ADMIN, con filtro opcional por estado ({@code activo}). */
+    /**
+     * RF-12: listado para cualquier usuario autenticado. El ADMIN puede filtrar por estado y ve el
+     * email; los demás solo ven profesionales activos (los de baja no son elegibles) y sin email.
+     */
     @Transactional(readOnly = true)
     public List<ProfesionalResponse> listar(Usuario actor, Boolean activo) {
-        exigirAdmin(actor);
-        List<Profesional> profesionales = activo == null
-                ? profesionalRepository.findAll(ORDEN)
-                : profesionalRepository.findByActivo(activo, ORDEN);
-        return profesionales.stream().map(ProfesionalResponse::de).toList();
+        if (esAdmin(actor)) {
+            List<Profesional> profesionales = activo == null
+                    ? profesionalRepository.findAll(ORDEN)
+                    : profesionalRepository.findByActivo(activo, ORDEN);
+            return profesionales.stream().map(ProfesionalResponse::de).toList();
+        }
+        return profesionalRepository.findByActivo(true, ORDEN).stream()
+                .map(ProfesionalResponse::publica)
+                .toList();
     }
 
+    /** Ficha completa para el ADMIN y el propio profesional; vista pública (sin email) para el resto. */
     @Transactional(readOnly = true)
     public ProfesionalResponse obtener(Usuario actor, Long id) {
         Profesional profesional = buscar(id);
         boolean esPropio = profesional.getUsuario().getId().equals(actor.getId());
-        if (!esAdmin(actor) && !esPropio) {
-            throw new AccesoDenegadoException("Solo podés consultar tu propia ficha");
+        if (esAdmin(actor) || esPropio) {
+            return ProfesionalResponse.de(profesional);
         }
-        return ProfesionalResponse.de(profesional);
+        if (!profesional.isActivo()) {
+            throw new RecursoNoEncontradoException("No existe el profesional " + id);
+        }
+        return ProfesionalResponse.publica(profesional);
     }
 
     /**

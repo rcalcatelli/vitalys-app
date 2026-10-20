@@ -73,7 +73,7 @@ Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener cla
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| GET    | `/api/personas` | Listar personas (filtros: estado, nombre, DNI) | ADMIN |
+| GET    | `/api/personas` | Listar personas (filtros: `estado`, `q` sobre nombre, apellido o DNI, `soloGym`) | ADMIN |
 | POST   | `/api/personas` | Crear nueva persona (alta presencial: usuario + persona en una operación, RF-05) | ADMIN |
 | POST   | `/api/personas/vincular` | Vincular una persona nueva a un `usuario` existente, buscándolo por email; sin contraseña (RF-31) | ADMIN |
 | GET    | `/api/personas/{id}` | Obtener datos de una persona | ADMIN, propia persona |

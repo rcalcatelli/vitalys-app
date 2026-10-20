@@ -86,4 +86,7 @@ export const http = {
   get: <T>(path: string, auth = true): Promise<T> => request<T>(path, { method: "GET", auth }),
   post: <T>(path: string, body?: unknown, auth = true): Promise<T> =>
     request<T>(path, { method: "POST", body, auth }),
+  put: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "PUT", body }),
+  patch: <T>(path: string, body?: unknown): Promise<T> =>
+    request<T>(path, { method: "PATCH", body }),
 };

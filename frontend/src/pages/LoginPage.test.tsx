@@ -73,7 +73,7 @@ describe("LoginPage", () => {
 
     renderWithRouter(<LoginPage />, {
       path: "/login",
-      extraRoutes: <Route path="/admin/dashboard" element={<div>Panel ADMIN</div>} />,
+      extraRoutes: <Route path="/admin/personas" element={<div>Panel ADMIN</div>} />,
     });
     await completarFormulario(user);
 

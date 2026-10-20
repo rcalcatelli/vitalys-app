@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "../pages/LoginPage";
+import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
@@ -22,6 +23,15 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <PlaceholderHomePage title="Panel ADMIN" />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/personas"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <PersonasPage />
           </RoleGuard>
         }
       />

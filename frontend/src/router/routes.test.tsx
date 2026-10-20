@@ -48,7 +48,7 @@ describe("AppRoutes", () => {
     expect(screen.queryByLabelText(/rol/i)).not.toBeInTheDocument();
   });
 
-  it.each(["/admin/dashboard", "/profesional/agenda", "/socio/turnos"])(
+  it.each(["/admin/dashboard", "/admin/personas", "/profesional/agenda", "/socio/turnos"])(
     "%s sin sesión redirige a /login (RoleGuard)",
     async (path) => {
       renderAt(path);

@@ -101,6 +101,25 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-38 | Login con DNI de un usuario sin ficha en `personas` (recién autorregistrado o profesional) | POST /api/auth/login | `identificador` = DNI que no está en `personas.dni` | 401, mismo mensaje que credenciales inválidas |
 | PI-39 | Login con DNI inexistente en todo el sistema               | POST /api/auth/login       | `identificador` = DNI que no existe        | 401, indistinguible de PI-38                  |
 
+### Personas — ABM y baja lógica (`PersonaIT`)
+
+| ID    | Caso                                                         | Método y URL                       | Body / precondición                                  | Respuesta esperada |
+|-------|--------------------------------------------------------------|------------------------------------|------------------------------------------------------|--------------------|
+| PI-61 | Alta presencial (RF-05)                                      | POST /api/personas                 | JWT ADMIN, `{email, contrasena, datos}` con DNI nuevo | 201, persona `ACTIVO`; el usuario creado es `SOCIO_PACIENTE` y puede loguearse |
+| PI-62 | Baja lógica y reactivación                                   | PATCH /api/personas/{id}/baja, /reactivar | persona activa                                 | 200 `INACTIVO` con `fechaBaja`; la fila sigue en la base; segunda baja → 409; reactivar → `ACTIVO` sin `fechaBaja` |
+| PI-63 | Listado filtrado por estado (RF-06)                          | GET /api/personas?estado=&q=       | persona dada de baja                                 | aparece con `INACTIVO`, no con `ACTIVO` |
+| PI-64 | DNI repetido por la API                                      | POST /api/personas                 | DNI de una persona existente                         | 409, y no queda creado el usuario del segundo intento |
+| PI-65 | DNI repetido directo en la base                              | `INSERT` con JdbcTemplate          | DNI existente                                        | lo rechaza `personas.dni UNIQUE`: la unicidad no depende del servicio |
+| PI-66 | Baja sin fecha directo en la base                            | `UPDATE` con JdbcTemplate          | `estado = 'INACTIVO'`, `fecha_baja = NULL`           | lo rechaza `chk_fecha_baja` |
+| PI-67 | Socio de gimnasio sin fecha de inicio de membresía           | POST /api/personas                 | `esSocioGym = true`, `fechaInicioMembresia = null`   | 400 |
+| PI-68 | Autorización en el servicio (RNF-03)                         | GET /api/personas, GET /api/personas/{id}, PATCH …/baja | JWT de SOCIO_PACIENTE con ficha propia | listar → 403; leer su propia ficha → 200; dar de baja → 403 |
+| PI-69 | Persona inexistente                                          | GET /api/personas/999999           | JWT ADMIN                                            | 404 |
+| PI-70 | Edición (RF-07) y unicidad al editar                         | PUT /api/personas/{id}             | datos nuevos; luego el DNI de otra persona           | 200 con los datos nuevos (dejar de ser socio limpia la fecha de membresía); DNI ajeno → 409 |
+
+> PI-68 es el primer caso que verifica el rechazo por rol **desde el servicio** y no desde el
+> filtro: `/api/personas` no está bajo `/api/admin/**`, así que el 403 lo produce
+> `PersonaService`. Con él queda cubierto lo que la nota de PI-06 dejaba pendiente para RNF-03.
+
 ### Personas — Vínculo con usuario existente
 
 | ID    | Caso                                                      | Método y URL                  | Body                                     | Respuesta esperada                            |

@@ -4,6 +4,7 @@ import com.vitalys.domain.Usuario;
 import com.vitalys.dto.DisponibilidadBatchRequest;
 import com.vitalys.dto.FranjaRequest;
 import com.vitalys.dto.FranjaResponse;
+import com.vitalys.dto.ImpactoResponse;
 import com.vitalys.dto.ProfesionalAltaRequest;
 import com.vitalys.dto.ProfesionalDatosRequest;
 import com.vitalys.dto.ProfesionalResponse;
@@ -85,13 +86,26 @@ public class ProfesionalController {
         return profesionalService.actualizar(actor, id, datos);
     }
 
+    @GetMapping("/{id}/baja/impacto")
+    @Operation(
+            summary = "Impacto de la baja (paso 1)",
+            description = "Turnos futuros reservados que se cancelarían al dar de baja al profesional. No modifica nada. ADMIN (RN-25).")
+    public ImpactoResponse impactoDeBaja(@AuthenticationPrincipal Usuario actor, @PathVariable Long id) {
+        return profesionalService.impactoDeBaja(actor, id);
+    }
+
     @DeleteMapping("/{id}")
     @Operation(
-            summary = "Baja de profesional",
-            description = "Baja lógica: activo = false, franjas borradas y usuario deshabilitado. 409 si tiene turnos futuros "
-                    + "reservados (la cancelación en cascada llega en un cambio posterior). ADMIN (RN-25).")
-    public ProfesionalResponse darDeBaja(@AuthenticationPrincipal Usuario actor, @PathVariable Long id) {
-        return profesionalService.darDeBaja(actor, id);
+            summary = "Baja de profesional (paso 2)",
+            description = "Baja lógica: activo = false, franjas borradas y usuario deshabilitado. Sin turnos futuros se da de baja "
+                    + "directamente; con turnos exige confirmar=true (409 con el impacto si falta) y los cancela en cascada, "
+                    + "avisando a cada paciente. ADMIN (RN-25, RN-24).")
+    public ProfesionalResponse darDeBaja(
+            @AuthenticationPrincipal Usuario actor,
+            @PathVariable Long id,
+            @Parameter(description = "true = confirma la cancelación de los turnos afectados") @RequestParam(defaultValue = "false")
+                    boolean confirmar) {
+        return profesionalService.darDeBaja(actor, id, confirmar);
     }
 
     @GetMapping("/{id}/disponibilidad")
@@ -110,32 +124,68 @@ public class ProfesionalController {
     }
 
     @PutMapping("/{id}/disponibilidad/{franjaId}")
-    @Operation(summary = "Modificar franja", description = "ADMIN o el propio profesional. 409 si se solapa (RN-11).")
+    @Operation(
+            summary = "Modificar franja",
+            description = "ADMIN o el propio profesional. 409 si se solapa (RN-11) o si deja turnos futuros sin cobertura "
+                    + "y falta confirmar=true (el body trae el impacto, RN-24).")
     public FranjaResponse modificarFranja(
             @AuthenticationPrincipal Usuario actor,
             @PathVariable Long id,
             @PathVariable Long franjaId,
-            @Valid @RequestBody FranjaRequest franja) {
-        return disponibilidadService.actualizar(actor, id, franjaId, franja);
+            @Valid @RequestBody FranjaRequest franja,
+            @Parameter(description = "true = confirma la cancelación de los turnos afectados") @RequestParam(defaultValue = "false")
+                    boolean confirmar) {
+        return disponibilidadService.actualizar(actor, id, franjaId, franja, confirmar);
     }
 
     @DeleteMapping("/{id}/disponibilidad/{franjaId}")
-    @Operation(summary = "Eliminar franja", description = "Borrado físico. ADMIN o el propio profesional.")
+    @Operation(
+            summary = "Eliminar franja",
+            description = "Borrado físico. ADMIN o el propio profesional. 409 con el impacto si hay turnos futuros afectados "
+                    + "y falta confirmar=true (RN-24).")
     public ResponseEntity<Void> eliminarFranja(
-            @AuthenticationPrincipal Usuario actor, @PathVariable Long id, @PathVariable Long franjaId) {
-        disponibilidadService.eliminar(actor, id, franjaId);
+            @AuthenticationPrincipal Usuario actor,
+            @PathVariable Long id,
+            @PathVariable Long franjaId,
+            @Parameter(description = "true = confirma la cancelación de los turnos afectados") @RequestParam(defaultValue = "false")
+                    boolean confirmar) {
+        disponibilidadService.eliminar(actor, id, franjaId, confirmar);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/disponibilidad/{franjaId}/impacto")
+    @Operation(
+            summary = "Impacto de quitar una franja",
+            description = "Turnos futuros que se cancelarían al quitar esa franja. No modifica nada. ADMIN o el propio profesional (RN-24).")
+    public ImpactoResponse impactoDeQuitarFranja(
+            @AuthenticationPrincipal Usuario actor, @PathVariable Long id, @PathVariable Long franjaId) {
+        return disponibilidadService.impactoDeQuitar(actor, id, franjaId);
+    }
+
+    @PostMapping("/{id}/disponibilidad/impacto")
+    @Operation(
+            summary = "Vista previa del impacto de un conjunto de franjas",
+            description = "Recibe el conjunto completo propuesto y devuelve los turnos futuros que quedarían sin "
+                    + "cobertura. Es solo lectura: no modifica nada. ADMIN o el propio profesional (RN-24).")
+    public ImpactoResponse impactoDeDisponibilidad(
+            @AuthenticationPrincipal Usuario actor,
+            @PathVariable Long id,
+            @Valid @RequestBody DisponibilidadBatchRequest request) {
+        return disponibilidadService.impacto(actor, id, request.franjas());
     }
 
     @PutMapping("/{id}/disponibilidad")
     @Operation(
             summary = "Reemplazar toda la disponibilidad",
             description = "Reemplazo total en una transacción. ADMIN o el propio profesional. 409 si alguna franja "
-                    + "se solapa (RN-11): no se aplica ninguna.")
+                    + "se solapa (RN-11): no se aplica ninguna. 409 con el impacto si deja turnos futuros sin cobertura "
+                    + "y falta confirmar=true; con confirmar=true los cancela en cascada y avisa a los pacientes (RN-24).")
     public List<FranjaResponse> reemplazarDisponibilidad(
             @AuthenticationPrincipal Usuario actor,
             @PathVariable Long id,
-            @Valid @RequestBody DisponibilidadBatchRequest request) {
-        return disponibilidadService.reemplazar(actor, id, request.franjas());
+            @Valid @RequestBody DisponibilidadBatchRequest request,
+            @Parameter(description = "true = confirma la cancelación de los turnos afectados") @RequestParam(defaultValue = "false")
+                    boolean confirmar) {
+        return disponibilidadService.reemplazar(actor, id, request.franjas(), confirmar);
     }
 }

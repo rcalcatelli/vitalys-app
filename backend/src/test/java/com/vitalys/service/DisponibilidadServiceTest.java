@@ -3,6 +3,8 @@ package com.vitalys.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -16,7 +18,9 @@ import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.FranjaRequest;
 import com.vitalys.dto.FranjaResponse;
+import com.vitalys.dto.ImpactoResponse;
 import com.vitalys.exception.AccesoDenegadoException;
+import com.vitalys.exception.ConfirmacionRequeridaException;
 import com.vitalys.exception.ConflictoException;
 import com.vitalys.exception.DatosInvalidosException;
 import com.vitalys.exception.RecursoNoEncontradoException;
@@ -36,6 +40,7 @@ class DisponibilidadServiceTest {
 
     private ProfesionalRepository profesionalRepository;
     private DisponibilidadProfesionalRepository disponibilidadRepository;
+    private CascadaDisponibilidadService cascada;
     private DisponibilidadService service;
 
     private final Usuario admin = usuario(1L, RolUsuario.ADMIN);
@@ -48,7 +53,8 @@ class DisponibilidadServiceTest {
     void setUp() {
         profesionalRepository = mock(ProfesionalRepository.class);
         disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
-        service = new DisponibilidadService(profesionalRepository, disponibilidadRepository);
+        cascada = mock(CascadaDisponibilidadService.class);
+        service = new DisponibilidadService(profesionalRepository, disponibilidadRepository, cascada);
 
         profesional = new Profesional(usuarioDueno);
         profesional.setId(10L);
@@ -205,7 +211,7 @@ class DisponibilidadServiceTest {
         DisponibilidadProfesional d = existente(5L, 1, "09:00", "13:00");
         when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(d));
 
-        FranjaResponse r = service.actualizar(usuarioDueno, 10L, 5L, franja(3, "10:00", "12:00"));
+        FranjaResponse r = service.actualizar(usuarioDueno, 10L, 5L, franja(3, "10:00", "12:00"), false);
 
         assertThat(r.diaSemana()).isEqualTo(3);
         assertThat(d.getHoraInicio()).isEqualTo(LocalTime.of(10, 0));
@@ -220,7 +226,7 @@ class DisponibilidadServiceTest {
                 new DisponibilidadProfesional(otro, 1, LocalTime.of(9, 0), LocalTime.of(13, 0));
         when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(ajena));
 
-        assertThatThrownBy(() -> service.actualizar(admin, 10L, 5L, franja(1, "09:00", "10:00")))
+        assertThatThrownBy(() -> service.actualizar(admin, 10L, 5L, franja(1, "09:00", "10:00"), false))
                 .isInstanceOf(RecursoNoEncontradoException.class);
     }
 
@@ -228,13 +234,13 @@ class DisponibilidadServiceTest {
     void actualizar_franjaInexistente_lanza404() {
         when(disponibilidadRepository.findById(5L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.actualizar(admin, 10L, 5L, franja(1, "09:00", "10:00")))
+        assertThatThrownBy(() -> service.actualizar(admin, 10L, 5L, franja(1, "09:00", "10:00"), false))
                 .isInstanceOf(RecursoNoEncontradoException.class);
     }
 
     @Test
     void actualizar_comoOtroProfesional_es403() {
-        assertThatThrownBy(() -> service.actualizar(usuarioOtro, 10L, 5L, franja(1, "09:00", "10:00")))
+        assertThatThrownBy(() -> service.actualizar(usuarioOtro, 10L, 5L, franja(1, "09:00", "10:00"), false))
                 .isInstanceOf(AccesoDenegadoException.class);
     }
 
@@ -245,7 +251,7 @@ class DisponibilidadServiceTest {
         DisponibilidadProfesional d = existente(5L, 1, "09:00", "13:00");
         when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(d));
 
-        service.eliminar(usuarioDueno, 10L, 5L);
+        service.eliminar(usuarioDueno, 10L, 5L, false);
 
         verify(disponibilidadRepository).delete(d);
         verify(disponibilidadRepository).flush();
@@ -253,7 +259,7 @@ class DisponibilidadServiceTest {
 
     @Test
     void eliminar_comoSocio_es403() {
-        assertThatThrownBy(() -> service.eliminar(socio, 10L, 5L)).isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.eliminar(socio, 10L, 5L, false)).isInstanceOf(AccesoDenegadoException.class);
         verify(disponibilidadRepository, never()).delete(any());
     }
 
@@ -266,7 +272,7 @@ class DisponibilidadServiceTest {
                 .thenReturn(actuales);
 
         List<FranjaResponse> r = service.reemplazar(
-                usuarioDueno, 10L, List.of(franja(1, "09:00", "11:00"), franja(1, "11:00", "13:00")));
+                usuarioDueno, 10L, List.of(franja(1, "09:00", "11:00"), franja(1, "11:00", "13:00")), false);
 
         InOrder orden = inOrder(disponibilidadRepository);
         orden.verify(disponibilidadRepository).deleteAll(actuales);
@@ -278,7 +284,7 @@ class DisponibilidadServiceTest {
 
     @Test
     void reemplazar_conListaVacia_dejaSinDisponibilidad() {
-        service.reemplazar(admin, 10L, List.of());
+        service.reemplazar(admin, 10L, List.of(), false);
 
         verify(disponibilidadRepository, never()).saveAndFlush(any());
     }
@@ -290,21 +296,133 @@ class DisponibilidadServiceTest {
                 .thenThrow(rechazoDeBase("23P01"));
 
         assertThatThrownBy(() -> service.reemplazar(
-                        admin, 10L, List.of(franja(2, "14:00", "19:00"), franja(2, "18:00", "20:00"))))
+                        admin, 10L, List.of(franja(2, "14:00", "19:00"), franja(2, "18:00", "20:00")), false))
                 .isInstanceOf(ConflictoException.class)
                 .hasMessageContaining("se superpone");
     }
 
     @Test
     void reemplazar_franjaConHorasInvalidas_noTocaLaBase() {
-        assertThatThrownBy(() -> service.reemplazar(admin, 10L, List.of(franja(1, "13:00", "09:00"))))
+        assertThatThrownBy(() -> service.reemplazar(admin, 10L, List.of(franja(1, "13:00", "09:00")), false))
                 .isInstanceOf(DatosInvalidosException.class);
         verify(disponibilidadRepository, never()).deleteAll(any(Iterable.class));
     }
 
     @Test
     void reemplazar_comoOtroProfesional_es403() {
-        assertThatThrownBy(() -> service.reemplazar(usuarioOtro, 10L, List.of()))
+        assertThatThrownBy(() -> service.reemplazar(usuarioOtro, 10L, List.of(), false))
                 .isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    // --- cascada (RN-24) ---
+
+    @Test
+    void reemplazar_resuelveLaCascadaAntesDeTocarLaBase() {
+        List<FranjaRequest> nuevas = List.of(franja(1, "09:00", "11:00"));
+
+        service.reemplazar(usuarioDueno, 10L, nuevas, true);
+
+        InOrder orden = inOrder(cascada, disponibilidadRepository);
+        orden.verify(cascada).resolver(eq(usuarioDueno), eq(profesional), eq(nuevas), eq(true), any());
+        orden.verify(disponibilidadRepository).flush();
+    }
+
+    @Test
+    void reemplazar_sinConfirmarConImpacto_cortaSinTocarLaBase() {
+        List<FranjaRequest> nuevas = List.of(franja(1, "09:00", "11:00"));
+        when(cascada.resolver(any(), any(), any(), eq(false), any()))
+                .thenThrow(new ConfirmacionRequeridaException("hay impacto", ImpactoResponse.de(List.of())));
+
+        assertThatThrownBy(() -> service.reemplazar(admin, 10L, nuevas, false))
+                .isInstanceOf(ConfirmacionRequeridaException.class);
+
+        verify(disponibilidadRepository, never()).deleteAll(any(Iterable.class));
+        verify(disponibilidadRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void actualizar_calculaElImpactoConLaFranjaYaModificada() {
+        DisponibilidadProfesional editada = existente(5L, 1, "09:00", "13:00");
+        DisponibilidadProfesional otra = existente(6L, 3, "09:00", "13:00");
+        when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(editada));
+        when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(10L))
+                .thenReturn(List.of(editada, otra));
+
+        service.actualizar(admin, 10L, 5L, franja(1, "09:00", "11:00"), true);
+
+        verify(cascada)
+                .resolver(
+                        eq(admin),
+                        eq(profesional),
+                        eq(List.of(franja(3, "09:00", "13:00"), franja(1, "09:00", "11:00"))),
+                        eq(true),
+                        any());
+    }
+
+    @Test
+    void eliminar_calculaElImpactoSinLaFranjaQuitada() {
+        DisponibilidadProfesional quitada = existente(5L, 1, "09:00", "13:00");
+        DisponibilidadProfesional queda = existente(6L, 3, "09:00", "13:00");
+        when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(quitada));
+        when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(10L))
+                .thenReturn(List.of(quitada, queda));
+
+        service.eliminar(admin, 10L, 5L, true);
+
+        verify(cascada)
+                .resolver(eq(admin), eq(profesional), eq(List.of(franja(3, "09:00", "13:00"))), eq(true), any());
+        verify(disponibilidadRepository).delete(quitada);
+    }
+
+    @Test
+    void impacto_esSoloLectura_yNoTomaElLock() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional));
+        ImpactoResponse esperado = ImpactoResponse.de(List.of());
+        when(cascada.impacto(eq(10L), any())).thenReturn(esperado);
+
+        assertThat(service.impacto(usuarioDueno, 10L, List.of(franja(1, "09:00", "10:00"))))
+                .isSameAs(esperado);
+
+        verify(profesionalRepository, never()).buscarParaActualizar(any());
+        verify(cascada, never()).resolver(any(), any(), any(), anyBoolean(), any());
+    }
+
+    @Test
+    void impacto_comoOtroProfesional_es403_yConHorasInvertidas_400() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional));
+
+        assertThatThrownBy(() -> service.impacto(usuarioOtro, 10L, List.of()))
+                .isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.impacto(admin, 10L, List.of(franja(1, "13:00", "09:00"))))
+                .isInstanceOf(DatosInvalidosException.class);
+    }
+
+    @Test
+    void impacto_profesionalInexistente_lanza404() {
+        when(profesionalRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.impacto(admin, 99L, List.of()))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void impactoDeQuitar_consultaConLasFranjasRestantes() {
+        DisponibilidadProfesional quitada = existente(5L, 1, "09:00", "13:00");
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional));
+        when(disponibilidadRepository.findById(5L)).thenReturn(Optional.of(quitada));
+        when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(10L))
+                .thenReturn(List.of(quitada));
+
+        service.impactoDeQuitar(usuarioDueno, 10L, 5L);
+
+        verify(cascada).impacto(10L, List.of());
+    }
+
+    @Test
+    void impactoDeQuitar_profesionalDeBaja_lanza409() {
+        profesional.darDeBaja();
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional));
+
+        assertThatThrownBy(() -> service.impactoDeQuitar(admin, 10L, 5L)).isInstanceOf(ConflictoException.class);
     }
 }

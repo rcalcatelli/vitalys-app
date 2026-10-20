@@ -1,11 +1,11 @@
 package com.vitalys.service;
 
-import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.ProfesionalAltaRequest;
 import com.vitalys.dto.ProfesionalDatosRequest;
+import com.vitalys.dto.ImpactoResponse;
 import com.vitalys.dto.ProfesionalResponse;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.ConflictoException;
@@ -13,10 +13,7 @@ import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.repository.DisponibilidadProfesionalRepository;
 import com.vitalys.repository.ProfesionalRepository;
-import com.vitalys.repository.TurnoRepository;
 import com.vitalys.repository.UsuarioRepository;
-import java.time.Clock;
-import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
@@ -37,24 +34,21 @@ public class ProfesionalService {
 
     private final ProfesionalRepository profesionalRepository;
     private final DisponibilidadProfesionalRepository disponibilidadRepository;
-    private final TurnoRepository turnoRepository;
+    private final CascadaDisponibilidadService cascada;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Clock clock;
 
     public ProfesionalService(
             ProfesionalRepository profesionalRepository,
             DisponibilidadProfesionalRepository disponibilidadRepository,
-            TurnoRepository turnoRepository,
+            CascadaDisponibilidadService cascada,
             UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder,
-            Clock clock) {
+            PasswordEncoder passwordEncoder) {
         this.profesionalRepository = profesionalRepository;
         this.disponibilidadRepository = disponibilidadRepository;
-        this.turnoRepository = turnoRepository;
+        this.cascada = cascada;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
-        this.clock = clock;
     }
 
     /**
@@ -128,23 +122,35 @@ public class ProfesionalService {
     }
 
     /**
-     * Baja (RN-25). PROVISORIO hasta el slice de cascada: solo se permite si el profesional no tiene
-     * turnos futuros reservados, porque todavía no existe la cancelación en cascada que los resuelva.
-     * Con turnos pendientes responde 409 y no toca nada. Sin turnos, la baja ya es la definitiva:
-     * borra las franjas, desactiva al profesional y deshabilita su usuario (el filtro JWT lo rechaza).
+     * Vista previa de la baja (RN-25, paso 1): los turnos futuros que se cancelarían. Dar de baja es
+     * dejar la disponibilidad en cero, así que todo turno futuro reservado queda afectado.
      */
-    @Transactional
-    public ProfesionalResponse darDeBaja(Usuario actor, Long id) {
+    @Transactional(readOnly = true)
+    public ImpactoResponse impactoDeBaja(Usuario actor, Long id) {
         exigirAdmin(actor);
         Profesional profesional = buscar(id);
         if (!profesional.isActivo()) {
             throw new ConflictoException("El profesional ya está dado de baja");
         }
-        if (turnoRepository.existsByProfesionalIdAndEstadoAndInicioAfter(
-                id, EstadoTurno.RESERVADO, OffsetDateTime.now(clock))) {
-            throw new ConflictoException(
-                    "El profesional tiene turnos futuros reservados: cancelarlos antes de darlo de baja");
+        return cascada.impacto(id, List.of());
+    }
+
+    /**
+     * Baja (RN-25, paso 2). Con turnos futuros exige {@code confirmar=true} (409 con la lista si
+     * falta); sin turnos se da de baja directamente. Confirmada, en una sola transacción: cancela los
+     * turnos y avisa a los pacientes, borra las franjas, desactiva al profesional y deshabilita su
+     * usuario (el filtro JWT rechaza sus tokens).
+     */
+    @Transactional
+    public ProfesionalResponse darDeBaja(Usuario actor, Long id, boolean confirmar) {
+        exigirAdmin(actor);
+        Profesional profesional = profesionalRepository
+                .buscarParaActualizar(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el profesional " + id));
+        if (!profesional.isActivo()) {
+            throw new ConflictoException("El profesional ya está dado de baja");
         }
+        cascada.resolver(actor, profesional, List.of(), confirmar, "El profesional fue dado de baja");
         disponibilidadRepository.deleteAll(
                 disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(id));
         profesional.darDeBaja();

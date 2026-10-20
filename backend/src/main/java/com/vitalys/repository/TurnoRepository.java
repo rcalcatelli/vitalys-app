@@ -1,6 +1,5 @@
 package com.vitalys.repository;
 
-import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Turno;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -32,8 +31,23 @@ public interface TurnoRepository extends JpaRepository<Turno, Long>, JpaSpecific
             nativeQuery = true)
     int marcarAusentesGym(@Param("ahora") OffsetDateTime ahora);
 
-    /** ¿Tiene el profesional turnos en ese estado que empiezan después de {@code desde}? */
-    boolean existsByProfesionalIdAndEstadoAndInicioAfter(Long profesionalId, EstadoTurno estado, OffsetDateTime desde);
+    /**
+     * Turnos de consultorio RESERVADOS que empiezan después de {@code desde}, con la persona y su
+     * usuario ya cargados (el aviso de cancelación necesita nombre y email). Es la base del cálculo
+     * de impacto de RN-24: los pasados y los que ya no están reservados nunca se tocan.
+     */
+    @Query("""
+            select t from Turno t
+            join fetch t.persona p
+            join fetch p.usuario
+            where t.profesionalId = :profesionalId
+              and t.tipoTurno = com.vitalys.domain.TipoTurno.CONSULTORIO
+              and t.estado = com.vitalys.domain.EstadoTurno.RESERVADO
+              and t.inicio > :desde
+            order by t.inicio
+            """)
+    List<Turno> futurosReservadosDeConsultorio(
+            @Param("profesionalId") Long profesionalId, @Param("desde") OffsetDateTime desde);
 
     /** Usuario del profesional a cargo, para saber si quien marca el turno es el propio. */
     @Query(value = "SELECT usuario_id FROM profesionales WHERE id = :profesionalId", nativeQuery = true)

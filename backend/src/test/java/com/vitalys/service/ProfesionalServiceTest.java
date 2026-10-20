@@ -12,26 +12,24 @@ import static org.mockito.Mockito.when;
 
 import com.vitalys.domain.DisponibilidadProfesional;
 import com.vitalys.domain.Especialidad;
-import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
+import com.vitalys.dto.ImpactoResponse;
 import com.vitalys.dto.ProfesionalAltaRequest;
 import com.vitalys.dto.ProfesionalDatosRequest;
 import com.vitalys.dto.ProfesionalResponse;
+import com.vitalys.dto.TurnoAfectadoResponse;
 import com.vitalys.exception.AccesoDenegadoException;
+import com.vitalys.exception.ConfirmacionRequeridaException;
 import com.vitalys.exception.ConflictoException;
 import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.repository.DisponibilidadProfesionalRepository;
 import com.vitalys.repository.ProfesionalRepository;
-import com.vitalys.repository.TurnoRepository;
 import com.vitalys.repository.UsuarioRepository;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,11 +40,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 class ProfesionalServiceTest {
 
-    private static final Instant AHORA = Instant.parse("2026-10-20T15:00:00Z");
-
     private ProfesionalRepository profesionalRepository;
     private DisponibilidadProfesionalRepository disponibilidadRepository;
-    private TurnoRepository turnoRepository;
+    private CascadaDisponibilidadService cascada;
     private UsuarioRepository usuarioRepository;
     private PasswordEncoder passwordEncoder;
     private ProfesionalService service;
@@ -59,12 +55,11 @@ class ProfesionalServiceTest {
     void setUp() {
         profesionalRepository = mock(ProfesionalRepository.class);
         disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
-        turnoRepository = mock(TurnoRepository.class);
+        cascada = mock(CascadaDisponibilidadService.class);
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
-        Clock clock = Clock.fixed(AHORA, ZoneId.of("America/Argentina/Buenos_Aires"));
         service = new ProfesionalService(
-                profesionalRepository, disponibilidadRepository, turnoRepository, usuarioRepository, passwordEncoder, clock);
+                profesionalRepository, disponibilidadRepository, cascada, usuarioRepository, passwordEncoder);
         when(profesionalRepository.saveAndFlush(any(Profesional.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -306,34 +301,46 @@ class ProfesionalServiceTest {
         verifyNoInteractions(profesionalRepository);
     }
 
-    // --- baja (provisoria) ---
+    // --- baja (RN-25) ---
+
+    private static ImpactoResponse impactoDeUnTurno() {
+        return new ImpactoResponse(
+                1,
+                List.of(new TurnoAfectadoResponse(
+                        7L,
+                        3L,
+                        "Ana Gómez",
+                        OffsetDateTime.parse("2026-11-20T10:00:00-03:00"),
+                        OffsetDateTime.parse("2026-11-20T10:30:00-03:00"))));
+    }
 
     @Test
     void darDeBaja_sinTurnosFuturos_borraFranjasYDeshabilitaAlUsuario() {
         Profesional existente = profesional(10L, usuarioProfesional);
         DisponibilidadProfesional franja = new DisponibilidadProfesional(existente, 1, LocalTime.of(9, 0), LocalTime.of(13, 0));
-        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(existente));
-        when(turnoRepository.existsByProfesionalIdAndEstadoAndInicioAfter(
-                        10L, EstadoTurno.RESERVADO, OffsetDateTime.ofInstant(AHORA, ZoneId.of("America/Argentina/Buenos_Aires"))))
-                .thenReturn(false);
+        when(profesionalRepository.buscarParaActualizar(10L)).thenReturn(Optional.of(existente));
         when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(10L))
                 .thenReturn(List.of(franja));
 
-        ProfesionalResponse r = service.darDeBaja(admin, 10L);
+        ProfesionalResponse r = service.darDeBaja(admin, 10L, false);
 
         assertThat(r.activo()).isFalse();
         assertThat(usuarioProfesional.getActivo()).isFalse();
+        verify(cascada).resolver(eq(admin), eq(existente), eq(List.of()), eq(false), any());
         verify(disponibilidadRepository).deleteAll(List.of(franja));
     }
 
     @Test
-    void darDeBaja_conTurnosFuturos_lanza409SinTocarNada() {
+    void darDeBaja_conTurnosFuturosSinConfirmar_lanza409ConImpactoSinTocarNada() {
         Profesional existente = profesional(10L, usuarioProfesional);
-        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(existente));
-        when(turnoRepository.existsByProfesionalIdAndEstadoAndInicioAfter(eq(10L), eq(EstadoTurno.RESERVADO), any()))
-                .thenReturn(true);
+        when(profesionalRepository.buscarParaActualizar(10L)).thenReturn(Optional.of(existente));
+        when(cascada.resolver(any(), any(), any(), eq(false), any()))
+                .thenThrow(new ConfirmacionRequeridaException("hay turnos", impactoDeUnTurno()));
 
-        assertThatThrownBy(() -> service.darDeBaja(admin, 10L)).isInstanceOf(ConflictoException.class);
+        assertThatThrownBy(() -> service.darDeBaja(admin, 10L, false))
+                .isInstanceOfSatisfying(
+                        ConfirmacionRequeridaException.class,
+                        e -> assertThat(e.getImpacto().cantidad()).isEqualTo(1));
 
         assertThat(existente.isActivo()).isTrue();
         assertThat(usuarioProfesional.getActivo()).isTrue();
@@ -342,18 +349,58 @@ class ProfesionalServiceTest {
     }
 
     @Test
+    void darDeBaja_confirmada_cancelaEnCascadaYDaDeBaja() {
+        Profesional existente = profesional(10L, usuarioProfesional);
+        when(profesionalRepository.buscarParaActualizar(10L)).thenReturn(Optional.of(existente));
+        when(cascada.resolver(any(), any(), any(), eq(true), any())).thenReturn(impactoDeUnTurno());
+
+        ProfesionalResponse r = service.darDeBaja(admin, 10L, true);
+
+        assertThat(r.activo()).isFalse();
+        assertThat(usuarioProfesional.getActivo()).isFalse();
+        verify(cascada).resolver(eq(admin), eq(existente), eq(List.of()), eq(true), any());
+    }
+
+    @Test
     void darDeBaja_yaDadoDeBaja_lanza409() {
         Profesional existente = profesional(10L, usuarioProfesional);
         existente.darDeBaja();
-        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(existente));
+        when(profesionalRepository.buscarParaActualizar(10L)).thenReturn(Optional.of(existente));
 
-        assertThatThrownBy(() -> service.darDeBaja(admin, 10L)).isInstanceOf(ConflictoException.class);
-        verifyNoInteractions(turnoRepository);
+        assertThatThrownBy(() -> service.darDeBaja(admin, 10L, true)).isInstanceOf(ConflictoException.class);
+        verifyNoInteractions(cascada);
+    }
+
+    @Test
+    void darDeBaja_inexistente_lanza404() {
+        when(profesionalRepository.buscarParaActualizar(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.darDeBaja(admin, 99L, false)).isInstanceOf(RecursoNoEncontradoException.class);
     }
 
     @Test
     void darDeBaja_comoProfesional_esRechazado() {
-        assertThatThrownBy(() -> service.darDeBaja(usuarioProfesional, 10L)).isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.darDeBaja(usuarioProfesional, 10L, true)).isInstanceOf(AccesoDenegadoException.class);
         verifyNoInteractions(profesionalRepository);
+    }
+
+    @Test
+    void impactoDeBaja_consultaTodosLosTurnosFuturos() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, usuarioProfesional)));
+        when(cascada.impacto(10L, List.of())).thenReturn(impactoDeUnTurno());
+
+        assertThat(service.impactoDeBaja(admin, 10L).cantidad()).isEqualTo(1);
+    }
+
+    @Test
+    void impactoDeBaja_yaDadoDeBaja_409_inexistente_404_noAdmin_403() {
+        Profesional deBaja = profesional(10L, usuarioProfesional);
+        deBaja.darDeBaja();
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(deBaja));
+        when(profesionalRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.impactoDeBaja(admin, 10L)).isInstanceOf(ConflictoException.class);
+        assertThatThrownBy(() -> service.impactoDeBaja(admin, 99L)).isInstanceOf(RecursoNoEncontradoException.class);
+        assertThatThrownBy(() -> service.impactoDeBaja(socio, 10L)).isInstanceOf(AccesoDenegadoException.class);
     }
 }

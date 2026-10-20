@@ -102,6 +102,18 @@ public class Turno {
         this.motivoCancelacion = motivo;
     }
 
+    /**
+     * RN-24: el profesional dejó de cubrir este horario. Estado propio (no CANCELADO_*), para no
+     * atribuirle al paciente una cancelación que no hizo. {@code cancelado_en} anterior al inicio
+     * libera el lugar ({@code fn_turno_ocupa_lugar}); {@code chk_cancelacion_info} exige los tres datos.
+     */
+    public void cancelarPorProfesional(OffsetDateTime ahora, Long usuarioId, String motivo) {
+        this.estado = EstadoTurno.CANCELADO_POR_PROFESIONAL;
+        this.canceladoEn = ahora;
+        this.canceladoPorUsuarioId = usuarioId;
+        this.motivoCancelacion = motivo;
+    }
+
     public void marcar(EstadoTurno nuevo) {
         this.estado = nuevo;
     }

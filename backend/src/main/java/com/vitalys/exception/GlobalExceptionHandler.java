@@ -8,9 +8,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Mapea cada excepción de negocio a {@link ErrorResponse} según la tabla de design.md §5. Sin
@@ -37,6 +39,26 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req);
     }
 
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ResponseEntity<ErrorResponse> handleAccesoDenegado(AccesoDenegadoException ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(RecursoNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> handleNoEncontrado(RecursoNoEncontradoException ex, HttpServletRequest req) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<ErrorResponse> handleConflicto(ConflictoException ex, HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(DatosInvalidosException.class)
+    public ResponseEntity<ErrorResponse> handleDatosInvalidos(DatosInvalidosException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException ex, HttpServletRequest req) {
@@ -46,6 +68,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "Datos de entrada inválidos", req);
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<ErrorResponse> handleFormatoInvalido(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Formato de datos inválido", req);
     }
 
     @ExceptionHandler(Exception.class)

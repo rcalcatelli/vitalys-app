@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
+import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.ExcepcionMorosidadResponse;
 import com.vitalys.dto.FranjaGymResponse;
 import com.vitalys.dto.LoginResponse;
@@ -271,6 +272,91 @@ class TurnoGymIT extends IntegrationTestBase {
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------ estado de gimnasio
+
+    private ResponseEntity<EstadoGymResponse> estado(String token, Long personaId) {
+        String ruta = "/api/turnos/gym/estado" + (personaId == null ? "" : "?personaId=" + personaId);
+        return llamar(HttpMethod.GET, ruta, null, token, EstadoGymResponse.class);
+    }
+
+    private HttpStatus estadoHttp(String token, Long personaId) {
+        String ruta = "/api/turnos/gym/estado" + (personaId == null ? "" : "?personaId=" + personaId);
+        return HttpStatus.valueOf(llamar(HttpMethod.GET, ruta, null, token, String.class).getStatusCode().value());
+    }
+
+    private int umbral() {
+        return jdbcTemplate.queryForObject("SELECT meses_tolerancia_morosidad FROM configuracion_gym WHERE id = 1", Integer.class);
+    }
+
+    @Test
+    void estadoGym_alDiaSuspendidoYConExcepcion_coincideConLaReserva() {
+        Socio alDia = socioAlDia();
+        EstadoGymResponse e = estado(alDia.token(), null).getBody();
+        assertThat(e).isEqualTo(new EstadoGymResponse(true, false, 0, umbral(), false));
+
+        Socio moroso = socioSuspendido();
+        EstadoGymResponse suspendido = estado(moroso.token(), null).getBody();
+        assertThat(suspendido.esSocioGym()).isTrue();
+        assertThat(suspendido.suspendido()).isTrue();
+        assertThat(suspendido.excepcionVigente()).isFalse();
+        assertThat(suspendido.periodosImpagos()).isGreaterThanOrEqualTo(suspendido.umbral());
+
+        Map<String, Object> exc = Map.of(
+                "personaId", moroso.persona().id(),
+                "motivo", "Plan de pago acordado",
+                "validaHasta", LocalDate.now(ZONA).plusMonths(1).toString(),
+                "unSoloUso", true);
+        llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class);
+        EstadoGymResponse conExcepcion = estado(moroso.token(), null).getBody();
+        assertThat(conExcepcion.suspendido()).isFalse();
+        assertThat(conExcepcion.excepcionVigente()).isTrue();
+        assertThat(conExcepcion.periodosImpagos()).isEqualTo(suspendido.periodosImpagos());
+
+        reservarOk(moroso.token(), franja(diaHabil(2), 15, 0));
+        EstadoGymResponse agotada = estado(moroso.token(), null).getBody();
+        assertThat(agotada.suspendido()).isTrue();
+        assertThat(agotada.excepcionVigente()).isFalse();
+    }
+
+    @Test
+    void estadoGym_matrizDeRoles() {
+        Socio a = socioAlDia();
+        Socio b = socioAlDia();
+
+        assertThat(estadoHttp(a.token(), a.persona().id())).isEqualTo(HttpStatus.OK);
+        assertThat(estadoHttp(a.token(), b.persona().id())).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(estado(tokenAdmin, b.persona().id()).getBody().esSocioGym()).isTrue();
+        assertThat(estadoHttp(tokenAdmin, null)).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(estadoHttp(tokenAdmin, 999_999_999L)).isEqualTo(HttpStatus.NOT_FOUND);
+
+        String emailProfesional = "prof-g-" + UUID.randomUUID() + "@vitalys.test";
+        Map<String, Object> datos = Map.of("nombre", "Nora", "apellido", "Gil", "especialidad", "NUTRICION", "duracionTurnoMinutos", 30);
+        llamar(HttpMethod.POST, "/api/profesionales", Map.of("email", emailProfesional, "contrasena", CLAVE, "datos", datos), tokenAdmin, String.class);
+        assertThat(estadoHttp(login(emailProfesional), null)).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String emailSinFicha = "sinficha-" + UUID.randomUUID() + "@vitalys.test";
+        usuarioRepository.save(new Usuario(emailSinFicha, passwordEncoder.encode(CLAVE), RolUsuario.SOCIO_PACIENTE));
+        assertThat(estadoHttp(login(emailSinFicha), null)).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void personaSinMembresiaDeGimnasio_estadoSinMembresiaYLaReservaLaRechazaElMotor() {
+        String email = "paciente-" + UUID.randomUUID() + "@mail.test";
+        Map<String, Object> datos = new LinkedHashMap<>();
+        datos.put("nombre", "Carlos");
+        datos.put("apellido", "Soto");
+        datos.put("dni", String.valueOf(ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999)));
+        datos.put("esSocioGym", false);
+        llamar(HttpMethod.POST, "/api/personas", Map.of("email", email, "contrasena", CLAVE, "datos", datos), tokenAdmin, PersonaResponse.class);
+        String token = login(email);
+
+        assertThat(estado(token, null).getBody()).isEqualTo(new EstadoGymResponse(false, false, 0, 0, false));
+
+        ResponseEntity<String> r = reservar(token, franja(diaHabil(2), 10, 0));
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("no tiene membresía de gimnasio");
     }
 
     @Test

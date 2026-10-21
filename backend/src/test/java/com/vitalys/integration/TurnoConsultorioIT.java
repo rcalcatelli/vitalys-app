@@ -14,10 +14,18 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -187,6 +195,118 @@ class TurnoConsultorioIT extends IntegrationTestBase {
         llamar(HttpMethod.PATCH, "/api/turnos/" + t.id() + "/cancelar", Map.of("motivo", "No puedo"), s.token(), String.class);
         assertThat(slots()[0].libre()).isTrue();
         assertThat(reservar(socio(false).token(), hora(9, 0)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void elDniDelPacienteSoloSeExponeEnLaAgendaDelProfesional() {
+        Socio s = socio(false);
+        String dni = s.persona().dni();
+        TurnoResponse t = llamar(
+                        HttpMethod.POST,
+                        "/api/turnos",
+                        Map.of("profesionalId", profesional.id(), "inicio", hora(9, 0).toString()),
+                        s.token(),
+                        TurnoResponse.class)
+                .getBody();
+
+        String agenda = llamar(
+                        HttpMethod.GET, "/api/turnos/mi-agenda?desde=" + dia + "&hasta=" + dia, null, tokenProfesional, String.class)
+                .getBody();
+        assertThat(agenda).contains("\"pacienteDni\":\"" + dni + "\"");
+
+        List<String> otras = List.of(
+                llamar(HttpMethod.GET, "/api/turnos/mis-turnos", null, s.token(), String.class).getBody(),
+                llamar(HttpMethod.GET, "/api/turnos/" + t.id(), null, s.token(), String.class).getBody(),
+                llamar(HttpMethod.GET, "/api/turnos/" + t.id(), null, tokenAdmin, String.class).getBody(),
+                llamar(HttpMethod.GET, "/api/turnos?tipo=CONSULTORIO&personaId=" + s.persona().id(), null, tokenAdmin, String.class)
+                        .getBody(),
+                llamar(
+                                HttpMethod.GET,
+                                "/api/turnos/disponibles?profesionalId=" + profesional.id() + "&fecha=" + dia,
+                                null,
+                                s.token(),
+                                String.class)
+                        .getBody());
+        assertThat(otras).allSatisfy(cuerpo -> assertThat(cuerpo).doesNotContain(dni).doesNotContainIgnoringCase("dni"));
+    }
+
+    /** PI-09: dos personas piden el mismo slot a la vez; la base decide, nunca dos 201. */
+    @Test
+    void pi09_dosReservasSimultaneasDelMismoSlot_unaGanaYLaOtraDa409() throws Exception {
+        for (OffsetDateTime slot : List.of(hora(9, 0), hora(9, 30), hora(10, 0))) {
+            String tokenA = socio(false).token();
+            String tokenB = socio(false).token();
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            CountDownLatch listos = new CountDownLatch(2);
+            CountDownLatch largada = new CountDownLatch(1);
+            try {
+                List<Future<Integer>> resultados = new ArrayList<>();
+                for (String token : List.of(tokenA, tokenB)) {
+                    resultados.add(pool.submit(() -> {
+                        listos.countDown();
+                        largada.await();
+                        return reservar(token, slot).getStatusCode().value();
+                    }));
+                }
+                assertThat(listos.await(10, TimeUnit.SECONDS)).isTrue();
+                largada.countDown();
+                List<Integer> estados = new ArrayList<>();
+                for (Future<Integer> f : resultados) {
+                    estados.add(f.get(30, TimeUnit.SECONDS));
+                }
+                assertThat(estados).as("slot %s", slot).containsExactlyInAnyOrder(201, 409);
+            } finally {
+                pool.shutdownNow();
+            }
+        }
+    }
+
+    /** PI-12: cancelar con menos de 24 h es tardía, pero antes del inicio el lugar se libera. */
+    @Test
+    void pi12_cancelacionTardiaAntesDelInicio_quedaCanceladoTardeYElSlotSeReserva() {
+        String email = "nutri-tarde-" + UUID.randomUUID() + "@vitalys.test";
+        Map<String, Object> datos = Map.of(
+                "nombre", "Lucía", "apellido", "Paz", "especialidad", "NUTRICION", "duracionTurnoMinutos", 30);
+        ProfesionalResponse otro = llamar(
+                        HttpMethod.POST,
+                        "/api/profesionales",
+                        Map.of("email", email, "contrasena", CLAVE, "datos", datos),
+                        tokenAdmin,
+                        ProfesionalResponse.class)
+                .getBody();
+        for (int diaSemana = 1; diaSemana <= 7; diaSemana++) {
+            jdbcTemplate.update(
+                    "INSERT INTO disponibilidad_profesional (profesional_id, dia_semana, hora_inicio, hora_fin) "
+                            + "VALUES (?, ?, '00:00', '23:59')",
+                    otro.id(),
+                    diaSemana);
+        }
+        OffsetDateTime slot = proximaMediaHora(OffsetDateTime.now(ZONA).plusHours(2));
+        if (slot.getHour() == 23 && slot.getMinute() == 30) {
+            slot = slot.plusMinutes(30); // el último turno debe terminar antes de las 23:59
+        }
+        Map<String, Object> pedido = Map.of("profesionalId", otro.id(), "inicio", slot.toString());
+
+        Socio primero = socio(false);
+        TurnoResponse t = llamar(HttpMethod.POST, "/api/turnos", pedido, primero.token(), TurnoResponse.class).getBody();
+
+        ResponseEntity<TurnoResponse> cancelado = llamar(
+                HttpMethod.PATCH, "/api/turnos/" + t.id() + "/cancelar", Map.of("motivo", "Me surgió algo"), primero.token(),
+                TurnoResponse.class);
+        assertThat(cancelado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(cancelado.getBody().estado().name()).isEqualTo("CANCELADO_TARDE");
+
+        ResponseEntity<TurnoResponse> otraPersona =
+                llamar(HttpMethod.POST, "/api/turnos", pedido, socio(false).token(), TurnoResponse.class);
+        assertThat(otraPersona.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    /** Primer múltiplo de 30 minutos que no es anterior a {@code desde}. */
+    private static OffsetDateTime proximaMediaHora(OffsetDateTime desde) {
+        OffsetDateTime base = desde.truncatedTo(ChronoUnit.MINUTES);
+        int resto = base.getMinute() % 30;
+        boolean exacto = resto == 0 && desde.equals(base);
+        return exacto ? base : base.plusMinutes(30 - resto);
     }
 
     @Test

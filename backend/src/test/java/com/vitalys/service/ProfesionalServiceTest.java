@@ -384,6 +384,38 @@ class ProfesionalServiceTest {
         verifyNoInteractions(profesionalRepository);
     }
 
+    // --- reactivación ---
+
+    @Test
+    void reactivar_dadoDeBaja_activaAlProfesionalYHabilitaAlUsuario() {
+        Profesional existente = profesional(10L, usuarioProfesional);
+        existente.darDeBaja();
+        usuarioProfesional.setActivo(false);
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(existente));
+
+        ProfesionalResponse r = service.reactivar(admin, 10L);
+
+        assertThat(r.activo()).isTrue();
+        assertThat(usuarioProfesional.getActivo()).isTrue();
+        verifyNoInteractions(disponibilidadRepository, cascada);
+    }
+
+    @Test
+    void reactivar_yaActivo_lanza409() {
+        when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, usuarioProfesional)));
+
+        assertThatThrownBy(() -> service.reactivar(admin, 10L)).isInstanceOf(ConflictoException.class);
+        verify(profesionalRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void reactivar_inexistente_404_yNoAdmin_403() {
+        when(profesionalRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reactivar(admin, 99L)).isInstanceOf(RecursoNoEncontradoException.class);
+        assertThatThrownBy(() -> service.reactivar(usuarioProfesional, 10L)).isInstanceOf(AccesoDenegadoException.class);
+    }
+
     @Test
     void impactoDeBaja_consultaTodosLosTurnosFuturos() {
         when(profesionalRepository.findById(10L)).thenReturn(Optional.of(profesional(10L, usuarioProfesional)));

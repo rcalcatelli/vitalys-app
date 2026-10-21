@@ -69,6 +69,11 @@ public class Profesional {
         this.activo = false;
     }
 
+    /** Vuelve a atender; las franjas borradas en la baja no se restauran (RN-25). */
+    public void reactivar() {
+        this.activo = true;
+    }
+
     public Long getId() {
         return id;
     }

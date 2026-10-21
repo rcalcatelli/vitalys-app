@@ -34,6 +34,17 @@ class ProfesionalTest {
     }
 
     @Test
+    void reactivar_vuelveAActivo_yConservaLosDatos() {
+        Profesional p = profesional();
+        p.darDeBaja();
+
+        p.reactivar();
+
+        assertThat(p.isActivo()).isTrue();
+        assertThat(p.getApellido()).isEqualTo("Rueda");
+    }
+
+    @Test
     void disponibilidad_guardaLaFranjaSemanal_ySePuedeEditar() {
         Profesional p = profesional();
         DisponibilidadProfesional d = new DisponibilidadProfesional(p, 1, LocalTime.of(8, 0), LocalTime.of(12, 0));

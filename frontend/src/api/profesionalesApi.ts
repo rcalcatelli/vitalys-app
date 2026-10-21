@@ -34,6 +34,11 @@ export function darDeBajaProfesional(id: number, confirmar: boolean): Promise<Pr
   return http.delete<Profesional>(`/api/profesionales/${id}?confirmar=${confirmar}`);
 }
 
+/** Reactivación: habilita de nuevo al profesional y su usuario. Vuelve sin franjas (la baja las borró, RN-25). */
+export function reactivar(id: number): Promise<Profesional> {
+  return http.patch<Profesional>(`/api/profesionales/${id}/reactivar`);
+}
+
 export function listarFranjas(id: number): Promise<FranjaApi[]> {
   return http.get<FranjaApi[]>(`/api/profesionales/${id}/disponibilidad`);
 }

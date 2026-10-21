@@ -20,6 +20,7 @@ function renderTabla(overrides: Partial<Parameters<typeof ProfesionalesTable>[0]
     onDisponibilidad: vi.fn(),
     onEditar: vi.fn(),
     onBaja: vi.fn(),
+    onReactivar: vi.fn(),
     ...overrides,
   };
   render(<ProfesionalesTable {...props} />);
@@ -75,12 +76,19 @@ describe("ProfesionalesTable", () => {
     expect(screen.queryByRole("button", { name: "Dar de baja" })).not.toBeInTheDocument();
   });
 
-  it("un profesional inactivo no tiene Disponibilidad ni menú (no hay Reactivar en el backend)", () => {
-    renderTabla();
+  it("un profesional inactivo tiene Disponibilidad deshabilitada y el menú ofrece Reactivar", async () => {
+    const user = userEvent.setup();
+    const props = renderTabla();
     const pablo = within(screen.getByTestId("profesional-2"));
     expect(pablo.getByRole("button", { name: "Disponibilidad de Lic. Pablo Ruiz" })).toBeDisabled();
-    expect(pablo.queryByRole("button", { name: /Más acciones/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Reactivar/ })).not.toBeInTheDocument();
+
+    await user.click(pablo.getByRole("button", { name: "Más acciones de Lic. Pablo Ruiz" }));
+    expect(screen.queryByRole("button", { name: "Dar de baja" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reactivar" }));
+
+    expect(props.onReactivar).toHaveBeenCalledWith(props.profesionales[1]);
+    expect(props.onBaja).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Reactivar" })).not.toBeInTheDocument();
   });
 
   it("deshabilita las acciones mientras hay una operación en curso", () => {

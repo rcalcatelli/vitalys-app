@@ -39,6 +39,7 @@ describe("BajaProfesionalDialog", () => {
     expect(screen.getByText("Lic. Valentina Méndez")).toBeInTheDocument();
     expect(screen.getByText("Nutrición · 30 min")).toBeInTheDocument();
     expect(screen.queryByText(/turnos? futuros?/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Podés reactivar su cuenta cuando quieras\./)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Dar de baja" }));
     expect(onConfirmar).toHaveBeenCalled();

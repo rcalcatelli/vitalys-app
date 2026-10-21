@@ -106,6 +106,7 @@ Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener cla
 | PUT    | `/api/profesionales/{id}` | Modificar nombre, apellido, especialidad y duración del turno | ADMIN |
 | GET    | `/api/profesionales/{id}/baja/impacto` | Paso 1 de la baja (RN-25): turnos futuros reservados que se cancelarían. Solo lectura | ADMIN |
 | DELETE | `/api/profesionales/{id}` | Paso 2 de la baja (RN-25): baja lógica (`activo = false`), franjas borradas y usuario deshabilitado. Sin turnos futuros se aplica directo; con turnos exige `confirmar=true` (si falta, 409 con el impacto) y los cancela en cascada (RN-24) | ADMIN |
+| PATCH  | `/api/profesionales/{id}/reactivar` | Reactivar un profesional dado de baja: `activo = true` y usuario habilitado (puede volver a iniciar sesión). Las franjas no se restauran (la baja las borró, RN-25): vuelve sin disponibilidad. 409 si ya está activo | ADMIN |
 | GET    | `/api/profesionales/{id}/disponibilidad` | Ver franjas horarias | Autenticado |
 | POST   | `/api/profesionales/{id}/disponibilidad` | Agregar franja. 409 si se solapa con otra del mismo día (RN-11) | ADMIN, PROFESIONAL (propio) |
 | PUT    | `/api/profesionales/{id}/disponibilidad` | Reemplazo total de la disponibilidad (batch, body `{franjas}`) en una transacción. Si alguna franja se solapa, no se aplica ninguna. Si deja turnos futuros sin cobertura exige `confirmar=true` (409 con el impacto si falta); devuelve la lista de franjas resultante | ADMIN, PROFESIONAL (propio) |

@@ -158,6 +158,22 @@ public class ProfesionalService {
         return ProfesionalResponse.de(guardar(profesional));
     }
 
+    /**
+     * Reactivación: vuelve a habilitar al profesional y a su usuario (puede iniciar sesión de nuevo).
+     * Las franjas se borraron en la baja (RN-25) y no se restauran: vuelve sin disponibilidad.
+     */
+    @Transactional
+    public ProfesionalResponse reactivar(Usuario actor, Long id) {
+        exigirAdmin(actor);
+        Profesional profesional = buscar(id);
+        if (profesional.isActivo()) {
+            throw new ConflictoException("El profesional ya está activo");
+        }
+        profesional.reactivar();
+        profesional.getUsuario().setActivo(true);
+        return ProfesionalResponse.de(guardar(profesional));
+    }
+
     private void aplicarDatos(Profesional profesional, ProfesionalDatosRequest datos) {
         profesional.setNombre(datos.nombre().trim());
         profesional.setApellido(datos.apellido().trim());

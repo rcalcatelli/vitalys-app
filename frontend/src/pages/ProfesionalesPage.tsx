@@ -149,6 +149,21 @@ export function ProfesionalesPage() {
     }
   }
 
+  async function reactivar(profesional: Profesional) {
+    setGuardando(true);
+    setAviso(null);
+    setErrorLista(null);
+    try {
+      await profesionalesApi.reactivar(profesional.id);
+      setAviso("Profesional reactivado. Cargá su disponibilidad para que pueda recibir turnos.");
+      await cargar();
+    } catch (err) {
+      setErrorLista(mensajeDeError(err));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   const visibles = profesionales.filter((p) => coincide(p, filtro, texto));
 
   return (
@@ -227,6 +242,7 @@ export function ProfesionalesPage() {
             onDisponibilidad={(p) => navigate(`/admin/profesionales/${p.id}/disponibilidad`)}
             onEditar={(p) => abrir({ modo: "edicion", profesional: p })}
             onBaja={(p) => void abrirBaja(p)}
+            onReactivar={(p) => void reactivar(p)}
           />
         )}
       </section>

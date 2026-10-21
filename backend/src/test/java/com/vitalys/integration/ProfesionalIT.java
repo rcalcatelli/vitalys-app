@@ -298,6 +298,50 @@ class ProfesionalIT extends IntegrationTestBase {
                 .isTrue();
     }
 
+    @Test
+    void reactivar_trasLaBaja_devuelveAlProfesionalSinFranjasYPuedeLoguearse() {
+        String email = emailNuevo();
+        ProfesionalResponse creado = crearProfesional(email);
+        jdbcTemplate.update(
+                "INSERT INTO disponibilidad_profesional (profesional_id, dia_semana, hora_inicio, hora_fin) "
+                        + "VALUES (?, 1, '09:00', '13:00')",
+                creado.id());
+        llamar(HttpMethod.DELETE, "/api/profesionales/" + creado.id(), null, tokenAdmin, ProfesionalResponse.class);
+
+        ResponseEntity<ProfesionalResponse> r = llamar(
+                HttpMethod.PATCH, "/api/profesionales/" + creado.id() + "/reactivar", null, tokenAdmin, ProfesionalResponse.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody().activo()).isTrue();
+        assertThat(jdbcTemplate.queryForObject("SELECT activo FROM usuarios WHERE email = ?", Boolean.class, email))
+                .isTrue();
+        assertThat(login(email)).isNotBlank();
+        // Las franjas se borraron en la baja (RN-25) y no vuelven
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM disponibilidad_profesional WHERE profesional_id = ?",
+                        Integer.class,
+                        creado.id()))
+                .isZero();
+        // Y no se puede reactivar dos veces
+        assertThat(llamar(HttpMethod.PATCH, "/api/profesionales/" + creado.id() + "/reactivar", null, tokenAdmin, String.class)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void reactivar_comoNoAdmin_devuelve403_einexistente_devuelve404() {
+        String email = emailNuevo();
+        ProfesionalResponse creado = crearProfesional(email);
+        String tokenProfesional = login(email);
+
+        assertThat(llamar(HttpMethod.PATCH, "/api/profesionales/" + creado.id() + "/reactivar", null, tokenProfesional, String.class)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(llamar(HttpMethod.PATCH, "/api/profesionales/999999999/reactivar", null, tokenAdmin, String.class)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     private PersonaResponse crearPaciente() {
         Map<String, Object> datos = new LinkedHashMap<>();
         datos.put("nombre", "Pedro");

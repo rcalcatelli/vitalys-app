@@ -43,7 +43,8 @@ export function BajaProfesionalDialog({
         </span>
       </div>
       <p className="text-ink-2">
-        {profesional.nombre} {profesional.apellido} no podrá ingresar ni recibir turnos.
+        {profesional.nombre} {profesional.apellido} no podrá ingresar ni recibir turnos. Podés
+        reactivar su cuenta cuando quieras.
       </p>
 
       {impacto === null && !error && (

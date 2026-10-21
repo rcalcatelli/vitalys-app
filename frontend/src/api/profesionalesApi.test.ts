@@ -4,6 +4,7 @@ import {
   actualizarProfesional,
   crearProfesional,
   darDeBajaProfesional,
+  reactivar,
   impactoDeBaja,
   impactoDeDisponibilidad,
   impactoDeError,
@@ -52,6 +53,7 @@ describe("profesionalesApi", () => {
       "DELETE",
       "/api/profesionales/3?confirmar=true",
     ],
+    ["reactivar", () => reactivar(3), "PATCH", "/api/profesionales/3/reactivar"],
     ["listarFranjas", () => listarFranjas(3), "GET", "/api/profesionales/3/disponibilidad"],
   ])("%s", async (_nombre, llamar, method, url) => {
     await llamar();

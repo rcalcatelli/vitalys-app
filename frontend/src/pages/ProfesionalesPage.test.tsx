@@ -17,6 +17,7 @@ vi.mock("../api/profesionalesApi", async (importOriginal) => {
     actualizarProfesional: vi.fn(),
     impactoDeBaja: vi.fn(),
     darDeBajaProfesional: vi.fn(),
+    reactivar: vi.fn(),
   };
 });
 
@@ -253,6 +254,36 @@ describe("ProfesionalesPage", () => {
     expect(
       screen.getByRole("button", { name: "Cancelar 1 turno y dar de baja" }),
     ).toBeInTheDocument();
+  });
+
+  it("reactiva a un profesional inactivo desde el menú ⋯ y recuerda cargar su disponibilidad", async () => {
+    const user = userEvent.setup();
+    vi.mocked(profesionalesApi.reactivar).mockResolvedValue({ ...pablo, activo: true });
+    renderPage();
+    await screen.findByText("Lic. Pablo Ruiz");
+
+    await user.click(screen.getByRole("button", { name: "Más acciones de Lic. Pablo Ruiz" }));
+    await user.click(screen.getByRole("button", { name: "Reactivar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Profesional reactivado. Cargá su disponibilidad",
+    );
+    expect(profesionalesApi.reactivar).toHaveBeenCalledWith(2);
+    expect(profesionalesApi.listarProfesionales).toHaveBeenCalledTimes(2);
+  });
+
+  it("muestra el error si la reactivación falla", async () => {
+    const user = userEvent.setup();
+    vi.mocked(profesionalesApi.reactivar).mockRejectedValue(
+      new ApiError(409, "El profesional ya está activo"),
+    );
+    renderPage();
+    await screen.findByText("Lic. Pablo Ruiz");
+
+    await user.click(screen.getByRole("button", { name: "Más acciones de Lic. Pablo Ruiz" }));
+    await user.click(screen.getByRole("button", { name: "Reactivar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("El profesional ya está activo");
   });
 
   it("muestra otros errores de la baja y los del impacto", async () => {

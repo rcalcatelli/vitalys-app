@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -106,6 +107,14 @@ public class ProfesionalController {
             @Parameter(description = "true = confirma la cancelación de los turnos afectados") @RequestParam(defaultValue = "false")
                     boolean confirmar) {
         return profesionalService.darDeBaja(actor, id, confirmar);
+    }
+
+    @PatchMapping("/{id}/reactivar")
+    @Operation(
+            summary = "Reactivar profesional",
+            description = "activo = true y usuario habilitado. Vuelve sin franjas: la baja las borró (RN-25). ADMIN. 409 si ya está activo.")
+    public ProfesionalResponse reactivar(@AuthenticationPrincipal Usuario actor, @PathVariable Long id) {
+        return profesionalService.reactivar(actor, id);
     }
 
     @GetMapping("/{id}/disponibilidad")

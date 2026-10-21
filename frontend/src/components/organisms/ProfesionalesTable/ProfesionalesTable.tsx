@@ -8,6 +8,7 @@ export interface ProfesionalesTableProps {
   onDisponibilidad: (profesional: Profesional) => void;
   onEditar: (profesional: Profesional) => void;
   onBaja: (profesional: Profesional) => void;
+  onReactivar: (profesional: Profesional) => void;
   /** Deshabilita las acciones mientras hay una operación en curso. */
   ocupado?: boolean;
 }
@@ -21,14 +22,15 @@ const chipBase =
  * una tarjeta por profesional (calco del mockup). Es el mismo markup con grillas
  * distintas, así no se duplica el árbol ni los controles.
  *
- * "Reactivar" no está: el backend no expone un endpoint de reactivación de profesionales,
- * por eso un profesional inactivo solo se ve (sin Disponibilidad ni menú).
+ * El menú ⋯ ofrece "Dar de baja" a un profesional activo y "Reactivar" a uno inactivo
+ * (que además tiene la Disponibilidad deshabilitada hasta que vuelva a estar activo).
  */
 export function ProfesionalesTable({
   profesionales,
   onDisponibilidad,
   onEditar,
   onBaja,
+  onReactivar,
   ocupado = false,
 }: ProfesionalesTableProps) {
   const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
@@ -113,42 +115,41 @@ export function ProfesionalesTable({
                 >
                   Editar
                 </Button>
-                {p.activo && (
-                  <span className="relative flex">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={ocupado}
-                      aria-label={`Más acciones de ${nombre}`}
-                      aria-expanded={menuAbierto}
-                      className="w-11 font-bold min-[1100px]:w-9 min-[1100px]:px-0"
-                      onClick={() => setMenuAbiertoId(menuAbierto ? null : p.id)}
-                    >
-                      ⋯
-                    </Button>
-                    {menuAbierto && (
-                      <>
-                        <div
-                          role="presentation"
-                          onClick={() => setMenuAbiertoId(null)}
-                          className="fixed inset-0 z-40"
-                        />
-                        <div className="absolute top-[calc(100%+4px)] right-0 z-41 min-w-44 rounded-lg border border-border bg-surface p-1 shadow-lg">
-                          <button
-                            type="button"
-                            className="h-11 w-full rounded-md px-3 text-left text-sm font-semibold text-bad-ink hover:bg-surface-2"
-                            onClick={() => {
-                              setMenuAbiertoId(null);
-                              onBaja(p);
-                            }}
-                          >
-                            Dar de baja
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </span>
-                )}
+                <span className="relative flex">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={ocupado}
+                    aria-label={`Más acciones de ${nombre}`}
+                    aria-expanded={menuAbierto}
+                    className="w-11 font-bold min-[1100px]:w-9 min-[1100px]:px-0"
+                    onClick={() => setMenuAbiertoId(menuAbierto ? null : p.id)}
+                  >
+                    ⋯
+                  </Button>
+                  {menuAbierto && (
+                    <>
+                      <div
+                        role="presentation"
+                        onClick={() => setMenuAbiertoId(null)}
+                        className="fixed inset-0 z-40"
+                      />
+                      <div className="absolute top-[calc(100%+4px)] right-0 z-41 min-w-44 rounded-lg border border-border bg-surface p-1 shadow-lg">
+                        <button
+                          type="button"
+                          className={`h-11 w-full rounded-md px-3 text-left text-sm font-semibold hover:bg-surface-2 ${p.activo ? "text-bad-ink" : "text-clin-ink"}`}
+                          onClick={() => {
+                            setMenuAbiertoId(null);
+                            if (p.activo) onBaja(p);
+                            else onReactivar(p);
+                          }}
+                        >
+                          {p.activo ? "Dar de baja" : "Reactivar"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </span>
               </span>
             </li>
           );

@@ -121,6 +121,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 **Flujo:** seleccionar tipo → (si consultorio) elegir profesional → elegir fecha → elegir slot → confirmar.  
 **Reglas:** slots ocupados no son clicables. Si el turno es de gimnasio y el socio está **suspendido** (períodos impagos ≥ `configuracion_gym.meses_tolerancia_morosidad`, sin excepción vigente), los slots se reemplazan por el aviso; con deuda por debajo del umbral los slots se muestran normalmente (RN-01). Confirmación muestra resumen antes de POSTear.
 
+> **Implementación (Sprint 4).** El selector de tipo no es un control de esta pantalla: la reserva quedó en dos rutas, `/socio/reservar-consultorio` (este wireframe: especialidad → profesional → día → slot → modal de confirmación) y `/socio/reservar-gimnasio` (W-08). Si otra persona toma el slot antes (409), se avisa y se recarga la grilla.
+
 ---
 
 ## W-03 — Agenda del profesional
@@ -158,6 +160,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 ```
 
 **Acciones:** el profesional puede marcar COMPLETADO o AUSENTE sobre turnos en estado RESERVADO del día actual o anteriores. No puede cancelar ni editar datos de la persona.
+
+> **Implementación (Sprint 4).** La agenda se resolvió como una lista agrupada por día (de hoy a siete días, `GET /api/turnos/mi-agenda`) y no como grilla semanal por franja horaria. Cada turno muestra nombre y DNI del paciente —el DNI llega en `pacienteDni`, solo para el PROFESIONAL—; el email no se expone. COMPLETADO se habilita desde 15 minutos antes del inicio y AUSENTE desde el inicio, y un turno completado se muestra con el chip "Atendido" sin opción de deshacer.
 
 ---
 
@@ -331,7 +335,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 ```
 
 **Flujo:** elegir fecha → ver franjas de 60 minutos con el cupo ocupado/total de cada una → reservar una franja libre → confirmar.
-**Reglas:** solo se listan franjas dentro de la grilla del gimnasio, entendida de apertura a cierre: L-V de 07:00 a 21:00 —última franja **20:00–21:00**— y sábados de 09:00 a 12:00 —última franja **11:00–12:00**—. Domingos y feriados no muestran ninguna franja; en un feriado se indica el motivo. Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si el socio está **suspendido** —períodos impagos acumulados ≥ `configuracion_gym.meses_tolerancia_morosidad`— y no tiene excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Tener deuda **por debajo** del umbral no oculta las franjas: el socio reserva normalmente y el aviso de deuda llega por notificación (RF-37, RN-01). Confirmar envía `POST /api/turnos/gym {persona_id, inicio}` — la ruta propia del gimnasio, distinta de `POST /api/turnos`, que es la de consultorio y exige `profesional_id`.
+**Reglas:** solo se listan franjas dentro de la grilla del gimnasio, entendida de apertura a cierre: L-V de 07:00 a 21:00 —última franja **20:00–21:00**— y sábados de 09:00 a 12:00 —última franja **11:00–12:00**—. Domingos y feriados no muestran ninguna franja; en un feriado se indica el motivo. Una franja con `ocupados = cupo_por_franja` (tabla `configuracion_gym`) aparece como "cupo completo" y no es clicable. Si la persona ya tiene un turno de gym ese día, no se ofrecen más franjas (un turno de gym por persona y por día). Si el socio está **suspendido** —períodos impagos acumulados ≥ `configuracion_gym.meses_tolerancia_morosidad`— y no tiene excepción vigente (ver UC21), las franjas se reemplazan por el aviso, igual que en W-02. Tener deuda **por debajo** del umbral no oculta las franjas: el socio reserva normalmente y el aviso de deuda llega por notificación (RF-37, RN-01). Confirmar envía `POST /api/turnos/gym {persona_id, inicio}` — la ruta propia del gimnasio, distinta de `POST /api/turnos`, que es la de consultorio y exige `profesional_id`. **Orden de la pantalla:** antes de pedir el cupo se consulta `GET /api/turnos/gym/estado`; si la persona no es socia de gimnasio o está suspendida sin excepción vigente, se muestra el aviso y no se ofrecen días ni franjas (el bloqueo va antes que las franjas).
 
 ---
 

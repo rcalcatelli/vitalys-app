@@ -126,6 +126,15 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T4-15 | Job de pasaje automático a `AUSENTE` al cerrar la franja de gym, con mitigación de cold-start de Render (ver RG-14) | R. Calcatelli | 3 h |
 | T4-16 | Tests de gimnasio: grilla, cupo, un turno por día, check-in, liberación de cupo al cancelar (PI-30 a PI-36 y PI-84 a PI-87) | Ambos | 3 h |
 
+**Estado real de las tareas de frontend (T4-8 a T4-11), rama `feat/6-s4-turnos-frontend`:**
+
+| ID | Estado | Detalle |
+|----|--------|---------|
+| T4-8 | ✅ | La reserva quedó en dos pantallas, una por tipo de turno: gimnasio (`/socio/reservar-gimnasio`, W-08) y consultorio (`/socio/reservar-consultorio`, W-02). La de gimnasio consulta primero `GET /api/turnos/gym/estado` y bloquea la reserva si el socio no tiene membresía o está suspendido |
+| T4-9 | ✅ | Agenda del profesional (`/profesional/agenda`, W-03) como lista agrupada por día, de hoy a siete días, con nombre y DNI del paciente; COMPLETADO y AUSENTE se habilitan según la ventana horaria que valida el backend |
+| T4-10 | ✅ | Mis turnos (`/socio/turnos`) con cancelación y motivo obligatorio, indicando si la cancelación es en término (24 h consultorio, 2 h gimnasio) |
+| T4-11 | 🔄 Parcial | Cubiertos PI-09 y PI-12 (consultorio) y los nuevos PI-88 a PI-90; PI-13 y PI-15 (cancelación con la franja ya iniciada) siguen sin IT propio |
+
 **Criterio de cierre:** la BD rechaza solapamientos por EXCLUDE; el servicio aplica la regla de 24 h; AUSENTE y COMPLETADO solo los puede marcar el profesional (consultorio) o el ADMIN vía check-in (gimnasio); la reserva de gym respeta grilla y cupo por franja, y cancelar libera el cupo.
 
 ---

@@ -141,6 +141,7 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-13 | Cancelación con la franja **ya iniciada** (`cancelado_en >= inicio`) | 200; el slot sigue ocupado: otra reserva en ese horario da 409 |
 | PI-14 | Cupo de gimnasio tras una cancelación previa al inicio         | La franja vuelve a admitir una reserva: 201      |
 | PI-15 | Cupo de gimnasio tras una cancelación con la franja iniciada   | La franja sigue completa: 409 "Cupo completo"    |
+| PI-90 | El DNI del paciente solo se expone en la agenda del profesional | `GET /api/turnos/mi-agenda` (PROFESIONAL) incluye `pacienteDni`; `GET /api/turnos/mis-turnos`, `GET /api/turnos/{id}` (socio y ADMIN), `GET /api/turnos` (ADMIN) y `GET /api/turnos/disponibles` no incluyen el DNI |
 
 ### Gimnasio
 
@@ -183,6 +184,8 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-85 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
 | PI-86 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
 | PI-87 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
+| PI-88 | Estado de gimnasio (`GET /api/turnos/gym/estado`) de un socio al día, uno suspendido y uno suspendido con excepción; matriz de roles | Al día: `suspendido = false`. Suspendido: `suspendido = true` con `periodosImpagos >= umbral`. Con excepción de un solo uso: `suspendido = false`, `excepcionVigente = true`, y vuelve a `suspendido = true` cuando la reserva la agota. El veredicto coincide con el de la reserva. Roles: socio propio → 200, socio ajeno → 403, ADMIN con `personaId` → 200, ADMIN sin `personaId` → 400, ADMIN con persona inexistente → 404, PROFESIONAL → 403, socio sin ficha → 422 |
+| PI-89 | Persona con `es_socio_gym = false`: estado y reserva | El estado responde `esSocioGym = false` (y `umbral = 0`); la reserva da 422 con "no tiene membresía de gimnasio" (la rechaza el motor, ver PI-84) |
 
 > **PI-59, reinterpretación aceptada.** El enunciado original ("o queda todo, o no queda nada") mezclaba dos cosas. La **cascada es atómica sobre los datos**: disponibilidad, cancelaciones y filas de notificación se guardan juntas o no se guarda nada (lo cubre `siElCambioDeDisponibilidadFalla_laCascadaSeRevierteCompleta`). El **email, en cambio, es un efecto externo** que no puede participar de la transacción: se despacha después del commit y su falla no deshace una cancelación ya decidida —sería peor dejar turnos de terceros vivos en un horario que el profesional ya no atiende—. Por eso la falla se resuelve con reintento y alerta, no con rollback.
 
@@ -197,6 +200,17 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 > **Implementación (Sprint 5, Profesionales).** PI-53 a PI-60 los ejercita `CascadaDisponibilidadIT`
 > (PI-59 en su variante de email, `CascadaEmailFallidoIT`), con fechas calculadas relativas a "ahora"
 > para que el escenario no caduque. Estos ITs corren solo contra Postgres real (Testcontainers) en CI.
+
+> **Implementación (Sprint 4, consultorio y frontend).** `TurnoConsultorioIT` cubre PI-09
+> (`pi09_dosReservasSimultaneasDelMismoSlot_unaGanaYLaOtraDa409`: dos hilos piden el mismo slot a
+> la vez; uno recibe 201 y el otro 409, decide la base) y PI-12
+> (`pi12_cancelacionTardiaAntesDelInicio_quedaCanceladoTardeYElSlotSeReserva`: cancelar con menos
+> de 24 h da `CANCELADO_TARDE` y otra persona reserva el mismo slot con 201). PI-90 es
+> `elDniDelPacienteSoloSeExponeEnLaAgendaDelProfesional`. `TurnoGymIT` cubre PI-88
+> (`estadoGym_alDiaSuspendidoYConExcepcion_coincideConLaReserva` y `estadoGym_matrizDeRoles`) y
+> PI-89 (`personaSinMembresiaDeGimnasio_estadoSinMembresiaYLaReservaLaRechazaElMotor`).
+> **Pendiente:** PI-13 y PI-15 (cancelación con la franja ya iniciada) todavía no tienen un IT
+> propio; quedan como seguimiento.
 
 > **Implementación (Sprint 4, gimnasio).** `TurnoServiceTest` cubre TU-03 a TU-06, TU-08 y
 > TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09, con la

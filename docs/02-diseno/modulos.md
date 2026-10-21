@@ -167,9 +167,10 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 |--------|------|-------------|-------|
 | GET    | `/api/turnos/disponibles` | Slots libres de consultorio por profesional y fecha | Autenticado |
 | GET    | `/api/turnos/gym/cupo` | Cupo disponible de gimnasio por franja y fecha (total, ocupados, disponibles) | Autenticado |
+| GET    | `/api/turnos/gym/estado` | Membresía y morosidad de una persona de cara al gimnasio, con el mismo veredicto que la reserva (ver detalle abajo) | SOCIO_PACIENTE (el propio), ADMIN |
 | GET    | `/api/turnos` | Listar turnos (filtros: persona, profesional, tipo, estado, fecha) | ADMIN |
 | GET    | `/api/turnos/mis-turnos` | Turnos propios del usuario autenticado (consultorio y gym) | SOCIO_PACIENTE |
-| GET    | `/api/turnos/mi-agenda` | Agenda del profesional autenticado (solo turnos de CONSULTORIO) | PROFESIONAL |
+| GET    | `/api/turnos/mi-agenda` | Agenda del profesional autenticado (solo turnos de CONSULTORIO). Devuelve `TurnoAgendaResponse`: incluye el `pacienteDni`, que ningún otro endpoint de turnos expone. Parámetros opcionales `desde` y `hasta` (por defecto, de hoy a siete días) | PROFESIONAL |
 | POST   | `/api/turnos` | Reservar turno de consultorio | SOCIO_PACIENTE, ADMIN |
 | POST   | `/api/turnos/gym` | Reservar turno de gimnasio | SOCIO_PACIENTE, ADMIN |
 | PATCH  | `/api/turnos/{id}/cancelar` | Cancelar turno (24h en consultorio, 2h en gym) | SOCIO_PACIENTE, ADMIN |
@@ -178,6 +179,18 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 | GET    | `/api/turnos/{id}` | Detalle de un turno | ADMIN, partes involucradas |
 | GET    | `/api/feriados` | Días en que el gimnasio no abre, por año. Lo consume la pantalla de reserva para no ofrecer franjas en un día cerrado (RN-14) | Autenticado |
 | POST   | `/api/admin/feriados/sincronizar` | Forzar la sincronización con el dataset oficial del Ministerio del Interior. Devuelve `207` si algún año no se pudo leer (RF-38) | ADMIN |
+
+**`GET /api/turnos/gym/estado`.** Existe para que la pantalla de reserva de gimnasio sepa, *antes* de mostrar franjas, si la persona puede reservar, y para que lo diga con el mismo criterio que después aplica `POST /api/turnos/gym` (RN-01, RN-09): lo calcula el mismo servicio, no una copia de la regla en el frontend.
+
+| Aspecto | Detalle |
+|---------|---------|
+| Parámetro | `personaId` (opcional). El SOCIO_PACIENTE consulta el suyo: si lo envía debe ser el propio |
+| Respuesta `200` | `{esSocioGym, suspendido, periodosImpagos, umbral, excepcionVigente}`. `suspendido` es el veredicto efectivo: ya descuenta una excepción vigente (RN-09). `excepcionVigente` es `true` solo si la persona superaba el umbral y una excepción la habilita. Una persona sin membresía de gimnasio devuelve `esSocioGym = false` y el resto en cero/`false` |
+| `400` | ADMIN sin `personaId` |
+| `401` | Sin token |
+| `403` | SOCIO_PACIENTE pidiendo el estado de otra persona; PROFESIONAL (no tiene turnos de gimnasio) |
+| `404` | ADMIN con un `personaId` que no existe |
+| `422` | Usuario SOCIO_PACIENTE cuya ficha en `personas` todavía no fue cargada por el centro |
 
 **Entidades involucradas:** `turnos`, `personas`, `profesionales`, `disponibilidad_profesional`, `configuracion_gym`, `pagos` (consulta de deuda), `excepciones_morosidad`
 

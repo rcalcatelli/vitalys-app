@@ -177,7 +177,7 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     @Test
-    void unTurnoDeGimnasioPorDia_segundoDa409() {
+    void pi85_unTurnoDeGimnasioPorDia_segundoDa409() {
         Socio s = socioAlDia();
         LocalDate dia = diaHabil(2);
         reservarOk(s.token(), franja(dia, 8, 0));
@@ -198,7 +198,7 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     @Test
-    void pi11_pi14_cancelarEnTiempoLiberaElCupo() {
+    void pi11_pi14_pi87_cancelarEnTiempoLiberaElCupo() {
         Socio s = socioAlDia();
         LocalDate dia = diaHabil(2);
         int antes = ocupados(dia, 12);
@@ -217,7 +217,7 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     @Test
-    void pi35_cupoCompleto_da422() {
+    void pi86_cupoCompleto_da422() {
         LocalDate dia = diaHabil(4);
         Socio a = socioAlDia();
         Socio b = socioAlDia();

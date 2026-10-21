@@ -124,7 +124,7 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T4-13 | GET /api/turnos/disponibles con cupo restante por franja de gym (ocupados / `cupo_por_franja`) | R. Calcatelli | 2 h |
 | T4-14 | PATCH /api/turnos/{id}/completado — el ADMIN marca el check-in del turno de gimnasio | R. Calcatelli | 2 h |
 | T4-15 | Job de pasaje automático a `AUSENTE` al cerrar la franja de gym, con mitigación de cold-start de Render (ver RG-14) | R. Calcatelli | 3 h |
-| T4-16 | Tests de gimnasio: grilla, cupo, un turno por día, check-in, liberación de cupo al cancelar (PI-30 a PI-36) | Ambos | 3 h |
+| T4-16 | Tests de gimnasio: grilla, cupo, un turno por día, check-in, liberación de cupo al cancelar (PI-30 a PI-36 y PI-84 a PI-87) | Ambos | 3 h |
 
 **Criterio de cierre:** la BD rechaza solapamientos por EXCLUDE; el servicio aplica la regla de 24 h; AUSENTE y COMPLETADO solo los puede marcar el profesional (consultorio) o el ADMIN vía check-in (gimnasio); la reserva de gym respeta grilla y cupo por franja, y cancelar libera el cupo.
 

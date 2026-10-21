@@ -84,4 +84,22 @@ describe("http", () => {
       expect((err as ApiError).status).toBe(401);
     }
   });
+  it("ApiError conserva el body de la respuesta de error (p. ej. el impacto de un 409)", async () => {
+    const impacto = { cantidad: 1, turnos: [] };
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(409, { message: "Hay turnos", impacto }));
+
+    await expect(http.delete("/api/profesionales/1")).rejects.toMatchObject({
+      status: 409,
+      body: { impacto },
+    });
+  });
+
+  it("delete usa el método DELETE y devuelve undefined ante un 204", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(204));
+
+    await expect(http.delete("/api/profesionales/1/disponibilidad/2")).resolves.toBeUndefined();
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(init?.method).toBe("DELETE");
+  });
 });

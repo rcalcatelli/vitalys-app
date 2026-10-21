@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "../pages/LoginPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
+import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
 import { RoleGuard } from "./RoleGuard";
@@ -32,6 +33,15 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <PersonasPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/profesionales"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <ProfesionalesPage />
           </RoleGuard>
         }
       />

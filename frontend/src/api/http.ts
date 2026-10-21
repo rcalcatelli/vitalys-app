@@ -23,11 +23,14 @@ export function clearToken(): void {
 
 export class ApiError extends Error {
   readonly status: number;
+  /** Body JSON de la respuesta de error (si lo había): p. ej. el `impacto` de un 409 de RN-24/RN-25. */
+  readonly body: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -64,15 +67,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     let message = `Error ${response.status}`;
+    let errorBody: unknown;
     try {
       const data = (await response.json()) as ErrorResponseBody;
+      errorBody = data;
       if (data.message) {
         message = data.message;
       }
     } catch {
       // Body sin JSON (o vacío): se conserva el mensaje genérico.
     }
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, errorBody);
   }
 
   if (response.status === 204) {
@@ -89,4 +94,5 @@ export const http = {
   put: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "PUT", body }),
   patch: <T>(path: string, body?: unknown): Promise<T> =>
     request<T>(path, { method: "PATCH", body }),
+  delete: <T>(path: string): Promise<T> => request<T>(path, { method: "DELETE" }),
 };

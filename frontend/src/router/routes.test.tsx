@@ -48,13 +48,16 @@ describe("AppRoutes", () => {
     expect(screen.queryByLabelText(/rol/i)).not.toBeInTheDocument();
   });
 
-  it.each(["/admin/dashboard", "/admin/personas", "/profesional/agenda", "/socio/turnos"])(
-    "%s sin sesión redirige a /login (RoleGuard)",
-    async (path) => {
-      renderAt(path);
-      await waitFor(() =>
-        expect(screen.getByRole("button", { name: "Ingresar" })).toBeInTheDocument(),
-      );
-    },
-  );
+  it.each([
+    "/admin/dashboard",
+    "/admin/personas",
+    "/admin/profesionales",
+    "/profesional/agenda",
+    "/socio/turnos",
+  ])("%s sin sesión redirige a /login (RoleGuard)", async (path) => {
+    renderAt(path);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Ingresar" })).toBeInTheDocument(),
+    );
+  });
 });

@@ -7,6 +7,7 @@ import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
+import { ReservarConsultorioPage } from "../pages/ReservarConsultorioPage";
 import { ReservarGimnasioPage } from "../pages/ReservarGimnasioPage";
 import { RoleGuard } from "./RoleGuard";
 
@@ -98,7 +99,7 @@ export function AppRoutes() {
         path="/socio/reservar-consultorio"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <PlaceholderHomePage title="Turno de consultorio" />
+            <ReservarConsultorioPage />
           </RoleGuard>
         }
       />

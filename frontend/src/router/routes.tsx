@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { LoginPage } from "../pages/LoginPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
@@ -42,6 +43,24 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <ProfesionalesPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/profesionales/:id/disponibilidad"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <DisponibilidadPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/profesional/disponibilidad"
+        element={
+          <RoleGuard allowedRoles={["PROFESIONAL"]}>
+            <DisponibilidadPage />
           </RoleGuard>
         }
       />

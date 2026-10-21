@@ -57,4 +57,11 @@ describe("useFeriados", () => {
     rerender({ anio: 2026 });
     await waitFor(() => expect(result.current.feriados).toEqual([navidad]));
   });
+
+  it("con null no consulta nada", () => {
+    const { result } = renderHook(() => useFeriados(null));
+    expect(result.current.cargando).toBe(false);
+    expect(result.current.feriadoDe("2026-12-25")).toBeUndefined();
+    expect(feriadosApi.listarFeriados).not.toHaveBeenCalled();
+  });
 });

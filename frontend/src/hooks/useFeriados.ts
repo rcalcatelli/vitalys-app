@@ -14,9 +14,9 @@ interface Resultado {
 
 /**
  * Feriados del año pedido, con caché por año (una sola request aunque el usuario navegue de día).
- * Guarda la promesa, no el resultado, para que dos renders del mismo año compartan el request.
+ * Con `null` no consulta nada (para no pedir dos veces el mismo año). Guarda la promesa, no el resultado, para que dos renders del mismo año compartan el request.
  */
-export function useFeriados(anio: number): Resultado {
+export function useFeriados(anio: number | null): Resultado {
   const cache = useRef(new Map<number, Promise<Feriado[]>>());
   const [estado, setEstado] = useState<{
     anio: number;
@@ -25,6 +25,7 @@ export function useFeriados(anio: number): Resultado {
   } | null>(null);
 
   useEffect(() => {
+    if (anio === null) return;
     let vigente = true;
     let promesa = cache.current.get(anio);
     if (!promesa) {
@@ -44,6 +45,8 @@ export function useFeriados(anio: number): Resultado {
     };
   }, [anio]);
 
+  if (anio === null)
+    return { feriados: [], cargando: false, error: false, feriadoDe: () => undefined };
   const listo = estado?.anio === anio;
   const feriados = listo ? estado.feriados : [];
   return {

@@ -7,6 +7,7 @@ import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
+import { ReservarGimnasioPage } from "../pages/ReservarGimnasioPage";
 import { RoleGuard } from "./RoleGuard";
 
 /**
@@ -88,7 +89,7 @@ export function AppRoutes() {
         path="/socio/reservar-gimnasio"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <PlaceholderHomePage title="Reservar gimnasio" />
+            <ReservarGimnasioPage />
           </RoleGuard>
         }
       />

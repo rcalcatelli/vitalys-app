@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setToken } from "../api/http";
 import { AuthProvider } from "../context/AuthContext";
+import { unEstadoGym } from "../test/turnoFixture";
 import { AppRoutes } from "./routes";
 
 function renderAt(path: string) {
@@ -68,11 +69,17 @@ describe("AppRoutes", () => {
 
   function sesionComo(rol: string) {
     setToken(`jwt-${rol}`);
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ id: 1, email: "u@vitalys.test", rol }),
-    } as Response);
+    vi.mocked(fetch).mockImplementation((entrada) => {
+      const url = String(entrada);
+      let cuerpo: unknown = [];
+      if (url.includes("/api/auth/me")) cuerpo = { id: 1, email: "u@vitalys.test", rol };
+      else if (url.includes("/gym/estado")) cuerpo = unEstadoGym();
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(cuerpo),
+      } as Response);
+    });
   }
 
   it.each([

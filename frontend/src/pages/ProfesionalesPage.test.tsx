@@ -8,6 +8,12 @@ import { unProfesional } from "../test/profesionalFixture";
 import { renderWithRouter } from "../test/renderWithRouter";
 import { ProfesionalesPage } from "./ProfesionalesPage";
 
+// El AdminNav consulta las notificaciones fallidas: sin esto dispararía un fetch real.
+vi.mock(
+  "../api/notificacionesApi",
+  async () => (await import("../test/notificacionesApiMock")).notificacionesApiVacia,
+);
+
 vi.mock("../api/profesionalesApi", async (importOriginal) => {
   const real = await importOriginal<typeof profesionalesApi>();
   return {

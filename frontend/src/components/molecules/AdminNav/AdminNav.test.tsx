@@ -37,7 +37,9 @@ describe("AdminNav", () => {
   it("con el conteo recibido muestra el badge en Hoy sin consultar la API", () => {
     renderNav(<AdminNav fallidas={3} />, "/admin/hoy");
 
-    expect(screen.getByRole("link", { name: "Hoy3" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Hoy, 3 notificaciones fallidas" }),
+    ).toBeInTheDocument();
     expect(notificacionesApi.listarFallidas).not.toHaveBeenCalled();
   });
 
@@ -60,6 +62,10 @@ describe("AdminNav", () => {
     ]);
     renderNav(<AdminNav />);
 
-    await waitFor(() => expect(screen.getByRole("link", { name: "Hoy2" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("link", { name: "Hoy, 2 notificaciones fallidas" }),
+      ).toBeInTheDocument(),
+    );
   });
 });

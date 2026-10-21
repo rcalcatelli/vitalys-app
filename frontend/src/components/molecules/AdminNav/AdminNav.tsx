@@ -29,6 +29,11 @@ export function AdminNav({ fallidas }: Props) {
         <NavLink
           key={to}
           to={to}
+          aria-label={
+            conBadge && conteo > 0
+              ? `${etiqueta}, ${conteo} ${conteo === 1 ? "notificación fallida" : "notificaciones fallidas"}`
+              : undefined
+          }
           className={({ isActive }) =>
             [
               "inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap",

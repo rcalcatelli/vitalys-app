@@ -282,6 +282,47 @@ class CascadaDisponibilidadIT extends CascadaITBase {
     }
 
     @Test
+    void siLaBajaConfirmadaFallaAMitad_seRevierteCompleta() {
+        // Falla inyectada: la base rechaza desactivar al profesional, que es el ÚLTIMO paso de la baja,
+        // cuando la cascada ya canceló los turnos, creó los avisos y borró las franjas.
+        jdbcTemplate.execute("CREATE OR REPLACE FUNCTION fn_test_rechazar_baja() RETURNS trigger AS $$ "
+                + "BEGIN RAISE EXCEPTION 'baja rechazada por el test'; END; $$ LANGUAGE plpgsql");
+        jdbcTemplate.execute("CREATE TRIGGER trg_test_rechazar_baja BEFORE UPDATE ON profesionales "
+                + "FOR EACH ROW WHEN (NEW.activo = false) EXECUTE FUNCTION fn_test_rechazar_baja()");
+        try {
+            ResponseEntity<String> r = llamar(
+                    HttpMethod.DELETE,
+                    "/api/profesionales/" + profesionalId + "?confirmar=true",
+                    null,
+                    tokenAdmin,
+                    String.class);
+
+            assertThat(r.getStatusCode().is2xxSuccessful()).isFalse();
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_test_rechazar_baja ON profesionales");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS fn_test_rechazar_baja()");
+        }
+
+        for (Long id : List.of(turnoLunes10, turnoLunes11, turnoLunes12, turnoMiercoles10)) {
+            assertThat(estadoDe(id)).isEqualTo("RESERVADO");
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT activo FROM profesionales WHERE id = ?", Boolean.class, profesionalId))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject("SELECT activo FROM usuarios WHERE id = ?", Boolean.class, profesionalUsuarioId))
+                .isTrue();
+        assertThat(cantidadDeFranjas()).isEqualTo(2);
+        assertThat(avisosDeCancelacion()).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM notificaciones WHERE turno_id IN (?, ?, ?, ?)",
+                        Integer.class,
+                        turnoLunes10,
+                        turnoLunes11,
+                        turnoLunes12,
+                        turnoMiercoles10))
+                .isZero();
+    }
+
+    @Test
     void bajaSinTurnosFuturos_noPideConfirmacion() {
         jdbcTemplate.update("DELETE FROM turnos WHERE profesional_id = ?", profesionalId);
 

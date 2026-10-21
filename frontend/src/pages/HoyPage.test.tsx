@@ -24,7 +24,9 @@ describe("HoyPage", () => {
     expect(screen.getByText("Ana Paz")).toBeInTheDocument();
     expect(screen.getByText("Falló dos veces")).toBeInTheDocument();
     expect(screen.getByText("Sin confirmar")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Hoy2" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Hoy, 2 notificaciones fallidas" }),
+    ).toBeInTheDocument();
     expect(notificacionesApi.listarFallidas).toHaveBeenCalledTimes(1);
   });
 

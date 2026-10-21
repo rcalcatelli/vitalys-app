@@ -303,6 +303,9 @@ a:hover{color:var(--clin)}
             <sc-if value="{{ gym.closed }}" hint-placeholder-val="{{ false }}">
               <div style="padding:36px 20px;text-align:center;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2)">Los domingos el gimnasio está cerrado.</div>
             </sc-if>
+            <sc-if value="{{ gym.feriado }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">{{ gym.feriadoText }}</div>
+            </sc-if>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:10px">
               <sc-for list="{{ gym.slots }}" as="sl" hint-placeholder-count="8">
                 <button onClick="{{ sl.pick }}" disabled="{{ sl.disabled }}" style="text-align:left;padding:12px 12px 11px;border-radius:12px;border:1.5px solid {{ sl.bd }};background:{{ sl.bg }};color:var(--text);display:flex;flex-direction:column;gap:9px;min-height:44px;opacity:{{ sl.op }}">
@@ -317,7 +320,7 @@ a:hover{color:var(--clin)}
                 <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
                   <span style="font-size:12px;font-weight:600;color:var(--gym-ink);text-transform:uppercase;letter-spacing:.05em">Gimnasio</span>
                   <span style="font-weight:600">{{ gym.selLabel }}</span>
-                  <span style="font-size:12.5px;color:var(--text-3)">Cancelás sin cargo hasta 2 h antes.</span>
+                  <span style="font-size:12.5px;color:var(--text-3)">Cancelás en término hasta 2 h antes.</span>
                 </div>
                 <div style="display:flex;gap:8px;flex:1 0 auto;justify-content:flex-end">
                   <button onClick="{{ gym.clear }}" style="height:46px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cambiar</button>
@@ -491,17 +494,15 @@ a:hover{color:var(--clin)}
                     <span style="font-weight:{{ r.fw }};color:{{ r.nameFg }}">{{ r.name }}</span>
                     <sc-if value="{{ r.booked }}" hint-placeholder-val="{{ true }}"><span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ r.dni }}</span></span></sc-if>
                   </div>
-                  <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;margin-left:auto">
                     <sc-if value="{{ r.showChip }}" hint-placeholder-val="{{ false }}">
                       <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span>
                     </sc-if>
                     <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ r.att }}" style="height:40px;padding:0 14px;border:1.5px solid var(--ok);border-radius:8px;background:var(--ok-soft);color:var(--ok-ink);font-weight:600;font-size:13px">Atendido</button>
-                      <button onClick="{{ r.abs }}" style="height:40px;padding:0 14px;border:1.5px solid var(--bad);border-radius:8px;background:var(--bad-soft);color:var(--bad-ink);font-weight:600;font-size:13px">Ausente</button>
+                      <button onClick="{{ r.att }}" disabled="{{ r.early }}" style="opacity:{{ r.btnOp }};height:40px;padding:0 14px;border:1.5px solid var(--ok);border-radius:8px;background:var(--ok-soft);color:var(--ok-ink);font-weight:600;font-size:13px">Atendido</button>
+                      <button onClick="{{ r.abs }}" disabled="{{ r.early }}" style="opacity:{{ r.btnOp }};height:40px;padding:0 14px;border:1.5px solid var(--bad);border-radius:8px;background:var(--bad-soft);color:var(--bad-ink);font-weight:600;font-size:13px">Ausente</button>
                     </sc-if>
-                    <sc-if value="{{ r.marked }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ r.undo }}" style="height:36px;padding:0 10px;border:0;background:transparent;color:var(--text-3);font-size:12.5px">Deshacer</button>
-                    </sc-if>
+                    <sc-if value="{{ r.early }}" hint-placeholder-val="{{ false }}"><span style="flex-basis:100%;text-align:right;font-size:12.5px;color:var(--text-3)">{{ r.earlyHelp }}</span></sc-if>
                   </div>
                 </div>
               </sc-for>
@@ -1063,10 +1064,11 @@ a:hover{color:var(--clin)}
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;socio&quot;,&quot;profesional&quot;,&quot;recepcion&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;fechaDemo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;2026-09-29&quot;,&quot;2026-11-20&quot;],&quot;default&quot;:&quot;2026-09-29&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;socio&quot;,&quot;profesional&quot;,&quot;recepcion&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  NOW = new Date(2026, 8, 29, 10, 40);
-  TODAY = '2026-09-29';
+  get TODAY() { return (this.props && this.props.fechaDemo) || '2026-09-29'; }
+  get NOW() { const d = this.dOf(this.TODAY); d.setHours(10, 40); return d; }
+  FERIADOS = { '2026-11-23': 'Día de la Soberanía Nacional' };
   D = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -1207,7 +1209,7 @@ class Component extends DCLogic {
     return { chip: map[0], line: map[1], amount: this.money(this.CUOTA), hasAmount: f.st !== 'na' && f.st !== 'baja' };
   }
 
-  gymHours(s) { const w = this.dOf(s).getDay(); if (w === 0) return []; if (w === 6) return [9, 10, 11, 12]; const a = []; for (let h = 7; h <= 21; h++) a.push(h); return a; }
+  gymHours(s) { if (this.FERIADOS[s]) return []; const w = this.dOf(s).getDay(); if (w === 0) return []; if (w === 6) return [9, 10, 11, 12]; const a = []; for (let h = 7; h <= 21; h++) a.push(h); return a; }
   baseOcc(s, h) {
     const o = this.off(s), w = this.dOf(s).getDay();
     if (o === 0 && h === 10) return 14;
@@ -1383,7 +1385,7 @@ class Component extends DCLogic {
       const lock = noGym || blocked;
       const days = [0, 1, 2, 3, 4, 5, 6].map(i => {
         const d = this.add(this.TODAY, i), dd = this.dOf(d), closed = !this.gymHours(d).length, act = s.gymDay === i, has = mine.some(b => b.date === d);
-        return { dow: this.DS[dd.getDay()], num: dd.getDate(), sub: closed ? 'Cerrado' : has ? 'Tu turno' : i === 0 ? 'Hoy' : '', pick: () => this.setState({ gymDay: i, gymSel: null }),
+        return { dow: this.DS[dd.getDay()], num: dd.getDate(), sub: this.FERIADOS[d] ? 'Feriado' : closed ? 'Cerrado' : has ? 'Tu turno' : i === 0 ? 'Hoy' : '', pick: () => this.setState({ gymDay: i, gymSel: null }),
           bg: act ? 'var(--gym)' : 'var(--surface)', fg: act ? 'var(--on-gym)' : closed ? 'var(--text-3)' : 'var(--text)', bd: act ? 'var(--gym)' : 'var(--border)', op: closed && !act ? 0.6 : 1 };
       });
       const date = this.add(this.TODAY, s.gymDay), hours = this.gymHours(date), dayMine = mine.find(b => b.date === date);
@@ -1406,7 +1408,7 @@ class Component extends DCLogic {
       });
       const sel = s.gymSel;
       out.gym = {
-        days, slots, closed: !hours.length, dayTitle: this.long(date) + (s.gymDay === 0 ? ' · hoy' : ''),
+        days, slots, closed: !hours.length && !this.FERIADOS[date], feriado: !!this.FERIADOS[date], feriadoText: this.FERIADOS[date] ? 'Feriado: ' + this.FERIADOS[date] + '. El gimnasio está cerrado.' : '', dayTitle: this.long(date) + (s.gymDay === 0 ? ' · hoy' : ''),
         dayHours: !hours.length ? 'Cerrado' : this.dOf(date).getDay() === 6 ? '09:00 – 13:00' : '07:00 – 22:00',
         lock, exc: me.fee.st === 'bloqueado' && !blocked, excText: '',
         lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Tu cuota está vencida hace ' + me.fee.dias + ' días',
@@ -1450,7 +1452,7 @@ class Component extends DCLogic {
       const up = its.filter(x => x.status === 'Reservado' && x.ts > NOW).sort((a, b) => a.ts - b.ts).map(x => row(x, true));
       const hist = its.filter(x => !(x.status === 'Reservado' && x.ts > NOW)).sort((a, b) => b.ts - a.ts).map(x => row(x, false));
       out.turnos = {
-        groups: [{ title: 'Próximos', note: 'Gimnasio: sin cargo hasta 2 h antes · Consultorio: hasta 24 h antes', rows: up, empty: !up.length }, { title: 'Historial', note: '', rows: hist, empty: !hist.length }],
+        groups: [{ title: 'Próximos', note: 'En término: gimnasio hasta 2 h antes · consultorio hasta 24 h antes', rows: up, empty: !up.length }, { title: 'Historial', note: '', rows: hist, empty: !hist.length }],
         cols: mob ? 'minmax(0,1fr) auto' : '1.1fr .9fr 1.8fr 1.5fr 110px', gap: mob ? '6px 12px' : '12px',
         timeAlign: mob ? 'right' : 'left', chipJustify: 'start', actCol: mob ? '2' : 'auto',
       };
@@ -1480,11 +1482,11 @@ class Component extends DCLogic {
         const st = this.at(this.TODAY, x.time), en = this.at(this.TODAY, x.end), b = x.b, p = b && s.persons.find(q => q.id === b.pid);
         const past = en <= NOW, cur = st <= NOW && en > NOW;
         if (!b) return { time: x.time, end: x.end, name: past ? 'Hueco libre (pasado)' : 'Libre', booked: false, fw: 400, nameFg: 'var(--text-3)', bg: 'transparent', bd: 'var(--border-2)', bdStyle: 'dashed', op: past ? 0.6 : 1, showChip: false, pending: false, marked: false, chip: {} };
-        const pending = past && b.status === 'Reservado', marked = b.status === 'Completado' || b.status === 'Ausente';
+        const pending = b.status === 'Reservado', early = pending && st > NOW;
         const set = v => () => this.setState(y => ({ cons: y.cons.map(c => c.id === b.id ? Object.assign({}, c, { status: v }) : c) }));
         return { time: x.time, end: x.end, name: p.name, dni: p.dni, booked: true, fw: 600, nameFg: 'var(--text)', bg: cur ? 'var(--clin-soft)' : 'var(--surface)', bd: cur ? 'var(--clin)' : 'var(--border)', bdStyle: 'solid', op: 1,
-          showChip: !pending, chip: cur && b.status === 'Reservado' ? this.chip('En curso', 'clin') : pending ? {} : b.status === 'Reservado' ? this.chip('Reservado', 'neu') : this.statusChip(b.status, true),
-          pending, marked, att: set('Completado'), abs: set('Ausente'), undo: set('Reservado') };
+          showChip: !pending || cur, chip: cur && pending ? this.chip('En curso', 'clin') : pending ? {} : this.statusChip(b.status, true),
+          pending, early, btnOp: early ? 0.45 : 1, earlyHelp: 'Disponible desde las ' + x.time + ' (inicio del turno)', att: set('Completado'), abs: set('Ausente') };
       });
       const booked = sl.filter(x => x.b).length;
       out.ag = { rows, stats: [{ v: booked, l: 'pacientes' }, { v: sl.length - booked, l: 'huecos libres' }, { v: sl.filter(x => x.b && x.b.status === 'Completado').length, l: 'atendidos' }, { v: '30 min', l: 'por consulta' }] };
@@ -1641,7 +1643,7 @@ class Component extends DCLogic {
       const it = md.it, g = it.kind === 'gym';
       out.m = Object.assign(out.m, { cancel: true, svc: g ? 'Gimnasio' : 'Consulta de ' + it.svc + ' · ' + it.who, when: this.long(it.date) + ' · ' + it.start + ' – ' + it.end,
         polBg: md.ok ? 'var(--ok-soft)' : 'var(--warn-soft)', polFg: md.ok ? 'var(--ok-ink)' : 'var(--warn-ink)',
-        polTitle: md.ok ? 'Cancelación en término, sin cargo' : 'Cancelación fuera de término',
+        polTitle: md.ok ? 'Cancelación en término' : 'Cancelación fuera de término',
         polText: md.ok ? 'Faltan ' + Math.floor(md.hrs) + ' h; el límite es ' + md.lim + ' h antes del turno.' : 'Faltan menos de ' + md.lim + ' h. El turno queda registrado como “cancelado fuera de término”.' });
     }
     out.doCancel = () => this.doCancel();

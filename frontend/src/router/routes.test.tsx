@@ -97,11 +97,15 @@ describe("AppRoutes", () => {
     async (path) => {
       sesionComo("PROFESIONAL");
       renderAt(path);
-      expect(
-        await screen.findByRole("heading", { name: "Agenda del profesional" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
     },
   );
+
+  it("/profesional/agenda muestra la agenda al profesional", async () => {
+    sesionComo("PROFESIONAL");
+    renderAt("/profesional/agenda");
+    expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
+  });
 
   it("/profesional/agenda rechaza al socio y lo manda a sus turnos", async () => {
     sesionComo("SOCIO_PACIENTE");

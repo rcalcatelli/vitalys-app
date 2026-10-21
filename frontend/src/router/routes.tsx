@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { AgendaPage } from "../pages/AgendaPage";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
@@ -82,7 +83,7 @@ export function AppRoutes() {
         path="/profesional/agenda"
         element={
           <RoleGuard allowedRoles={["PROFESIONAL"]}>
-            <PlaceholderHomePage title="Agenda del profesional" />
+            <AgendaPage />
           </RoleGuard>
         }
       />

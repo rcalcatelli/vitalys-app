@@ -12,29 +12,36 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.vitalys.domain.DisponibilidadProfesional;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.Persona;
+import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
+import com.vitalys.dto.SlotConsultorioResponse;
 import com.vitalys.dto.TurnoResponse;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.ConflictoException;
 import com.vitalys.exception.DatosInvalidosException;
 import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.exception.ReglaDeNegocioException;
+import com.vitalys.repository.DisponibilidadProfesionalRepository;
 import com.vitalys.repository.ExcepcionMorosidadRepository;
 import com.vitalys.repository.FeriadoRepository;
 import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -59,6 +66,8 @@ class TurnoServiceTest {
     private FeriadoRepository feriadoRepository;
     private MorosidadService morosidadService;
     private JdbcTemplate jdbcTemplate;
+    private ProfesionalRepository profesionalRepository;
+    private DisponibilidadProfesionalRepository disponibilidadRepository;
     private TurnoService service;
 
     private final Usuario admin = usuario(1L, RolUsuario.ADMIN);
@@ -75,12 +84,16 @@ class TurnoServiceTest {
         feriadoRepository = mock(FeriadoRepository.class);
         morosidadService = mock(MorosidadService.class);
         jdbcTemplate = mock(JdbcTemplate.class);
+        profesionalRepository = mock(ProfesionalRepository.class);
+        disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
         service = new TurnoService(
                 turnoRepository,
                 personaRepository,
                 excepcionRepository,
                 feriadoRepository,
                 morosidadService,
+                profesionalRepository,
+                disponibilidadRepository,
                 jdbcTemplate,
                 Clock.fixed(AHORA.toInstant(), ZONA));
 
@@ -395,5 +408,134 @@ class TurnoServiceTest {
         when(feriadoRepository.findCierrePorFecha(LocalDate.of(2026, 11, 23)))
                 .thenReturn(Optional.of(mock(com.vitalys.domain.Feriado.class)));
         assertThat(service.cupoGym(LocalDate.of(2026, 11, 23))).isEmpty();
+    }
+
+    // ------------------------------------------------------------------ consultorio
+
+    /** Valentina: Nutrición, 30 minutos, miércoles 09:00 a 11:00. */
+    private Profesional nutricionista() {
+        Profesional p = new Profesional(profesional);
+        p.setId(8L);
+        p.setNombre("Valentina");
+        p.setApellido("Méndez");
+        p.setDuracionTurnoMinutos(30);
+        when(profesionalRepository.findById(8L)).thenReturn(Optional.of(p));
+        when(profesionalRepository.buscarParaActualizar(8L)).thenReturn(Optional.of(p));
+        when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(8L))
+                .thenReturn(List.of(new DisponibilidadProfesional(p, 3, LocalTime.of(9, 0), LocalTime.of(11, 0))));
+        return p;
+    }
+
+    private static final LocalDate MIERCOLES = LocalDate.of(2026, 10, 28);
+    private static final OffsetDateTime MIERCOLES_9 = OffsetDateTime.parse("2026-10-28T09:00:00-03:00");
+
+    @Test
+    void slots_partenLaFranjaPorDuracionYMarcanLosTomados() {
+        nutricionista();
+        List<Object[]> ocupados = new java.util.ArrayList<>();
+        ocupados.add(new Object[] {MIERCOLES_9.plusHours(1), MIERCOLES_9.plusMinutes(90)});
+        when(turnoRepository.ocupadosDeProfesional(eq(8L), any(), any())).thenReturn(ocupados);
+
+        List<SlotConsultorioResponse> slots = service.slotsDisponibles(8L, MIERCOLES);
+
+        assertThat(slots).hasSize(4);
+        assertThat(slots).extracting(SlotConsultorioResponse::libre).containsExactly(true, true, false, true);
+        assertThat(slots.get(3).fin()).isEqualTo(MIERCOLES_9.plusHours(2));
+    }
+
+    @Test
+    void slots_diaSinFranjaOProfesionalInactivo_vacio() {
+        Profesional p = nutricionista();
+        assertThat(service.slotsDisponibles(8L, MIERCOLES.plusDays(1))).isEmpty();
+        p.darDeBaja();
+        assertThat(service.slotsDisponibles(8L, MIERCOLES)).isEmpty();
+        when(profesionalRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.slotsDisponibles(9L, MIERCOLES)).isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void slots_unaFranjaQueNoCierraJustaDescartaElResto() {
+        Profesional p = nutricionista();
+        List<OffsetDateTime[]> slots = TurnoService.generarSlots(
+                List.of(new DisponibilidadProfesional(p, 3, LocalTime.of(23, 0), LocalTime.of(23, 59))), MIERCOLES, 45);
+        assertThat(slots).hasSize(1);
+    }
+
+    @Test
+    void reservaDeConsultorio_tomaElLockYUsaLaDuracionDelProfesional() {
+        nutricionista();
+
+        TurnoResponse r = service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9.plusMinutes(30), null));
+
+        assertThat(r.tipoTurno()).isEqualTo(TipoTurno.CONSULTORIO);
+        assertThat(r.profesionalId()).isEqualTo(8L);
+        assertThat(r.fin()).isEqualTo(MIERCOLES_9.plusHours(1));
+        verify(profesionalRepository).buscarParaActualizar(8L);
+    }
+
+    @Test
+    void tu07_fueraDeLaDisponibilidad_lanza422() {
+        nutricionista();
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9.plusMinutes(15), null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("disponibilidad");
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9.plusHours(2), null)))
+                .isInstanceOf(ReglaDeNegocioException.class);
+    }
+
+    @Test
+    void tu09_socioSuspendidoReservaConsultorioSinQueSeEvalueLaMorosidad() {
+        nutricionista();
+        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(9, 6, true));
+
+        service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null));
+
+        verify(morosidadService, never()).evaluar(any());
+    }
+
+    @Test
+    void reservaDeConsultorio_rechazos() {
+        Profesional p = nutricionista();
+        assertThatThrownBy(() -> service.reservarConsultorio(profesional, new ReservaConsultorioRequest(8L, MIERCOLES_9, null)))
+                .isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, AHORA, null)))
+                .isInstanceOf(ReglaDeNegocioException.class);
+        when(profesionalRepository.buscarParaActualizar(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(9L, MIERCOLES_9, null)))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+        p.darDeBaja();
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("no está atendiendo");
+    }
+
+    @Test
+    void superposicionDeConsultorio_distingueProfesionalYPersona() {
+        nutricionista();
+        doThrow(rechazoDelMotor("23P01", "ERROR: conflicting key value violates exclusion constraint \"excl_turnos_overlap\""))
+                .when(turnoRepository).saveAndFlush(any(Turno.class));
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null)))
+                .hasMessageContaining("profesional ya tiene");
+
+        doThrow(rechazoDelMotor("23P01", "ERROR: conflicting key value violates exclusion constraint \"excl_turnos_persona_overlap\""))
+                .when(turnoRepository).saveAndFlush(any(Turno.class));
+        assertThatThrownBy(() -> service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null)))
+                .hasMessageContaining("persona ya tiene");
+    }
+
+    @Test
+    void miAgenda_soloDelProfesionalAutenticado() {
+        Profesional p = nutricionista();
+        when(profesionalRepository.findByUsuarioId(4L)).thenReturn(Optional.of(p));
+        Turno t = Turno.deConsultorio(personaSocio, 8L, 2L, MIERCOLES_9, MIERCOLES_9.plusMinutes(30));
+        when(turnoRepository.agendaDeProfesional(eq(8L), any(), any())).thenReturn(List.of(t));
+
+        assertThat(service.miAgenda(profesional, null, null)).singleElement().extracting(TurnoResponse::persona).isEqualTo("Pérez, María");
+        assertThat(service.miAgenda(profesional, MIERCOLES, MIERCOLES)).hasSize(1);
+        assertThatThrownBy(() -> service.miAgenda(profesional, MIERCOLES, MIERCOLES.minusDays(1)))
+                .isInstanceOf(DatosInvalidosException.class);
+        assertThatThrownBy(() -> service.miAgenda(socio, null, null)).isInstanceOf(AccesoDenegadoException.class);
+        when(profesionalRepository.findByUsuarioId(4L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.miAgenda(profesional, null, null)).isInstanceOf(RecursoNoEncontradoException.class);
     }
 }

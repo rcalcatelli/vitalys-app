@@ -5,7 +5,9 @@ import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.CancelacionRequest;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
+import com.vitalys.dto.SlotConsultorioResponse;
 import com.vitalys.dto.TurnoResponse;
 import com.vitalys.service.TurnoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,6 +53,29 @@ public class TurnoController {
     public ResponseEntity<TurnoResponse> reservarGym(
             @AuthenticationPrincipal Usuario actor, @Valid @RequestBody ReservaGymRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(turnoService.reservarGym(actor, request));
+    }
+
+    @GetMapping("/disponibles")
+    @Operation(summary = "Slots de consultorio", description = "Agenda del día de un profesional según su disponibilidad y duración de turno.")
+    public List<SlotConsultorioResponse> disponibles(
+            @RequestParam Long profesionalId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return turnoService.slotsDisponibles(profesionalId, fecha);
+    }
+
+    @PostMapping
+    @Operation(summary = "Reservar turno de consultorio", description = "Debe coincidir con un slot de la disponibilidad del profesional. La morosidad de gimnasio no aplica.")
+    public ResponseEntity<TurnoResponse> reservarConsultorio(
+            @AuthenticationPrincipal Usuario actor, @Valid @RequestBody ReservaConsultorioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(turnoService.reservarConsultorio(actor, request));
+    }
+
+    @GetMapping("/mi-agenda")
+    @Operation(summary = "Mi agenda", description = "Turnos de consultorio del profesional autenticado. Por defecto, de hoy a siete días.")
+    public List<TurnoResponse> miAgenda(
+            @AuthenticationPrincipal Usuario actor,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return turnoService.miAgenda(actor, desde, hasta);
     }
 
     @GetMapping("/mis-turnos")

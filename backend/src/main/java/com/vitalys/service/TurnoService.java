@@ -1,22 +1,28 @@
 package com.vitalys.service;
 
+import com.vitalys.domain.DisponibilidadProfesional;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.Persona;
+import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
+import com.vitalys.dto.SlotConsultorioResponse;
 import com.vitalys.dto.TurnoResponse;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.DatosInvalidosException;
 import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.exception.ReglaDeNegocioException;
+import com.vitalys.repository.DisponibilidadProfesionalRepository;
 import com.vitalys.repository.ExcepcionMorosidadRepository;
 import com.vitalys.repository.FeriadoRepository;
 import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import java.time.Clock;
@@ -38,8 +44,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Ciclo de vida de los turnos (Módulo 4). En esta etapa cubre el gimnasio de punta a punta;
- * la reserva de consultorio llega con el Módulo 3 (profesionales y disponibilidad).
+ * Ciclo de vida de los turnos (Módulo 4): gimnasio y consultorio.
  *
  * <p>La grilla, el cupo, los feriados y la superposición los valida el motor; el servicio
  * valida lo que depende de {@code NOW()} o del actor: morosidad (RN-01), excepciones (RN-09),
@@ -58,6 +63,8 @@ public class TurnoService {
     private final ExcepcionMorosidadRepository excepcionRepository;
     private final FeriadoRepository feriadoRepository;
     private final MorosidadService morosidadService;
+    private final ProfesionalRepository profesionalRepository;
+    private final DisponibilidadProfesionalRepository disponibilidadRepository;
     private final JdbcTemplate jdbcTemplate;
     private final Clock clock;
 
@@ -67,6 +74,8 @@ public class TurnoService {
             ExcepcionMorosidadRepository excepcionRepository,
             FeriadoRepository feriadoRepository,
             MorosidadService morosidadService,
+            ProfesionalRepository profesionalRepository,
+            DisponibilidadProfesionalRepository disponibilidadRepository,
             JdbcTemplate jdbcTemplate,
             Clock clock) {
         this.turnoRepository = turnoRepository;
@@ -74,6 +83,8 @@ public class TurnoService {
         this.excepcionRepository = excepcionRepository;
         this.feriadoRepository = feriadoRepository;
         this.morosidadService = morosidadService;
+        this.profesionalRepository = profesionalRepository;
+        this.disponibilidadRepository = disponibilidadRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
@@ -166,6 +177,121 @@ public class TurnoService {
             excepcionRepository.save(e);
         });
         return TurnoResponse.de(turno);
+    }
+
+    // ---------------------------------------------------------------- consultorio
+
+    /**
+     * Slots del día de un profesional, partiendo cada franja activa en turnos de su duración.
+     * Un slot no está libre si ya pasó o se superpone con un turno que ocupa el lugar.
+     */
+    @Transactional(readOnly = true)
+    public List<SlotConsultorioResponse> slotsDisponibles(Long profesionalId, LocalDate fecha) {
+        Profesional profesional = profesionalRepository
+                .findById(profesionalId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el profesional " + profesionalId));
+        if (!profesional.isActivo()) {
+            return List.of();
+        }
+        List<OffsetDateTime[]> slots =
+                generarSlots(franjasDelDia(profesionalId, fecha), fecha, profesional.getDuracionTurnoMinutos());
+        if (slots.isEmpty()) {
+            return List.of();
+        }
+        OffsetDateTime desde = fecha.atStartOfDay(ZONA).toOffsetDateTime();
+        List<java.time.Instant[]> ocupados = new ArrayList<>();
+        for (Object[] fila : turnoRepository.ocupadosDeProfesional(profesionalId, desde, desde.plusDays(1))) {
+            ocupados.add(new java.time.Instant[] {instante(fila[0]), instante(fila[1])});
+        }
+        java.time.Instant ahora = ahora().toInstant();
+        List<SlotConsultorioResponse> respuesta = new ArrayList<>();
+        for (OffsetDateTime[] slot : slots) {
+            java.time.Instant ini = slot[0].toInstant();
+            java.time.Instant fin = slot[1].toInstant();
+            boolean tomado = ocupados.stream().anyMatch(o -> o[0].isBefore(fin) && o[1].isAfter(ini));
+            respuesta.add(new SlotConsultorioResponse(slot[0], slot[1], ini.isAfter(ahora) && !tomado));
+        }
+        return respuesta;
+    }
+
+    /**
+     * Reserva de consultorio (RF-15). No evalúa morosidad: la suspensión es solo de gimnasio
+     * (Decisión de dominio 1). Toma el mismo lock de fila del profesional que la cascada de
+     * disponibilidad (RN-24), así una reserva no puede colarse mientras se recortan sus franjas.
+     */
+    @Transactional
+    public TurnoResponse reservarConsultorio(Usuario actor, ReservaConsultorioRequest request) {
+        if (actor.getRol() == RolUsuario.PROFESIONAL) {
+            throw new AccesoDenegadoException("Un profesional no reserva turnos");
+        }
+        if (!request.inicio().isAfter(ahora())) {
+            throw new ReglaDeNegocioException("No se puede reservar un horario que ya empezó");
+        }
+        Persona persona = resolverPersona(actor, request.personaId());
+        Profesional profesional = profesionalRepository
+                .buscarParaActualizar(request.profesionalId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el profesional " + request.profesionalId()));
+        if (!profesional.isActivo()) {
+            throw new ReglaDeNegocioException("El profesional no está atendiendo");
+        }
+        LocalDate fecha = request.inicio().atZoneSameInstant(ZONA).toLocalDate();
+        java.time.Instant pedido = request.inicio().toInstant();
+        OffsetDateTime[] slot = generarSlots(franjasDelDia(profesional.getId(), fecha), fecha, profesional.getDuracionTurnoMinutos())
+                .stream()
+                .filter(s -> s[0].toInstant().equals(pedido))
+                .findFirst()
+                .orElseThrow(() -> new ReglaDeNegocioException(
+                        "Ese horario no está dentro de la disponibilidad del profesional"));
+        return TurnoResponse.de(guardar(Turno.deConsultorio(persona, profesional.getId(), actor.getId(), slot[0], slot[1])));
+    }
+
+    /** Agenda del profesional autenticado (W-03). Por defecto, de hoy a siete días. */
+    @Transactional(readOnly = true)
+    public List<TurnoResponse> miAgenda(Usuario actor, LocalDate desde, LocalDate hasta) {
+        if (actor.getRol() != RolUsuario.PROFESIONAL) {
+            throw new AccesoDenegadoException("La agenda es del rol PROFESIONAL");
+        }
+        Profesional profesional = profesionalRepository
+                .findByUsuarioId(actor.getId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Tu usuario no tiene ficha de profesional"));
+        LocalDate inicio = desde != null ? desde : LocalDate.now(clock);
+        LocalDate fin = hasta != null ? hasta : inicio.plusDays(7);
+        if (fin.isBefore(inicio)) {
+            throw new DatosInvalidosException("La fecha final no puede ser anterior a la inicial");
+        }
+        return turnoRepository
+                .agendaDeProfesional(
+                        profesional.getId(),
+                        inicio.atStartOfDay(ZONA).toOffsetDateTime(),
+                        fin.plusDays(1).atStartOfDay(ZONA).toOffsetDateTime())
+                .stream()
+                .map(TurnoResponse::de)
+                .toList();
+    }
+
+    private List<DisponibilidadProfesional> franjasDelDia(Long profesionalId, LocalDate fecha) {
+        int dia = fecha.getDayOfWeek().getValue();
+        return disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(profesionalId).stream()
+                .filter(f -> f.isActivo() && f.getDiaSemana() == dia)
+                .toList();
+    }
+
+    /**
+     * Parte cada franja en turnos consecutivos de {@code minutos}, desde su inicio, sin pasarse de
+     * su fin. Se calcula en minutos del día para que una franja que termina cerca de medianoche
+     * no dé la vuelta.
+     */
+    static List<OffsetDateTime[]> generarSlots(List<DisponibilidadProfesional> franjas, LocalDate fecha, int minutos) {
+        List<OffsetDateTime[]> slots = new ArrayList<>();
+        for (DisponibilidadProfesional franja : franjas) {
+            int desde = franja.getHoraInicio().toSecondOfDay() / 60;
+            int hasta = franja.getHoraFin().toSecondOfDay() / 60;
+            for (int m = desde; m + minutos <= hasta; m += minutos) {
+                OffsetDateTime inicio = fecha.atStartOfDay(ZONA).plusMinutes(m).toOffsetDateTime();
+                slots.add(new OffsetDateTime[] {inicio, inicio.plusMinutes(minutos)});
+            }
+        }
+        return slots;
     }
 
     private Persona resolverPersona(Usuario actor, Long personaId) {

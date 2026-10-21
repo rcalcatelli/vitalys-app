@@ -5,7 +5,7 @@ import { homePathForRol } from "./roleHome";
 describe("homePathForRol", () => {
   it.each<[RolUsuario, string]>([
     ["ADMIN", "/admin/personas"],
-    ["PROFESIONAL", "/profesional/agenda"],
+    ["PROFESIONAL", "/profesional/disponibilidad"],
     ["SOCIO_PACIENTE", "/socio/turnos"],
   ])("mapea %s a %s", (rol, path) => {
     expect(homePathForRol(rol)).toBe(path);

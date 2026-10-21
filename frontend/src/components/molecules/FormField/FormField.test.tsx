@@ -27,4 +27,21 @@ describe("FormField", () => {
     await user.type(input, "a");
     expect(onChange).toHaveBeenCalledWith("a");
   });
+
+  it("muestra la ayuda y el error inline asociados al input", () => {
+    render(
+      <FormField
+        id="pw"
+        label="Contraseña"
+        value=""
+        onChange={vi.fn()}
+        help="Mínimo 8 caracteres"
+        error="Campo obligatorio."
+      />,
+    );
+
+    const input = screen.getByLabelText("Contraseña");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription("Mínimo 8 caracteres Campo obligatorio.");
+  });
 });

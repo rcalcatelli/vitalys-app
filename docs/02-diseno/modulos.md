@@ -92,22 +92,30 @@ Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener cla
 **Reglas de negocio clave:**
 - La duración del turno se inicializa por especialidad (Nutrición: 30 min, Psicología: 50 min, Kinesiología: 45 min) y puede ajustarse por profesional. La disponibilidad puede ser modificada por el propio profesional o por un administrador.
 - Las franjas de un mismo profesional en el mismo día no pueden solaparse (RN-11, `trg_disponibilidad_overlap`).
+- **Dar de baja a un profesional equivale a dejar su disponibilidad en cero (RN-25)** y sigue el mismo flujo en dos pasos que RN-24: `GET .../baja/impacto` y después `DELETE` con `confirmar=true`. La baja es lógica y además deshabilita al usuario, así que un JWT ya emitido deja de funcionar.
 - **Reducir la disponibilidad cancela los turnos futuros que quedan afuera (RN-24).** Es una acción destructiva sobre turnos de terceros, así que la operación va en dos pasos: primero se consulta el impacto y recién con confirmación explícita se aplica. Los turnos afectados quedan en `CANCELADO_POR_PROFESIONAL` —un estado propio, para no atribuirle al paciente una cancelación que no hizo— con motivo y autor registrados, y cada paciente recibe el aviso (RF-27). Los turnos ya transcurridos no se tocan. Todo ocurre en una única transacción del servicio: o se guarda la disponibilidad con sus cancelaciones y notificaciones, o no se guarda nada.
 
 **Endpoints principales:**
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| GET    | `/api/profesionales` | Listar profesionales activos | Autenticado |
-| POST   | `/api/profesionales` | Registrar nuevo profesional: crea `usuario` (rol `PROFESIONAL`) y `profesional` en una sola operación. No existe endpoint de vínculo para profesionales (Decisión de dominio 8, RFC-0001) | ADMIN |
-| GET    | `/api/profesionales/{id}` | Datos de un profesional | Autenticado |
-| PUT    | `/api/profesionales/{id}` | Modificar datos | ADMIN |
-| PATCH  | `/api/profesionales/{id}/desactivar` | Baja lógica | ADMIN |
+| GET    | `/api/profesionales` | Listar profesionales. Cualquier usuario autenticado lo puede leer (la grilla de reserva lo necesita), pero ve solo los activos y **sin email** (RF-12). El filtro `activo` y el email son solo del ADMIN | Autenticado |
+| GET    | `/api/profesionales/me` | Ficha del profesional autenticado. 404 si el usuario no tiene un profesional asociado | Autenticado |
+| GET    | `/api/profesionales/{id}` | Datos de un profesional. El email lo ven solo el ADMIN y el propio profesional | Autenticado |
+| POST   | `/api/profesionales` | Registrar nuevo profesional: crea `usuario` (rol `PROFESIONAL`, con contraseña inicial) y `profesional` en una sola operación. No existe endpoint de vínculo para profesionales (Decisión de dominio 8, RFC-0001) | ADMIN |
+| PUT    | `/api/profesionales/{id}` | Modificar nombre, apellido, especialidad y duración del turno | ADMIN |
+| GET    | `/api/profesionales/{id}/baja/impacto` | Paso 1 de la baja (RN-25): turnos futuros reservados que se cancelarían. Solo lectura | ADMIN |
+| DELETE | `/api/profesionales/{id}` | Paso 2 de la baja (RN-25): baja lógica (`activo = false`), franjas borradas y usuario deshabilitado. Sin turnos futuros se aplica directo; con turnos exige `confirmar=true` (si falta, 409 con el impacto) y los cancela en cascada (RN-24) | ADMIN |
+| PATCH  | `/api/profesionales/{id}/reactivar` | Reactivar un profesional dado de baja: `activo = true` y usuario habilitado (puede volver a iniciar sesión). Las franjas no se restauran (la baja las borró, RN-25): vuelve sin disponibilidad. 409 si ya está activo | ADMIN |
 | GET    | `/api/profesionales/{id}/disponibilidad` | Ver franjas horarias | Autenticado |
-| POST   | `/api/profesionales/{id}/disponibilidad` | Agregar franja | ADMIN, PROFESIONAL (propio) |
-| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar franja. Si reduce la cobertura, exige `confirmar=true` cuando hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
-| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar franja. Ídem: exige `confirmar=true` si hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
-| GET    | `/api/profesionales/{id}/disponibilidad/{dId}/impacto` | Qué turnos futuros se cancelarían al quitar o recortar esa franja (persona, fecha y hora). Es el paso previo obligatorio de RN-24 | ADMIN, PROFESIONAL (propio) |
+| POST   | `/api/profesionales/{id}/disponibilidad` | Agregar franja. 409 si se solapa con otra del mismo día (RN-11) | ADMIN, PROFESIONAL (propio) |
+| PUT    | `/api/profesionales/{id}/disponibilidad` | Reemplazo total de la disponibilidad (batch, body `{franjas}`) en una transacción. Si alguna franja se solapa, no se aplica ninguna. Si deja turnos futuros sin cobertura exige `confirmar=true` (409 con el impacto si falta); devuelve la lista de franjas resultante | ADMIN, PROFESIONAL (propio) |
+| POST   | `/api/profesionales/{id}/disponibilidad/impacto` | Vista previa del conjunto propuesto (body `{franjas}`): turnos futuros que quedarían sin cobertura. Solo lectura. Paso 1 de RN-24 | ADMIN, PROFESIONAL (propio) |
+| PUT    | `/api/profesionales/{id}/disponibilidad/{dId}` | Modificar una franja. Exige `confirmar=true` cuando hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| DELETE | `/api/profesionales/{id}/disponibilidad/{dId}` | Eliminar una franja (borrado físico). Ídem: exige `confirmar=true` si hay turnos futuros afectados | ADMIN, PROFESIONAL (propio) |
+| GET    | `/api/profesionales/{id}/disponibilidad/{dId}/impacto` | Turnos futuros que se cancelarían al quitar esa franja por completo. Solo lectura | ADMIN, PROFESIONAL (propio) |
+
+**Contrato de la confirmación (RN-24/RN-25):** cuando falta `confirmar=true` y hay impacto, la respuesta es `409` con el `ErrorResponse` habitual más `impacto { cantidad, turnos[ turnoId, personaId, paciente, inicio, fin ] }`. Un turno cuenta como afectado si no entra completo en una única franja de su día de la semana, evaluado en `America/Argentina/Buenos_Aires`; los turnos pasados nunca se tocan. Si no hay impacto, la operación se aplica sin pedir confirmación.
 
 **Entidades involucradas:** `profesionales`, `usuarios`, `disponibilidad_profesional`
 
@@ -246,8 +254,11 @@ Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET    | `/api/notificaciones/persona/{id}` | Historial de notificaciones de una persona | ADMIN |
+| GET    | `/api/admin/notificaciones?fallidas=true` | Alerta de avisos que no llegaron: los `DEFINITIVA` (2 intentos fallidos) y los `HUERFANA` (en curso sin resolver). Es el único listado del endpoint | ADMIN |
 
-> **Nota:** El envío es asíncrono (tarea programada o evento interno). El módulo expone únicamente el historial de logs.
+> **Nota:** El envío es asíncrono: un listener `AFTER_COMMIT` despacha el email recién cuando la transacción que creó la notificación se confirmó. Si falla, se reintenta **una vez a los 10 segundos**; si el segundo intento también falla, la notificación queda con `intentos = 2` y `exitoso = false` y aparece en la alerta del ADMIN. Un fallo de email **nunca** deshace la operación de negocio que lo originó (por ejemplo, la cascada de RN-24).
+
+**Proveedor de email (Brevo, por HTTP):** el envío usa la API HTTP de Brevo detrás del puerto `NotificadorEmail`; en local y en tests se usa una implementación que solo loguea. Se descartó SMTP porque el plan gratuito de Render bloquea los puertos de salida SMTP; SendGrid porque dejó de ofrecer plan gratuito el 2025-05-27; y Resend porque exige tener un dominio propio verificado.
 
 **Entidades involucradas:** `notificaciones`, `personas`, `turnos`, `pagos` (para el cálculo de RN-01 que dispara `AVISO_DEUDA` y `AVISO_SUSPENSION`)
 

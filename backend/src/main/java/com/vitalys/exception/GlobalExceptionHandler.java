@@ -1,5 +1,6 @@
 package com.vitalys.exception;
 
+import com.vitalys.dto.ErrorConImpactoResponse;
 import com.vitalys.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
@@ -53,6 +54,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictoException.class)
     public ResponseEntity<ErrorResponse> handleConflicto(ConflictoException ex, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req);
+    }
+
+    @ExceptionHandler(ConfirmacionRequeridaException.class)
+    public ResponseEntity<ErrorConImpactoResponse> handleConfirmacionRequerida(
+            ConfirmacionRequeridaException ex, HttpServletRequest req) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        return ResponseEntity.status(status)
+                .body(new ErrorConImpactoResponse(
+                        OffsetDateTime.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        ex.getMessage(),
+                        req.getRequestURI(),
+                        ex.getImpacto()));
     }
 
     @ExceptionHandler(DatosInvalidosException.class)

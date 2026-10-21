@@ -1,7 +1,10 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { DisponibilidadPage } from "../pages/DisponibilidadPage";
+import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
+import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
 import { RoleGuard } from "./RoleGuard";
@@ -28,10 +31,46 @@ export function AppRoutes() {
       />
 
       <Route
+        path="/admin/hoy"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <HoyPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
         path="/admin/personas"
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <PersonasPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/profesionales"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <ProfesionalesPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/profesionales/:id/disponibilidad"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <DisponibilidadPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/profesional/disponibilidad"
+        element={
+          <RoleGuard allowedRoles={["PROFESIONAL"]}>
+            <DisponibilidadPage />
           </RoleGuard>
         }
       />

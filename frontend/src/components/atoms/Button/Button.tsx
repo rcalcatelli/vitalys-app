@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
-export type ButtonVariant = "primary" | "ghost" | "outline";
+export type ButtonVariant = "primary" | "ghost" | "outline" | "danger";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**
@@ -37,6 +37,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   // táctil de 44px del resto de la escala a propósito — es del mismo tamaño
   // que en el mockup porque convive con el logo en una fila angosta, nunca es
   // la acción principal de la pantalla.
+  // Acción destructiva (baja, cancelación de turnos): mismo tamaño que `primary`, color `bad`.
+  danger: "h-12 w-full bg-bad px-4 text-white font-semibold hover:brightness-110",
   outline: "h-9 border border-border bg-surface px-3 text-sm text-ink-2 hover:border-clin",
 };
 

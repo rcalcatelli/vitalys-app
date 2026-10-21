@@ -49,6 +49,18 @@ class TurnoTest {
     }
 
     @Test
+    void cancelarPorProfesional_registraQuienCuandoYPorQue_sinAtribuirloAlPaciente() {
+        Turno t = gym(T);
+        t.cancelarPorProfesional(T.minusHours(1), 9L, "Baja del profesional");
+
+        assertThat(t.getEstado()).isEqualTo(EstadoTurno.CANCELADO_POR_PROFESIONAL);
+        assertThat(t.getCanceladoEn()).isEqualTo(T.minusHours(1));
+        assertThat(t.getCanceladoPorUsuarioId()).isEqualTo(9L);
+        assertThat(t.getMotivoCancelacion()).isEqualTo("Baja del profesional");
+        assertThat(t.estaReservado()).isFalse();
+    }
+
+    @Test
     void consultorioExigeVeinticuatroHoras() {
         assertThat(gym(T).anticipacionRequerida()).isEqualTo(Turno.ANTICIPACION_GYM);
         assertThat(Turno.ANTICIPACION_CONSULTORIO.toHours()).isEqualTo(24);

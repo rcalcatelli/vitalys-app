@@ -46,7 +46,7 @@ describe("RoleGuard", () => {
       {
         path: "/admin/dashboard",
         extraRoutes: (
-          <Route path="/profesional/agenda" element={<div>Agenda del profesional</div>} />
+          <Route path="/profesional/disponibilidad" element={<div>Agenda del profesional</div>} />
         ),
       },
     );

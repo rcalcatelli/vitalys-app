@@ -53,4 +53,14 @@ describe("Button", () => {
 
     expect(screen.getByRole("button", { name: "Modo oscuro" })).toHaveClass("border-border");
   });
+
+  it("acepta variant danger para acciones destructivas", () => {
+    render(
+      <Button type="button" variant="danger">
+        Dar de baja
+      </Button>,
+    );
+
+    expect(screen.getByRole("button", { name: "Dar de baja" })).toHaveClass("bg-bad");
+  });
 });

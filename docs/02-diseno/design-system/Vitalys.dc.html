@@ -141,7 +141,7 @@ a:hover{color:var(--clin)}
         <nav style="display:flex;flex-direction:column;gap:2px">
           <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
             <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:10px;width:100%;height:40px;padding:0 12px;border:0;border-radius:8px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:{{ n.fw }};text-align:left" style-hover="background:var(--surface-2)">
-              <span style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:{{ n.dot }}"></span>{{ n.label }}
+              <span style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:{{ n.dot }}"></span>{{ n.label }}<sc-if value="{{ n.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
             </button>
           </sc-for>
         </nav>
@@ -512,6 +512,17 @@ a:hover{color:var(--clin)}
         <!-- ============ PROFESIONAL: DISPONIBILIDAD ============ -->
         <sc-if value="{{ is.disp }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <sc-if value="{{ disp.isAdmin }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button onClick="{{ disp.back }}" style="align-self:flex-start;height:40px;padding:0;border:0;background:transparent;color:var(--clin-ink);font-weight:600">← Profesionales</button>
+                <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border)">
+                  <span style="font-size:13px;font-weight:600;color:var(--text-2)">Profesional:</span>
+                  <select value="{{ disp.proId }}" onChange="{{ disp.onPro }}" style="flex:1 1 240px;min-width:0;height:44px;padding:0 10px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;font-weight:500">
+                    <sc-for list="{{ disp.proOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+                  </select>
+                </label>
+              </div>
+            </sc-if>
             <div style="padding:12px 16px;border-radius:12px;background:{{ disp.noteBg }};color:{{ disp.noteFg }};font-size:13.5px">{{ disp.note }}</div>
             <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
               <div style="flex:1 1 300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
@@ -533,6 +544,7 @@ a:hover{color:var(--clin)}
                     <sc-if value="{{ r.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--bad-ink)">{{ r.err }}</span></sc-if>
                   </div>
                 </sc-for>
+                <sc-if value="{{ disp.noRows }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--text-3)">Sin franjas cargadas.</span></sc-if>
                 <button onClick="{{ disp.add }}" style="height:44px;border:1px dashed var(--border-2);border-radius:10px;background:transparent;color:var(--clin-ink);font-weight:600">+ Agregar franja</button>
                 <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px">
                   <button onClick="{{ disp.discard }}" disabled="{{ disp.clean }}" style="height:44px;padding:0 14px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);opacity:{{ disp.discardOp }}">Descartar</button>
@@ -612,6 +624,31 @@ a:hover{color:var(--clin)}
                 <button onClick="{{ goPagos }}" style="height:42px;margin-top:4px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-weight:500">Ir a Pagos y cuotas</button>
               </div>
             </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Notificaciones fallidas</span><span style="font-size:12.5px;color:var(--text-3)">Los turnos ya están cancelados; lo que falló es el aviso al paciente.</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ hoy.fails }}" as="n" hint-placeholder-count="2">
+                  <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px 16px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border)">
+                    <div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px">
+                      <span style="font-weight:600">{{ n.name }}</span>
+                      <span style="font-size:12.5px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis">{{ n.email }}</span>
+                    </div>
+                    <div style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:13.5px">{{ n.pro }}</span>
+                      <span style="font-size:12.5px;color:var(--text-2)">{{ n.date }} · <span style="font-family:'IBM Plex Mono',monospace">{{ n.time }}</span></span>
+                      <span style="font-size:12.5px;color:var(--bad-ink)">{{ n.reason }}</span>
+                    </div>
+                    <div style="flex:0 1 200px;display:flex;flex-direction:column;align-items:flex-start;gap:4px">
+                      <span style="display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:{{ n.chip.bg }};color:{{ n.chip.fg }}">{{ n.chip.label }}</span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-3)">{{ n.tries }}</span>
+                      <sc-if value="{{ n.help }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-3)">{{ n.help }}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ hoy.noFails }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">No hay notificaciones fallidas.</div></sc-if>
+              </div>
+              <sc-if value="{{ hoy.hasFails }}" hint-placeholder-val="{{ true }}"><span style="font-size:12.5px;color:var(--text-3)">Avisale al paciente por teléfono o en recepción.</span></sc-if>
+            </div>
           </div>
         </sc-if>
 
@@ -685,11 +722,86 @@ a:hover{color:var(--clin)}
           </div>
         </sc-if>
 
+        <!-- ============ RECEPCIÓN: PROFESIONALES ============ -->
+        <sc-if value="{{ is.profes }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;animation:vtIn .3s ease">
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <input value="{{ f.prQ }}" onChange="{{ on.prQ }}" placeholder="Buscar por nombre o email" style="flex:1 1 240px;height:44px;padding:0 14px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+              <button onClick="{{ openNuevoPro }}" style="height:44px;padding:0 18px;border:0;border-radius:10px;background:var(--clin);color:var(--on-clin);font-weight:600">+ Nuevo profesional</button>
+            </div>
+            <div style="display:flex;gap:6px;overflow-x:auto">
+              <sc-for list="{{ prof.filters }}" as="fl" hint-placeholder-count="5">
+                <button onClick="{{ fl.pick }}" style="height:36px;padding:0 14px;border-radius:999px;border:1px solid {{ fl.bd }};background:{{ fl.bg }};color:{{ fl.fg }};font-size:13px;font-weight:500;white-space:nowrap">{{ fl.label }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ prof.wide }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px">
+                <div style="display:grid;grid-template-columns:minmax(160px,1.6fr) 130px 90px 100px 270px;gap:12px;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2);border-radius:13px 13px 0 0">
+                  <span>Nombre</span><span style="white-space:nowrap">Especialidad</span><span style="white-space:nowrap">Duración</span><span style="white-space:nowrap">Estado</span><span style="text-align:right">Acciones</span>
+                </div>
+                <sc-for list="{{ prof.rows }}" as="r" hint-placeholder-count="5">
+                  <div style="display:grid;grid-template-columns:minmax(160px,1.6fr) 130px 90px 100px 270px;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                    <span style="display:flex;flex-direction:column;min-width:0;opacity:{{ r.op }}"><span style="font-weight:500">{{ r.name }}</span><span style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.email }}</span></span>
+                    <span style="opacity:{{ r.op }}"><span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--clin-soft);color:var(--clin-ink);white-space:nowrap">{{ r.esp }}</span></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-2);white-space:nowrap;opacity:{{ r.op }}">{{ r.dur }}</span>
+                    <span style="opacity:{{ r.op }}"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span></span>
+                    <span style="display:flex;justify-content:flex-end;gap:6px">
+                      <button onClick="{{ r.disp }}" disabled="{{ r.dispDisabled }}" style="height:38px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--clin-ink);font-size:13px;font-weight:600;white-space:nowrap;opacity:{{ r.dispOp }}">Disponibilidad</button>
+                      <button onClick="{{ r.edit }}" style="height:38px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-size:13px;font-weight:500">Editar</button>
+                      <span style="position:relative;display:flex">
+                        <button onClick="{{ r.toggleMenu }}" aria-label="Más acciones" style="width:38px;height:38px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text-2);font-size:16px;font-weight:700;line-height:1">⋯</button>
+                        <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+                          <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+                          <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:41;min-width:170px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14)">
+                            <button onClick="{{ r.menuAct }}" style="width:100%;height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:{{ r.menuFg }};font-size:13.5px;font-weight:600;text-align:left" style-hover="background:var(--surface-2)">{{ r.menuLabel }}</button>
+                          </div>
+                        </sc-if>
+                      </span>
+                    </span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ prof.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3);border-top:1px solid var(--border)">No hay profesionales que coincidan.</div></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ prof.narrow }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:10px">
+                <sc-for list="{{ prof.rows }}" as="r" hint-placeholder-count="4">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;opacity:{{ r.op }}">
+                      <span style="display:flex;flex-direction:column;min-width:0"><span style="font-weight:600">{{ r.name }}</span><span style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.email }}</span></span>
+                      <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;opacity:{{ r.op }}">
+                      <span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--clin-soft);color:var(--clin-ink);white-space:nowrap">{{ r.esp }}</span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-2)">{{ r.dur }}</span>
+                      <span style="font-size:12px;color:var(--text-3)">por turno</span>
+                    </div>
+                    <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+                      <button onClick="{{ r.disp }}" disabled="{{ r.dispDisabled }}" style="flex:1;height:44px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--clin-ink);font-size:13.5px;font-weight:600;opacity:{{ r.dispOp }}">Disponibilidad</button>
+                      <button onClick="{{ r.edit }}" style="flex:1;height:44px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-size:13.5px;font-weight:500">Editar</button>
+                      <span style="position:relative;display:flex">
+                        <button onClick="{{ r.toggleMenu }}" aria-label="Más acciones" style="width:44px;height:44px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text-2);font-size:16px;font-weight:700;line-height:1">⋯</button>
+                        <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+                          <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+                          <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:41;min-width:170px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.14)">
+                            <button onClick="{{ r.menuAct }}" style="width:100%;height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:{{ r.menuFg }};font-size:13.5px;font-weight:600;text-align:left" style-hover="background:var(--surface-2)">{{ r.menuLabel }}</button>
+                          </div>
+                        </sc-if>
+                      </span>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ prof.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">No hay profesionales que coincidan.</div></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
         <!-- ============ RECEPCIÓN: PAGOS ============ -->
         <sc-if value="{{ is.pagos }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:20px;animation:vtIn .3s ease">
             <div style="display:flex;flex-direction:column;gap:10px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Cuotas vencidas</span><span style="font-size:12.5px;color:var(--text-3)">A los 10 días se bloquea la reserva de gimnasio</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Cuotas vencidas</span><span style="font-size:12.5px;color:var(--text-3)">Con el límite de períodos impagos se suspende la reserva de gimnasio.</span></div>
               <div style="display:flex;flex-direction:column;gap:8px">
                 <sc-for list="{{ pag.overdue }}" as="o" hint-placeholder-count="3">
                   <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border)">
@@ -752,8 +864,8 @@ a:hover{color:var(--clin)}
     <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
       <nav style="position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:4px 4px calc(4px + env(safe-area-inset-bottom))">
         <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
-          <button onClick="{{ n.go }}" style="flex:1;min-width:0;height:56px;border:0;background:transparent;color:{{ n.mfg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:{{ n.fw }}">
-            <span style="width:22px;height:4px;border-radius:2px;background:{{ n.mbar }}"></span>{{ n.short }}
+          <button onClick="{{ n.go }}" style="position:relative;flex:1;min-width:0;height:56px;border:0;background:transparent;color:{{ n.mfg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:{{ n.fw }}">
+            <span style="width:22px;height:4px;border-radius:2px;background:{{ n.mbar }}"></span>{{ n.short }}<sc-if value="{{ n.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:4px;left:calc(50% + 10px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
           </button>
         </sc-for>
       </nav>
@@ -849,6 +961,99 @@ a:hover{color:var(--clin)}
           <button onClick="{{ doNueva }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Crear persona</button>
         </div>
       </sc-if>
+
+      <sc-if value="{{ m.pro }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">{{ m.proTitle }}</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Nombre
+            <input value="{{ m.v.nombre }}" onChange="{{ m.on.nombre }}" style="height:44px;width:100%;padding:0 12px;border:1px solid {{ m.bd.nombre }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+            <sc-if value="{{ m.e.nombre }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.nombre }}</span></sc-if>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Apellido
+            <input value="{{ m.v.apellido }}" onChange="{{ m.on.apellido }}" style="height:44px;width:100%;padding:0 12px;border:1px solid {{ m.bd.apellido }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+            <sc-if value="{{ m.e.apellido }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.apellido }}</span></sc-if>
+          </label>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Email <span style="font-weight:400;color:var(--text-3)">· será su usuario de acceso</span>
+            <input value="{{ m.v.email }}" onChange="{{ m.on.email }}" type="email" style="height:44px;width:100%;padding:0 12px;border:1px solid {{ m.bd.email }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+            <sc-if value="{{ m.e.email }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.email }}</span></sc-if>
+          </label>
+        <sc-if value="{{ m.isNew }}" hint-placeholder-val="{{ true }}">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Contraseña inicial
+            <input type="password" value="{{ m.v.pw }}" onChange="{{ m.on.pw }}" placeholder="Mínimo 8 caracteres" style="height:44px;width:100%;padding:0 12px;border:1px solid {{ m.bd.pw }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+            <span style="font-size:12.5px;font-weight:400;color:var(--text-3)">Compartila con el profesional por un medio seguro.</span>
+            <sc-if value="{{ m.e.pw }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.pw }}</span></sc-if>
+          </label>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px;align-items:start">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Especialidad
+              <select value="{{ m.v.esp }}" onChange="{{ m.on.esp }}" style="height:44px;width:100%;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+                <sc-for list="{{ m.esps }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+              </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Duración del turno
+              <span style="position:relative;display:block">
+                <input inputMode="numeric" value="{{ m.v.dur }}" onChange="{{ m.on.dur }}" style="height:44px;width:100%;padding:0 12px;border:1px solid {{ m.bd.dur }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;outline:none;padding-right:44px;font-family:'IBM Plex Mono',monospace" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+                <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-3)">min</span>
+              </span>
+              <sc-if value="{{ m.e.dur }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.dur }}</span></sc-if>
+            </label>
+          </div>
+          <span style="font-size:12.5px;color:var(--text-3)">{{ m.durHint }}</span>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
+          <button onClick="{{ doPro }}" disabled="{{ m.proInvalid }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600;opacity:{{ m.proOp }}">{{ m.proBtn }}</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ m.baja }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Dar de baja</h3>
+        <div style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px;background:var(--surface-2)">
+          <span style="font-weight:600">{{ m.bName }}</span>
+          <span style="font-size:13px;color:var(--text-2)">{{ m.bMeta }}</span>
+        </div>
+        <span style="color:var(--text-2);text-wrap:pretty">{{ m.bajaText }}</span>
+        <sc-if value="{{ m.hasTurnos }}" hint-placeholder-val="{{ false }}">
+          <span style="font-weight:600">{{ m.turnosIntro }}</span>
+          <div style="display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:260px;overflow-y:auto">
+          <sc-for list="{{ m.turnos }}" as="t" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 12px;background:var(--surface)">
+              <span style="font-weight:500">{{ t.name }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px">{{ t.time }}</span>
+              <span style="font-size:12.5px;color:var(--text-3);grid-column:1 / -1">{{ t.date }}</span>
+            </div>
+          </sc-for>
+        </div>
+          <div style="padding:12px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px;display:flex;flex-direction:column;gap:3px">
+            <strong style="font-weight:600">Se notificará a cada paciente por email.</strong>
+            <span>Los turnos pasados no se modifican.</span>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Volver</button>
+          <button onClick="{{ doBaja }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--bad);color:#FFFFFF;font-weight:600">{{ m.bajaBtn }}</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ m.reduce }}" hint-placeholder-val="{{ false }}">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Hay turnos afectados</h3>
+        <span style="color:var(--text-2);text-wrap:pretty">{{ m.reduceText }}</span>
+        <div style="display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:260px;overflow-y:auto">
+          <sc-for list="{{ m.turnos }}" as="t" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 12px;background:var(--surface)">
+              <span style="font-weight:500">{{ t.name }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px">{{ t.time }}</span>
+              <span style="font-size:12.5px;color:var(--text-3);grid-column:1 / -1">{{ t.date }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">
+          <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Volver</button>
+          <button onClick="{{ doReduce }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--bad);color:#FFFFFF;font-weight:600">Cancelar turnos y guardar</button>
+        </div>
+      </sc-if>
     </div>
   </div>
 </sc-if>
@@ -866,11 +1071,9 @@ class Component extends DCLogic {
   DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   ML = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  PROS = [
-    { id: 'vm', name: 'Lic. Valentina Méndez', esp: 'Nutrición', dur: 30 },
-    { id: 'rm', name: 'Lic. Rodrigo Almirón', esp: 'Psicología', dur: 50 },
-    { id: 'fr', name: 'Lic. Florencia Rueda', esp: 'Kinesiología', dur: 45 },
-  ];
+  DUR = { 'Nutrición': 30, 'Psicología': 50, 'Kinesiología': 45 };
+  ESPS = ['Nutrición', 'Psicología', 'Kinesiología'];
+  get PROS() { return (this.state && this.state.pros) || []; }
   SV = { gym: 'Gimnasio', nut: 'Nutrición', psi: 'Psicología', kin: 'Kinesiología' };
   CUOTA = 38000;
   state = this.seed();
@@ -930,6 +1133,8 @@ class Component extends DCLogic {
       avail: {
         vm: [{ id: 'a1', day: 1, from: '09:00', to: '13:00' }, { id: 'a2', day: 2, from: '09:00', to: '13:00' }, { id: 'a3', day: 3, from: '09:00', to: '13:00' }, { id: 'a4', day: 4, from: '15:00', to: '19:00' }],
         rm: [{ id: 'b1', day: 2, from: '15:00', to: '20:00' }, { id: 'b2', day: 4, from: '15:00', to: '20:00' }],
+        tf: [{ id: 't1', day: 5, from: '14:00', to: '18:00' }],
+        mq: [],
         fr: [{ id: 'f1', day: 1, from: '08:00', to: '12:00' }, { id: 'f2', day: 3, from: '08:00', to: '12:00' }, { id: 'f3', day: 5, from: '08:00', to: '12:00' }],
       },
       draft: null,
@@ -944,9 +1149,14 @@ class Component extends DCLogic {
         { id: 'y7', pid: 'p9', date: '2026-09-12', concept: 'Cuota septiembre', method: 'Transferencia', amount: 38000 },
       ],
       exceptions: [],
+      notifFails: [
+        { id: 'nf1', name: 'Lucía Paredes', email: 'lucia.paredes@mail.com', pro: 'vm', date: '2026-09-30', time: '11:00', reason: 'El proveedor de email no respondió', tries: 2, last: '14:32', kind: 'fail' },
+        { id: 'nf2', name: 'Martín Sosa', email: 'martin.sosa@mail.com', pro: 'fr', date: '2026-10-02', time: '09:00', reason: 'El envío no llegó a confirmarse', tries: 1, last: '08:15', kind: 'pending' },
+      ],
       gymDay: 0, gymSel: null, consPro: null, consSel: null,
-      modal: null, toast: null, pFilter: 'todos',
-      form: { loginId: '', loginPw: '', q: '', ingQ: '', rGym: true, rCons: false },
+      modal: null, toast: null, pFilter: 'todos', prFilter: 'todos', proMenu: null, dispPro: 'vm',
+      pros: [['vm','Valentina','Méndez','Nutrición',30,true],['rm','Rodrigo','Almirón','Psicología',50,true],['fr','Florencia','Rueda','Kinesiología',45,true],['tf','Tomás','Ferreyra','Psicología',50,true],['mq','Martina','Quiroga','Nutrición',30,false]].map(([id, nombre, apellido, esp, dur, active]) => ({ id, nombre, apellido, esp, dur, active, name: 'Lic. ' + nombre + ' ' + apellido, email: (nombre[0] + apellido).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') + '@vitalys.com.ar' })),
+      form: { loginId: '', loginPw: '', q: '', ingQ: '', prQ: '', rGym: true, rCons: false },
     };
   }
 
@@ -980,7 +1190,7 @@ class Component extends DCLogic {
   tc(t) { return { ok: ['var(--ok-ink)','var(--ok-soft)'], warn: ['var(--warn-ink)','var(--warn-soft)'], bad: ['var(--bad-ink)','var(--bad-soft)'], clin: ['var(--clin-ink)','var(--clin-soft)'], gym: ['var(--gym-ink)','var(--gym-soft)'], neu: ['var(--text-2)','var(--surface-2)'] }[t]; }
   chip(label, t) { const [fg, bg] = this.tc(t); return { label, fg, bg }; }
   statusChip(s, pro) {
-    const t = { 'Reservado': 'clin', 'Completado': 'ok', 'Ausente': 'bad', 'Cancelado en término': 'neu', 'Cancelado fuera de término': 'warn' }[s];
+    const t = { 'Reservado': 'clin', 'Completado': 'ok', 'Ausente': 'bad', 'Cancelado en término': 'neu', 'Cancelado fuera de término': 'warn', 'Cancelado por el centro': 'neu' }[s];
     return this.chip(pro && s === 'Completado' ? 'Atendido' : s, t);
   }
   hasExc(pid) { return this.state.exceptions.some(e => e.pid === pid); }
@@ -1008,6 +1218,22 @@ class Component extends DCLogic {
   }
   occ(s, h) { return Math.min(20, this.baseOcc(s, h) + this.state.gym.filter(b => b.isNew && b.date === s && b.hour === h && b.status === 'Reservado').length); }
 
+  futureCons(pid) { return this.state.cons.filter(c => c.pro === pid && c.status === 'Reservado' && this.at(c.date, c.time) > this.NOW).sort((a, b) => this.at(a.date, a.time) - this.at(b.date, b.time)); }
+  turnoRow(c) { const p = this.state.persons.find(x => x.id === c.pid) || {}; return { name: p.name || '—', date: this.long(c.date), time: c.time }; }
+  openPro(p) {
+    this.setState({ proMenu: null, modal: { type: 'pro', id: p ? p.id : null, t: {}, v: p ? { nombre: p.nombre, apellido: p.apellido, email: p.email, pw: '', esp: p.esp, dur: String(p.dur) } : { nombre: '', apellido: '', email: '', pw: '', esp: 'Nutrición', dur: '30' } } });
+  }
+  proErrs(md) {
+    const v = md.v, e = {}, req = 'Campo obligatorio.', em = v.email.trim().toLowerCase(), d = parseInt(v.dur, 10);
+    if (!v.nombre.trim()) e.nombre = req;
+    if (!v.apellido.trim()) e.apellido = req;
+    if (!em) e.email = req;
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) e.email = 'Ingresá un email válido.';
+    else if (this.PROS.some(p => p.id !== md.id && p.email.toLowerCase() === em) || this.state.persons.some(p => (p.email || '').toLowerCase() === em)) e.email = 'Este email ya está registrado.';
+    if (!md.id) { if (!v.pw) e.pw = req; else if (v.pw.length < 8) e.pw = 'Mínimo 8 caracteres.'; }
+    if (String(v.dur).trim() === '') e.dur = req; else if (!(d > 0)) e.dur = 'La duración debe ser mayor a 0.';
+    return e;
+  }
   active(c) { return c.status === 'Reservado' || c.status === 'Completado' || c.status === 'Ausente'; }
   proSlots(pid, s, avail) {
     const pro = this.PROS.find(p => p.id === pid), w = this.dOf(s).getDay();
@@ -1051,19 +1277,20 @@ class Component extends DCLogic {
     const role = s.acting ? 'socio' : s.role, uid = s.acting || s.userId;
     const me = s.persons.find(p => p.id === uid) || s.persons[0];
     const on = {};
-    ['loginId','loginPw','rNombre','rApellido','rDni','rEmail','rPw','q','ingQ','monto','medio','motivo','vig','nName','nDni','nEmail'].forEach(k => on[k] = e => this.setF(k, e.target.value));
+    ['loginId','loginPw','rNombre','rApellido','rDni','rEmail','rPw','q','ingQ','monto','medio','motivo','vig','nName','nDni','nEmail','prQ'].forEach(k => on[k] = e => this.setF(k, e.target.value));
     const toggleTheme = () => this.setState(x => ({ theme: x.theme === 'dark' ? 'light' : 'dark' }));
 
     const navDefs = {
       socio: [['inicio','Inicio','Inicio','neu'],['gym','Reservar gimnasio','Gimnasio','gym'],['consulta','Turno de consultorio','Consulta','clin'],['turnos','Mis turnos','Turnos','neu'],['cuenta','Estado de cuenta','Cuenta','neu']],
       profesional: [['agenda','Agenda de hoy','Agenda','clin'],['disp','Disponibilidad','Disponibilidad','clin']],
-      recepcion: [['hoy','Hoy en el centro','Hoy','neu'],['ingreso','Ingreso al gimnasio','Ingreso','gym'],['personas','Personas','Personas','neu'],['pagos','Pagos y cuotas','Pagos','neu']],
+      recepcion: [['hoy','Hoy en el centro','Hoy','neu'],['ingreso','Ingreso al gimnasio','Ingreso','gym'],['personas','Personas','Personas','neu'],['profes','Profesionales','Profes.','clin'],['pagos','Pagos y cuotas','Pagos','neu']],
     }[role];
     const nav = navDefs.map(([id, label, sh, k]) => {
-      const act = s.screen === id, g = k === 'gym';
-      return { id, label, short: sh, go: () => this.go(id), bg: act ? (g ? 'var(--gym-soft)' : 'var(--clin-soft)') : 'transparent', fg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-2)', fw: act ? 600 : 500, dot: g ? 'var(--gym)' : k === 'clin' ? 'var(--clin)' : 'var(--text-3)', mfg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-3)', mbar: act ? (g ? 'var(--gym)' : 'var(--clin)') : 'transparent' };
+      const act = s.screen === id || (id === 'profes' && s.screen === 'disp'), g = k === 'gym';
+      const nb = id === 'hoy' ? this.state.notifFails.length : 0;
+      return { id, label, short: sh, hasBadge: nb > 0, badge: nb, go: () => this.go(id), bg: act ? (g ? 'var(--gym-soft)' : 'var(--clin-soft)') : 'transparent', fg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-2)', fw: act ? 600 : 500, dot: g ? 'var(--gym)' : k === 'clin' ? 'var(--clin)' : 'var(--text-3)', mfg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-3)', mbar: act ? (g ? 'var(--gym)' : 'var(--clin)') : 'transparent' };
     });
-    const is = {}; ['inicio','gym','consulta','turnos','cuenta','agenda','disp','hoy','ingreso','personas','pagos'].forEach(k => is[k] = s.screen === k);
+    const is = {}; ['inicio','gym','consulta','turnos','cuenta','agenda','disp','hoy','ingreso','personas','profes','pagos'].forEach(k => is[k] = s.screen === k);
 
     let userCard;
     if (role === 'socio') userCard = { name: me.name, ini: this.ini(me.name), sub: me.sv.map(x => this.SV[x]).join(' + ') };
@@ -1081,9 +1308,11 @@ class Component extends DCLogic {
       hoy: ['Hoy en el centro', this.long(this.TODAY) + ' · 10:40', ''],
       ingreso: ['Ingreso al gimnasio', 'Recepción', ''],
       personas: ['Personas', 'Recepción', 'Socios y pacientes del centro.'],
+      profes: ['Profesionales', 'Recepción', 'Equipo de consultorios del centro.'],
       pagos: ['Pagos y cuotas', 'Recepción', ''],
     }[s.screen] || ['', '', ''];
     const page = { title: pages[0], eyebrow: pages[1], sub: pages[2] };
+    if (s.screen === 'disp' && role === 'recepcion') { page.eyebrow = 'Recepción'; page.sub = 'Elegí el profesional y editá sus franjas semanales.'; }
     const fee = this.feeInfo(me);
     const blocked = me.fee.st === 'bloqueado' && !this.hasExc(me.id);
     const noGym = !me.sv.includes('gym') || me.fee.st === 'baja';
@@ -1181,7 +1410,7 @@ class Component extends DCLogic {
         dayHours: !hours.length ? 'Cerrado' : this.dOf(date).getDay() === 6 ? '09:00 – 13:00' : '07:00 – 22:00',
         lock, exc: me.fee.st === 'bloqueado' && !blocked, excText: '',
         lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Tu cuota está vencida hace ' + me.fee.dias + ' días',
-        lockText: noGym ? 'Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.' : 'Con más de 10 días de mora no se puede reservar el gimnasio. Las consultas siguen habilitadas. Regularizá el pago en recepción.',
+        lockText: noGym ? 'Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.' : 'Alcanzaste el límite de períodos impagos y la reserva de gimnasio está suspendida. Las consultas siguen habilitadas.',
         hasSel: !!sel, selLabel: sel ? this.long(sel.date) + ' · ' + this.p2(sel.hour) + ':00 – ' + this.p2(sel.hour + 1) + ':00' : '',
         clear: () => this.setState({ gymSel: null }),
         confirm: () => { const x = s.gymSel; this.setState(y => ({ gym: y.gym.concat([{ id: 'g' + Date.now(), pid: uid, date: x.date, hour: x.hour, status: 'Reservado', isNew: true }]), gymSel: null })); this.flash('Listo, reservaste gimnasio el ' + this.short(x.date) + ' a las ' + this.p2(x.hour) + ':00'); },
@@ -1190,7 +1419,7 @@ class Component extends DCLogic {
 
     // CONSULTA
     if (is.consulta) {
-      const pros = this.PROS.map(p => {
+      const pros = this.PROS.filter(p => p.active).map(p => {
         const na = this.nextAgenda(p.id), free = na ? na.slots.filter(x => !x.b && this.at(na.date, x.time) > NOW).length : 0, act = s.consPro === p.id;
         return { esp: p.esp, dur: p.dur, name: p.name, next: na ? 'Próxima agenda: ' + this.rel(na.date) + ', ' + this.short(na.date).toLowerCase() + ' · ' + free + ' libres' : 'Sin agenda próxima',
           bd: act ? 'var(--clin)' : 'var(--border)', bg: act ? 'var(--clin-soft)' : 'var(--surface)', pick: () => this.setState({ consPro: p.id, consSel: null }) };
@@ -1266,27 +1495,37 @@ class Component extends DCLogic {
     out.hourOpts = hourOpts;
     out.dayOpts = [1, 2, 3, 4, 5, 6].map(v => ({ v, l: this.D[v] }));
     if (is.disp) {
-      const dr = s.draft || s.avail.vm;
-      const errs = {};
+      const isAdmin = role === 'recepcion', pid = isAdmin ? s.dispPro : 'vm';
+      const pro = this.PROS.find(p => p.id === pid) || this.PROS[0];
+      const saved = s.avail[pid] || [], dr = s.draft || saved, errs = {};
       dr.forEach(a => {
         if (this.toMin(a.to) <= this.toMin(a.from)) { errs[a.id] = 'El horario de fin tiene que ser posterior al de inicio.'; return; }
         const o = dr.find(b => b.id !== a.id && b.day === a.day && this.toMin(b.from) < this.toMin(a.to) && this.toMin(a.from) < this.toMin(b.to));
-        if (o) errs[a.id] = 'Se superpone con ' + this.D[o.day].toLowerCase() + ' ' + o.from + '–' + o.to + '.';
+        if (o) errs[a.id] = 'Se superpone con ' + this.D[o.day] + ' ' + o.from + '–' + o.to + '.';
       });
-      const upd = (id, patch) => this.setState(y => ({ draft: (y.draft || y.avail.vm).map(a => a.id === id ? Object.assign({}, a, patch) : a) }));
-      const hasErr = Object.keys(errs).length > 0, dirty = !!s.draft && JSON.stringify(s.draft) !== JSON.stringify(s.avail.vm);
+      const base = y => y.draft || y.avail[pid] || [];
+      const upd = (id, patch) => this.setState(y => ({ draft: base(y).map(a => a.id === id ? Object.assign({}, a, patch) : a) }));
+      const hasErr = Object.keys(errs).length > 0, dirty = !!s.draft && JSON.stringify(s.draft) !== JSON.stringify(saved);
       const hours = []; for (let h = 7; h < 21; h++) hours.push(this.p2(h));
       out.disp = {
+        isAdmin, proId: pid, back: () => this.go('profes'),
+        onPro: e => this.setState({ dispPro: e.target.value, draft: null }),
+        proOpts: this.PROS.filter(p => p.active || p.id === pid).map(p => ({ v: p.id, l: p.name + ' · ' + p.esp + (p.active ? '' : ' (inactivo)') })),
+        noRows: !dr.length,
         rows: dr.map(a => ({ day: a.day, from: a.from, to: a.to, err: errs[a.id] || '', bd: errs[a.id] ? 'var(--bad)' : 'var(--border)', bg: errs[a.id] ? 'var(--bad-soft)' : 'transparent',
           onDay: e => upd(a.id, { day: +e.target.value }), onFrom: e => upd(a.id, { from: e.target.value }), onTo: e => upd(a.id, { to: e.target.value }),
-          remove: () => this.setState(y => ({ draft: (y.draft || y.avail.vm).filter(b => b.id !== a.id) })) })),
-        add: () => this.setState(y => ({ draft: (y.draft || y.avail.vm).concat([{ id: 'a' + Date.now(), day: 5, from: '09:00', to: '12:00' }]) })),
+          remove: () => this.setState(y => ({ draft: base(y).filter(b => b.id !== a.id) })) })),
+        add: () => this.setState(y => ({ draft: base(y).concat([{ id: 'a' + Date.now(), day: 5, from: '09:00', to: '12:00' }]) })),
         clean: !dirty, discardOp: dirty ? 1 : 0.5, discard: () => this.setState({ draft: null }),
         cantSave: !dirty || hasErr, saveOp: !dirty || hasErr ? 0.45 : 1,
-        save: () => { this.setState(y => ({ avail: Object.assign({}, y.avail, { vm: y.draft }), draft: null })); this.flash('Disponibilidad guardada'); },
-        note: hasErr ? 'Hay franjas que se superponen o son inválidas. Corregilas para poder guardar.' : 'Las franjas de un mismo día no pueden superponerse. Los turnos ya reservados se mantienen.',
+        save: () => {
+          const aff = this.futureCons(pid).filter(c => { const w = this.dOf(c.date).getDay(), st = this.toMin(c.time), en = st + pro.dur; return !s.draft.some(a => a.day === w && this.toMin(a.from) <= st && en <= this.toMin(a.to)); });
+          if (aff.length) return this.setState({ modal: { type: 'reduce', pid, ids: aff.map(c => c.id), own: !isAdmin } });
+          this.setState(y => ({ avail: Object.assign({}, y.avail, { [pid]: y.draft }), draft: null })); this.flash('Disponibilidad guardada');
+        },
+        note: hasErr ? 'Hay franjas que se superponen o son inválidas. Corregilas para poder guardar.' : 'Las franjas de un mismo día no pueden superponerse. Si achicás una franja con turnos reservados, te vamos a pedir confirmación.',
         noteBg: hasErr ? 'var(--bad-soft)' : 'var(--clin-soft)', noteFg: hasErr ? 'var(--bad-ink)' : 'var(--clin-ink)',
-        durNote: 'Consultas de 30 min', hours,
+        durNote: 'Consultas de ' + pro.dur + ' min', hours,
         grid: [1, 2, 3, 4, 5, 6].map(d => ({ label: this.DS[d], blocks: dr.filter(a => a.day === d && this.toMin(a.to) > this.toMin(a.from)).map(a => {
           const e = !!errs[a.id], t0 = Math.max(0, this.toMin(a.from) - 420), t1 = Math.min(840, this.toMin(a.to) - 420);
           return { top: (t0 / 60 * 30) + 'px', h: ((t1 - t0) / 60 * 30) + 'px', from: a.from, to: a.to, bg: e ? 'var(--bad-soft)' : 'var(--clin-soft)', bd: e ? 'var(--bad)' : 'var(--clin)', fg: e ? 'var(--bad-ink)' : 'var(--clin-ink)' };
@@ -1319,6 +1558,10 @@ class Component extends DCLogic {
       overdue.forEach(p => att.push({ name: p.name, detail: p.fee.st === 'bloqueado' ? (this.hasExc(p.id) ? 'Excepción autorizada · ' + p.fee.dias + ' días de mora' : p.fee.dias + ' días de mora · no puede reservar gimnasio') : 'Vencida hace ' + p.fee.dias + ' días · se bloquea en ' + (10 - p.fee.dias) + ' días', chip: p.fee.st === 'bloqueado' ? this.chip('Bloqueado', 'bad') : this.chip('Vencida', 'warn') }));
       s.persons.filter(p => p.fee.st === 'por_vencer').forEach(p => att.push({ name: p.name, detail: 'Vence el ' + this.dm(p.fee.vence) + ' (' + this.rel(p.fee.vence) + ')', chip: this.chip('Por vencer', 'warn') }));
       out.hoy.att = att; out.hoy.attCount = att.length + ' personas';
+      out.hoy.fails = s.notifFails.map(n => { const p = this.PROS.find(x => x.id === n.pro) || {}, bad = n.kind === 'fail';
+        return { name: n.name, email: n.email, pro: p.name, date: this.long(n.date), time: n.time, reason: n.reason, tries: n.tries + (n.tries === 1 ? ' intento' : ' intentos') + ' · último ' + n.last,
+          chip: bad ? this.chip('Falló dos veces', 'bad') : this.chip('Sin confirmar', 'warn'), help: bad ? '' : 'Quedó pendiente por un reinicio del sistema' }; });
+      out.hoy.hasFails = s.notifFails.length > 0; out.hoy.noFails = !s.notifFails.length;
     }
 
     // INGRESO
@@ -1351,6 +1594,25 @@ class Component extends DCLogic {
     }
     out.openNueva = () => this.setState(y => ({ modal: { type: 'nueva', sv: ['gym'] }, form: Object.assign({}, y.form, { nName: '', nDni: '', nEmail: '' }) }));
 
+    // PROFESIONALES
+    if (is.profes) {
+      const q = (f.prQ || '').toLowerCase().trim(), k = s.prFilter;
+      const rows = this.PROS.filter(p => (!q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)) && (k === 'todos' || (k === 'inactivos' ? !p.active : p.esp === k))).map(p => ({
+        name: p.name, email: p.email, esp: p.esp, dur: p.dur + ' min', op: p.active ? 1 : 0.55,
+        chip: p.active ? this.chip('Activo', 'ok') : this.chip('Inactivo', 'neu'),
+        menuOpen: s.proMenu === p.id, menuLabel: p.active ? 'Dar de baja' : 'Reactivar', menuFg: p.active ? 'var(--bad-ink)' : 'var(--clin-ink)',
+        toggleMenu: () => this.setState(y => ({ proMenu: y.proMenu === p.id ? null : p.id })),
+        menuAct: () => { if (p.active) return this.setState({ proMenu: null, modal: { type: 'baja', pid: p.id } }); this.setState(y => ({ proMenu: null, pros: y.pros.map(x => x.id === p.id ? Object.assign({}, x, { active: true }) : x) })); this.flash('Profesional reactivado'); },
+        dispDisabled: !p.active, dispOp: p.active ? 1 : 0.5,
+        disp: () => { this.setState({ dispPro: p.id, draft: null }); this.go('disp'); },
+        edit: () => this.openPro(p),
+      }));
+      out.prof = { rows, empty: !rows.length, wide: s.width >= 1100, narrow: s.width < 1100,
+        filters: [['todos','Todos'],['Nutrición','Nutrición'],['Psicología','Psicología'],['Kinesiología','Kinesiología'],['inactivos','Inactivos']].map(([v, l]) => { const a = k === v; return { label: l, pick: () => this.setState({ prFilter: v }), bg: a ? 'var(--text)' : 'var(--surface)', fg: a ? 'var(--bg)' : 'var(--text-2)', bd: a ? 'var(--text)' : 'var(--border)' }; }) };
+    }
+    out.closeMenu = () => this.setState({ proMenu: null });
+    out.openNuevoPro = () => this.openPro(null);
+
     // PAGOS
     const openPago = p => this.setState(y => ({ modal: { type: 'pago', pid: p.id }, form: Object.assign({}, y.form, { monto: String(this.CUOTA), medio: 'Efectivo' }) }));
     const openExc = p => this.setState(y => ({ modal: { type: 'exc', pid: p.id }, form: Object.assign({}, y.form, { motivo: '', vig: 'Hasta 48 h' }) }));
@@ -1374,7 +1636,7 @@ class Component extends DCLogic {
     const md = s.modal;
     out.modalOpen = !!md; out.closeModal = () => this.setState({ modal: null }); out.stop = e => e.stopPropagation();
     out.modalAlign = mob ? 'flex-end' : 'center'; out.modalPad = mob ? '0' : '20px'; out.modalRadius = mob ? '18px 18px 0 0' : '16px';
-    out.m = { cancel: false, pago: false, exc: false, nueva: false };
+    out.m = { cancel: false, pago: false, exc: false, nueva: false, pro: false, baja: false, reduce: false, v: {}, on: {}, e: {}, bd: {}, turnos: [] };
     if (md && md.type === 'cancel') {
       const it = md.it, g = it.kind === 'gym';
       out.m = Object.assign(out.m, { cancel: true, svc: g ? 'Gimnasio' : 'Consulta de ' + it.svc + ' · ' + it.who, when: this.long(it.date) + ' · ' + it.start + ' – ' + it.end,
@@ -1383,6 +1645,46 @@ class Component extends DCLogic {
         polText: md.ok ? 'Faltan ' + Math.floor(md.hrs) + ' h; el límite es ' + md.lim + ' h antes del turno.' : 'Faltan menos de ' + md.lim + ' h. El turno queda registrado como “cancelado fuera de término”.' });
     }
     out.doCancel = () => this.doCancel();
+    if (md && md.type === 'pro') {
+      const errs = this.proErrs(md), shown = {}, bd = {}, onv = {};
+      ['nombre','apellido','email','pw','dur'].forEach(k => { shown[k] = md.t[k] ? (errs[k] || '') : ''; bd[k] = shown[k] ? 'var(--bad)' : 'var(--border-2)'; });
+      const setV = (k, val) => this.setState(y => { const v = Object.assign({}, y.modal.v, { [k]: val }); if (k === 'esp') v.dur = String(this.DUR[val]); return { modal: Object.assign({}, y.modal, { v, t: Object.assign({}, y.modal.t, { [k]: true }) }) }; });
+      ['nombre','apellido','email','pw','esp','dur'].forEach(k => onv[k] = e => setV(k, k === 'dur' ? e.target.value.replace(/\D/g, '') : e.target.value));
+      const invalid = Object.keys(errs).length > 0;
+      out.m = Object.assign(out.m, { pro: true, isNew: !md.id, proTitle: md.id ? 'Editar profesional' : 'Nuevo profesional', proBtn: md.id ? 'Guardar cambios' : 'Crear profesional',
+        v: md.v, on: onv, e: shown, bd, proInvalid: invalid, proOp: invalid ? 0.45 : 1, esps: this.ESPS,
+        durHint: 'Sugerido para ' + md.v.esp + ': ' + this.DUR[md.v.esp] + ' min. Podés ajustarlo.' });
+    }
+    out.doPro = () => {
+      if (Object.keys(this.proErrs(md)).length) return;
+      const v = md.v, data = { nombre: v.nombre.trim(), apellido: v.apellido.trim(), email: v.email.trim().toLowerCase(), esp: v.esp, dur: parseInt(v.dur, 10) };
+      data.name = 'Lic. ' + data.nombre + ' ' + data.apellido;
+      if (md.id) { this.setState(y => ({ pros: y.pros.map(p => p.id === md.id ? Object.assign({}, p, data) : p), modal: null })); this.flash('Cambios guardados'); }
+      else { const id = 'pr' + Date.now(); this.setState(y => ({ pros: y.pros.concat([Object.assign({ id, active: true }, data)]), avail: Object.assign({}, y.avail, { [id]: [] }), modal: null })); this.flash(data.name + ' se agregó a Profesionales'); }
+    };
+    if (md && md.type === 'baja') {
+      const p = this.PROS.find(x => x.id === md.pid), fut = this.futureCons(p.id), n = fut.length;
+      out.m = Object.assign(out.m, { baja: true, bName: p.name, bMeta: p.esp + ' · ' + p.dur + ' min', hasTurnos: n > 0,
+        bajaText: p.name.replace('Lic. ', '') + ' no podrá ingresar ni recibir turnos. Podés reactivar su cuenta cuando quieras.',
+        turnosIntro: n === 1 ? 'Tiene 1 turno futuro que se va a cancelar:' : 'Tiene ' + n + ' turnos futuros que se van a cancelar:',
+        turnos: fut.map(c => this.turnoRow(c)),
+        bajaBtn: n ? 'Cancelar ' + n + (n === 1 ? ' turno' : ' turnos') + ' y dar de baja' : 'Dar de baja' });
+    }
+    out.doBaja = () => {
+      const ids = this.futureCons(md.pid).map(c => c.id);
+      this.setState(y => ({ pros: y.pros.map(p => p.id === md.pid ? Object.assign({}, p, { active: false }) : p), cons: y.cons.map(c => ids.includes(c.id) ? Object.assign({}, c, { status: 'Cancelado por el centro' }) : c), modal: null }));
+      this.flash('Profesional dado de baja');
+    };
+    if (md && md.type === 'reduce') {
+      const p = this.PROS.find(x => x.id === md.pid);
+      out.m = Object.assign(out.m, { reduce: true, turnos: s.cons.filter(c => md.ids.includes(c.id)).map(c => this.turnoRow(c)),
+        reduceText: (md.own ? 'Estos turnos quedan fuera de tu nueva disponibilidad' : 'Estos turnos quedan fuera de la nueva disponibilidad de ' + p.name) + ' y se cancelarán. Se avisará a cada paciente.' });
+    }
+    out.doReduce = () => {
+      const n = md.ids.length;
+      this.setState(y => ({ cons: y.cons.map(c => md.ids.includes(c.id) ? Object.assign({}, c, { status: 'Cancelado por el centro' }) : c), avail: Object.assign({}, y.avail, { [md.pid]: y.draft }), draft: null, modal: null }));
+      this.flash('Disponibilidad guardada · ' + n + (n === 1 ? ' turno cancelado' : ' turnos cancelados'));
+    };
     if (md && (md.type === 'pago' || md.type === 'exc')) {
       const p = s.persons.find(x => x.id === md.pid);
       const venc = p.fee.vencio || p.fee.vence;

@@ -86,6 +86,12 @@ public class Turno {
         return new Turno(persona, TipoTurno.GYM, null, reservadoPor, inicio, inicio.plusHours(1));
     }
 
+    /** Turno con un profesional; la duración sale de {@code profesionales.duracion_turno_minutos}. */
+    public static Turno deConsultorio(
+            Persona persona, Long profesionalId, Long reservadoPor, OffsetDateTime inicio, OffsetDateTime fin) {
+        return new Turno(persona, TipoTurno.CONSULTORIO, profesionalId, reservadoPor, inicio, fin);
+    }
+
     public Duration anticipacionRequerida() {
         return tipoTurno == TipoTurno.GYM ? ANTICIPACION_GYM : ANTICIPACION_CONSULTORIO;
     }

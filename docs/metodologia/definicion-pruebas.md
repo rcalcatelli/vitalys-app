@@ -199,8 +199,9 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 > para que el escenario no caduque. Estos ITs corren solo contra Postgres real (Testcontainers) en CI.
 
 > **Implementación (Sprint 4, gimnasio).** `TurnoServiceTest` cubre TU-03 a TU-06, TU-08 y
-> TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09 quedan
-> para la reserva de consultorio, que depende del Módulo 3. `MorosidadServiceTest` cubre PU-01
+> TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09, con la
+> reserva de consultorio, también en `TurnoServiceTest` y de punta a punta en
+> `TurnoConsultorioIT` (que cubre además PI-07 y PI-08 en consultorio). `MorosidadServiceTest` cubre PU-01
 > a PU-05 y PU-08 a PU-12. `TurnoGymIT` ejercita PI-07, PI-10, PI-11, PI-14, PI-30, PI-34,
 > PI-35, PI-45, PI-51 y PI-52 contra Postgres real.
 

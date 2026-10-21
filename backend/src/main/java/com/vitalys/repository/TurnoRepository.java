@@ -62,6 +62,34 @@ public interface TurnoRepository extends JpaRepository<Turno, Long>, JpaSpecific
         return buscarFuturos(profesionalId, TipoTurno.CONSULTORIO, EstadoTurno.RESERVADO, desde);
     }
 
+    /**
+     * Horarios que el profesional ya tiene tomados entre dos instantes, con la misma
+     * {@code fn_turno_ocupa_lugar} que usa {@code excl_turnos_overlap}: un slot libre en pantalla
+     * es uno que el motor va a aceptar.
+     */
+    @Query(
+            value = "SELECT inicio, fin FROM turnos WHERE profesional_id = :profesionalId AND inicio < :hasta "
+                    + "AND fin > :desde AND fn_turno_ocupa_lugar(estado, inicio, cancelado_en)",
+            nativeQuery = true)
+    List<Object[]> ocupadosDeProfesional(
+            @Param("profesionalId") Long profesionalId,
+            @Param("desde") OffsetDateTime desde,
+            @Param("hasta") OffsetDateTime hasta);
+
+    /** Agenda del profesional (W-03): sus turnos de consultorio en un rango, con la persona cargada. */
+    @Query("""
+            select t from Turno t
+            join fetch t.persona
+            where t.profesionalId = :profesionalId
+              and t.inicio >= :desde
+              and t.inicio < :hasta
+            order by t.inicio
+            """)
+    List<Turno> agendaDeProfesional(
+            @Param("profesionalId") Long profesionalId,
+            @Param("desde") OffsetDateTime desde,
+            @Param("hasta") OffsetDateTime hasta);
+
     /** Usuario del profesional a cargo, para saber si quien marca el turno es el propio. */
     @Query(value = "SELECT usuario_id FROM profesionales WHERE id = :profesionalId", nativeQuery = true)
     Long usuarioDelProfesional(@Param("profesionalId") Long profesionalId);

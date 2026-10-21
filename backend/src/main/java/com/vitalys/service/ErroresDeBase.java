@@ -33,6 +33,13 @@ final class ErroresDeBase {
             return new ReglaDeNegocioException(mensaje(sql, "El turno no cumple las reglas de reserva"));
         }
         if (EXCLUSION.equals(estado)) {
+            String texto = sql.getMessage() == null ? "" : sql.getMessage();
+            if (texto.contains("excl_turnos_persona_overlap")) {
+                return new ConflictoException("La persona ya tiene otro turno en ese horario");
+            }
+            if (texto.contains("excl_turnos_overlap")) {
+                return new ConflictoException("El profesional ya tiene un turno en ese horario");
+            }
             return new ConflictoException("Ese horario se superpone con otro turno que ocupa el lugar");
         }
         if (UNICO.equals(estado)) {

@@ -283,12 +283,13 @@ class CascadaDisponibilidadIT extends CascadaITBase {
 
     @Test
     void siLaBajaConfirmadaFallaAMitad_seRevierteCompleta() {
+        // (Nombres sin prefijo trg_/fn_: no son del esquema y verificar-nombres-db.py los tomaría por fantasmas.)
         // Falla inyectada: la base rechaza desactivar al profesional, que es el ÚLTIMO paso de la baja,
         // cuando la cascada ya canceló los turnos, creó los avisos y borró las franjas.
-        jdbcTemplate.execute("CREATE OR REPLACE FUNCTION fn_test_rechazar_baja() RETURNS trigger AS $$ "
+        jdbcTemplate.execute("CREATE OR REPLACE FUNCTION prueba_rechazar_baja_fn() RETURNS trigger AS $$ "
                 + "BEGIN RAISE EXCEPTION 'baja rechazada por el test'; END; $$ LANGUAGE plpgsql");
-        jdbcTemplate.execute("CREATE TRIGGER trg_test_rechazar_baja BEFORE UPDATE ON profesionales "
-                + "FOR EACH ROW WHEN (NEW.activo = false) EXECUTE FUNCTION fn_test_rechazar_baja()");
+        jdbcTemplate.execute("CREATE TRIGGER prueba_rechazar_baja_tg BEFORE UPDATE ON profesionales "
+                + "FOR EACH ROW WHEN (NEW.activo = false) EXECUTE FUNCTION prueba_rechazar_baja_fn()");
         try {
             ResponseEntity<String> r = llamar(
                     HttpMethod.DELETE,
@@ -299,8 +300,8 @@ class CascadaDisponibilidadIT extends CascadaITBase {
 
             assertThat(r.getStatusCode().is2xxSuccessful()).isFalse();
         } finally {
-            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_test_rechazar_baja ON profesionales");
-            jdbcTemplate.execute("DROP FUNCTION IF EXISTS fn_test_rechazar_baja()");
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS prueba_rechazar_baja_tg ON profesionales");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS prueba_rechazar_baja_fn()");
         }
 
         for (Long id : List.of(turnoLunes10, turnoLunes11, turnoLunes12, turnoMiercoles10)) {

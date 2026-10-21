@@ -50,6 +50,7 @@ describe("AppRoutes", () => {
 
   it.each([
     "/admin/dashboard",
+    "/admin/hoy",
     "/admin/personas",
     "/admin/profesionales",
     "/profesional/agenda",

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
+import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
@@ -25,6 +26,15 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <PlaceholderHomePage title="Panel ADMIN" />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/hoy"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <HoyPage />
           </RoleGuard>
         }
       />

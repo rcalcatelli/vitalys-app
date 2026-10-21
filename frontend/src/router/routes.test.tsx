@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setToken } from "../api/http";
 import { AuthProvider } from "../context/AuthContext";
 import { AppRoutes } from "./routes";
 
@@ -55,10 +56,49 @@ describe("AppRoutes", () => {
     "/admin/profesionales",
     "/profesional/agenda",
     "/socio/turnos",
+    "/socio/reservar-gimnasio",
+    "/socio/reservar-consultorio",
+    "/profesional/disponibilidad",
   ])("%s sin sesión redirige a /login (RoleGuard)", async (path) => {
     renderAt(path);
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Ingresar" })).toBeInTheDocument(),
     );
+  });
+
+  function sesionComo(rol: string) {
+    setToken(`jwt-${rol}`);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: 1, email: "u@vitalys.test", rol }),
+    } as Response);
+  }
+
+  it.each([
+    ["/socio/reservar-gimnasio", "Reservar gimnasio"],
+    ["/socio/reservar-consultorio", "Turno de consultorio"],
+    ["/socio/turnos", "Mis turnos"],
+  ])("%s muestra su pantalla al socio", async (path, titulo) => {
+    sesionComo("SOCIO_PACIENTE");
+    renderAt(path);
+    expect(await screen.findByRole("heading", { name: titulo })).toBeInTheDocument();
+  });
+
+  it.each(["/socio/reservar-gimnasio", "/socio/reservar-consultorio"])(
+    "%s rechaza al profesional y lo manda a su agenda",
+    async (path) => {
+      sesionComo("PROFESIONAL");
+      renderAt(path);
+      expect(
+        await screen.findByRole("heading", { name: "Agenda del profesional" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("/profesional/agenda rechaza al socio y lo manda a sus turnos", async () => {
+    sesionComo("SOCIO_PACIENTE");
+    renderAt("/profesional/agenda");
+    expect(await screen.findByRole("heading", { name: "Mis turnos" })).toBeInTheDocument();
   });
 });

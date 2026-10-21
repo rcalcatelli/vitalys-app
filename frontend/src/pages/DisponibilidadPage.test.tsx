@@ -139,6 +139,13 @@ describe("DisponibilidadPage", () => {
     expect(profesionalesApi.listarProfesionales).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "← Profesionales" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Profesional:")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Profesional" })).toBeInTheDocument();
+  });
+
+  it("ADMIN: no muestra el menú del profesional", async () => {
+    renderAdmin();
+    await screen.findByRole("group", { name: "Franja 1" });
+    expect(screen.queryByRole("navigation", { name: "Profesional" })).not.toBeInTheDocument();
   });
 
   it("PROFESIONAL sin ficha (404) muestra el mensaje del servidor", async () => {

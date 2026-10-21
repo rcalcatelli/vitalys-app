@@ -85,6 +85,24 @@ export function AppRoutes() {
       />
 
       <Route
+        path="/socio/reservar-gimnasio"
+        element={
+          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
+            <PlaceholderHomePage title="Reservar gimnasio" />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/socio/reservar-consultorio"
+        element={
+          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
+            <PlaceholderHomePage title="Turno de consultorio" />
+          </RoleGuard>
+        }
+      />
+
+      <Route
         path="/socio/turnos"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>

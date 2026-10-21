@@ -230,8 +230,9 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 □ Socio puede reservar un turno → recibe email de confirmación
 □ Profesional ve el turno en su agenda → puede marcarlo COMPLETADO
 □ Admin registra cuota mensual para el socio → estado de cuenta actualizado
-□ Cancelación con >24 h libera el slot; con <24 h lo mantiene bloqueado
-□ Socio moroso (Juan García) intenta reservar gym → recibe mensaje de bloqueo
+□ Cancelación antes del inicio libera el slot (en tiempo o tarde); con el turno ya iniciado lo mantiene bloqueado (RN-02)
+□ Socio suspendido (Juan García) reserva gym gracias a su excepción vigente; el admin la revisa en su historial
+□ Socio suspendido sin excepción vigente intenta reservar gym → recibe 422 por morosidad
 ```
 
 **Frecuencia:** antes de cada entrega de cátedra y de la defensa oral.

@@ -198,7 +198,7 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 
 **Lógica:** un período figura como impago si `NOW() > (periodo + 1 mes + 10 días)` y no tiene cuota registrada; un mes salteado sigue contando aunque se hayan pagado los posteriores (RN-01). La pantalla distingue **dos estados**: con deuda por debajo de `configuracion_gym.meses_tolerancia_morosidad` muestra un aviso informativo y el socio reserva con normalidad; al alcanzar el umbral muestra la suspensión, como en el ejemplo. La suspensión **nunca alcanza a los turnos de consultorio** (Decisión de dominio 1). Si existe una excepción vigente (RN-09) se indica junto a la alerta. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
 
-> Los valores del ejemplo corresponden a Juan García en los datos de prueba (`db/dml/seed.sql`): socio desde 01/2026, cuotas de julio y agosto pagadas, seis períodos impagos acumulados y una excepción vigente hasta el 31/10/2026. No tiene sesiones de consultorio: la única del seed es de Carlos Soto.
+> Los valores del ejemplo corresponden a Juan García en los datos de prueba (`db/dml/seed.sql`), mostrados como si el seed se hubiera cargado a fines de septiembre de 2026. El seed calcula sus fechas contra el día de la carga, así que en la base real los meses cambian pero el caso es siempre el mismo: membresía iniciada ocho meses antes, solo los dos últimos meses pagos, seis períodos impagos y una excepción vigente por 30 días. No tiene sesiones de consultorio: la única del seed es de Carlos Soto.
 
 ---
 

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
+import { MisTurnosPage } from "../pages/MisTurnosPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
@@ -108,7 +109,7 @@ export function AppRoutes() {
         path="/socio/turnos"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <PlaceholderHomePage title="Mis turnos" />
+            <MisTurnosPage />
           </RoleGuard>
         }
       />

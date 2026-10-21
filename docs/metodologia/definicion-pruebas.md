@@ -155,9 +155,9 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-34 | Reserva GYM L-V empezando a las 21:00 (terminaría 22:00)        | 422: la franja excede la hora de cierre (RN-14) |
 | PI-35 | Reserva GYM sábado en la última franja (11:00–12:00)            | 201 |
 | PI-36 | Reserva GYM sábado empezando a las 12:00                        | 422: el sábado cierra a las 12:00 |
-| PI-37 | Reserva GYM en un feriado `INAMOVIBLE`                          | 422 con el nombre del feriado en el mensaje |
-| PI-38 | Reserva GYM en un feriado `TRASLADABLE` **en la fecha corrida**, no en la nominal | 422 en la fecha corrida; 201 en la fecha nominal si ese año no es feriado |
-| PI-39 | Reserva GYM en un día `NO_LABORABLE`                            | 201: las festividades religiosas no cierran el gimnasio (`cierra_gimnasio = FALSE`) |
+| PI-81 | Reserva GYM en un feriado `INAMOVIBLE`                          | 422 con el nombre del feriado en el mensaje |
+| PI-82 | Reserva GYM en un feriado `TRASLADABLE` **en la fecha corrida**, no en la nominal | 422 en la fecha corrida; 201 en la fecha nominal si ese año no es feriado |
+| PI-83 | Reserva GYM en un día `NO_LABORABLE`                            | 201: las festividades religiosas no cierran el gimnasio (`cierra_gimnasio = FALSE`) |
 | PI-40 | Reserva GYM en un cierre cargado por el ADMIN (`origen = 'MANUAL'`) | 422: el trigger no distingue el origen, solo `cierra_gimnasio` |
 | PI-41 | Pago `SESION_CONSULTORIO` asociado a un turno de gimnasio | 422 (`trg_pago_sesion`, RN-20 a) |
 | PI-42 | Pago `SESION_CONSULTORIO` a nombre de una persona distinta a la del turno | 422 (`trg_pago_sesion`, RN-20 b) |
@@ -179,10 +179,10 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-58 | Notificaciones tras la cascada | Una fila `AVISO_CANCELACION` por cada paciente afectado (RF-27) |
 | PI-59 | Falla el proveedor de email durante la cascada (reinterpretado, ver nota) | La cascada **queda confirmada**: disponibilidad reducida, turnos en `CANCELADO_POR_PROFESIONAL` y filas de notificación creadas. El email sale recién después del commit; si falla se reintenta una vez a los 10 s y, si vuelve a fallar, la notificación queda con `intentos = 2` y `exitoso = false` y aparece en la alerta del ADMIN. No se hace rollback de la cascada |
 | PI-60 | **Ampliar** la disponibilidad (no reducirla) | 200 sin confirmación: no hay turnos que puedan quedar afuera |
-| PI-33 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
-| PI-34 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
-| PI-35 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
-| PI-36 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
+| PI-84 | Reserva GYM de una persona con `es_socio_gym = false`          | 422 (trigger `fn_check_turno_gym`: no es socia activa del gimnasio) |
+| PI-85 | Segunda reserva GYM de la misma persona el mismo día           | 409 (`uq_turno_gym_persona_dia`)                |
+| PI-86 | Reserva GYM sobre una franja con el cupo completo              | 422 (trigger `fn_check_turno_gym`: cupo completo) |
+| PI-87 | Cancelar un turno GYM libera el cupo de la franja               | 200 al cancelar; una reserva nueva sobre la misma franja responde 201 |
 
 > **PI-59, reinterpretación aceptada.** El enunciado original ("o queda todo, o no queda nada") mezclaba dos cosas. La **cascada es atómica sobre los datos**: disponibilidad, cancelaciones y filas de notificación se guardan juntas o no se guarda nada (lo cubre `siElCambioDeDisponibilidadFalla_laCascadaSeRevierteCompleta`). El **email, en cambio, es un efecto externo** que no puede participar de la transacción: se despacha después del commit y su falla no deshace una cancelación ya decidida —sería peor dejar turnos de terceros vivos en un horario que el profesional ya no atiende—. Por eso la falla se resuelve con reintento y alerta, no con rollback.
 
@@ -203,17 +203,17 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 > reserva de consultorio, también en `TurnoServiceTest` y de punta a punta en
 > `TurnoConsultorioIT` (que cubre además PI-07 y PI-08 en consultorio). `MorosidadServiceTest` cubre PU-01
 > a PU-05 y PU-08 a PU-12. `TurnoGymIT` ejercita PI-07, PI-10, PI-11, PI-14, PI-30, PI-34,
-> PI-35, PI-45, PI-51 y PI-52 contra Postgres real.
+> PI-45, PI-51, PI-52 y PI-85 a PI-87 contra Postgres real.
 
 ### Pagos
 
 | ID    | Caso                                                      | Resultado esperado                              |
 |-------|-----------------------------------------------------------|-------------------------------------------------|
-| PI-13 | Registrar cuota mensual                                   | 201, pago creado                                |
-| PI-14 | Registrar segunda cuota del mismo mes                     | 409 (uq_cuota_mensual)                         |
-| PI-15 | Registrar pago de sesión para turno sin turno_id         | 422 (chk_concepto_datos)                       |
-| PI-16 | Registrar segundo pago al mismo turno                     | 409 (uq_pago_por_turno)                        |
-| PI-17 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte) |
+| PI-76 | Registrar cuota mensual                                   | 201, pago creado                                |
+| PI-77 | Registrar segunda cuota del mismo mes                     | 409 (uq_cuota_mensual)                         |
+| PI-78 | Registrar pago de sesión para turno sin turno_id         | 422 (chk_concepto_datos)                       |
+| PI-79 | Registrar segundo pago al mismo turno                     | 409 (uq_pago_por_turno)                        |
+| PI-80 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte) |
 
 ---
 

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
+import com.vitalys.dto.EstadoCuentaResponse;
+import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.LoginResponse;
 import com.vitalys.dto.PagoResponse;
 import com.vitalys.dto.PersonaResponse;
@@ -367,5 +369,117 @@ class PagoControllerIT extends IntegrationTestBase {
         jdbcTemplate.update("UPDATE personas SET estado = 'INACTIVO', fecha_baja = CURRENT_DATE WHERE id = ?", socia.datos().id());
 
         assertThat(registrar(cuota(socia, inicioMembresia)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    // ------------------------------------------------------------------ estado de cuenta
+
+    private ResponseEntity<EstadoCuentaResponse> estadoCuenta(Persona consultada, String token) {
+        return llamar(HttpMethod.GET, "/api/pagos/persona/" + consultada.datos().id() + "/estado-cuenta", null, token,
+                EstadoCuentaResponse.class);
+    }
+
+    @Test
+    void pi100_mezclaDePeriodos_pagadoImpagoYPendiente() {
+        // inicio = hace 2 meses: [m-2, m-1, m]; solo se paga m-2. m-2 vencio hace mas de 10 dias.
+        Persona socia = persona(true);
+        assertThat(registrar(cuota(socia, inicioMembresia)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        EstadoCuentaResponse e = estadoCuenta(socia, tokenAdmin).getBody();
+
+        assertThat(e.esSocioGym()).isTrue();
+        assertThat(e.fechaInicioMembresia()).isEqualTo(inicioMembresia);
+        assertThat(e.periodos()).hasSize(3);
+        assertThat(e.periodos().get(0).estado().name()).isEqualTo("PAGADO");
+        assertThat(e.periodos().get(0).pago().medio().name()).isEqualTo("EFECTIVO");
+        assertThat(e.periodos().get(2).estado().name()).isEqualTo("PENDIENTE");
+        long impagos = e.periodos().stream().filter(p -> p.estado().name().equals("IMPAGO")).count();
+        assertThat(e.periodosImpagos()).isEqualTo((int) impagos);
+        assertThat(e.periodos().get(1).estado().name()).isIn("IMPAGO", "PENDIENTE");
+        assertThat(e.suspendido()).isFalse();
+        assertThat(e.excepcion()).isNull();
+        assertThat(e.totales().cantidadPagos()).isEqualTo(1);
+    }
+
+    @Test
+    void pi101_sesionPagadaApareceEnSesionesYSumaEnTotales() {
+        Persona paciente = persona(false);
+        TurnoResponse turno = reservarConsultorio(paciente, 9, 0);
+        assertThat(registrar(sesion(paciente, turno.id())).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        EstadoCuentaResponse e = estadoCuenta(paciente, tokenAdmin).getBody();
+
+        assertThat(e.esSocioGym()).isFalse();
+        assertThat(e.periodos()).isEmpty();
+        assertThat(e.suspendido()).isFalse();
+        assertThat(e.sesiones()).hasSize(1);
+        assertThat(e.sesiones().get(0).turnoId()).isEqualTo(turno.id());
+        assertThat(e.sesiones().get(0).medio().name()).isEqualTo("TRANSFERENCIA");
+        assertThat(e.sesiones().get(0).fechaTurno()).isNotNull();
+        assertThat(e.totales().cantidadPagos()).isEqualTo(1);
+        assertThat(e.totales().montoTotal()).isEqualByComparingTo("8000");
+    }
+
+    @Test
+    void pi98_socioVeLaPropiaPeroNoLaAjena_profesionalYPersonaInexistente() {
+        Persona yo = persona(true);
+        Persona otra = persona(true);
+
+        assertThat(estadoCuenta(yo, yo.token()).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(llamar(HttpMethod.GET, "/api/pagos/mi-estado-cuenta", null, yo.token(), EstadoCuentaResponse.class)
+                        .getBody()
+                        .personaId())
+                .isEqualTo(yo.datos().id());
+        assertThat(estadoCuenta(otra, yo.token()).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(estadoCuenta(yo, tokenProfesional).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(llamar(HttpMethod.GET, "/api/pagos/mi-estado-cuenta", null, tokenProfesional, String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(llamar(HttpMethod.GET, "/api/pagos/persona/999999999/estado-cuenta", null, tokenAdmin, String.class)
+                        .getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void pi99_socioSinFicha_miEstadoCuentaDa422() {
+        String email = "sinficha-" + UUID.randomUUID() + "@mail.test";
+        usuarioRepository.save(new Usuario(email, passwordEncoder.encode(CLAVE), RolUsuario.SOCIO_PACIENTE));
+
+        ResponseEntity<String> r = llamar(HttpMethod.GET, "/api/pagos/mi-estado-cuenta", null, login(email), String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("ficha");
+    }
+
+    @Test
+    void pi103_estadoDeCuentaYEstadoGymCoincidenConLaMismaRegla() {
+        // Sin pagos y desde hace 2 meses; con umbral 1 queda suspendido, y con excepcion vigente deja de estarlo
+        Persona socia = persona(true);
+        int umbralOriginal = jdbcTemplate.queryForObject(
+                "SELECT meses_tolerancia_morosidad FROM configuracion_gym WHERE id = 1", Integer.class);
+        try {
+            jdbcTemplate.update("UPDATE configuracion_gym SET meses_tolerancia_morosidad = 1 WHERE id = 1");
+            EstadoCuentaResponse cuenta = estadoCuenta(socia, tokenAdmin).getBody();
+            EstadoGymResponse gym = llamar(HttpMethod.GET, "/api/turnos/gym/estado", null, socia.token(), EstadoGymResponse.class)
+                    .getBody();
+            assertThat(cuenta.suspendido()).isTrue();
+            assertThat(cuenta.suspendido()).isEqualTo(gym.suspendido());
+            assertThat(cuenta.periodosImpagos()).isEqualTo(gym.periodosImpagos());
+            assertThat(cuenta.umbral()).isEqualTo(gym.umbral());
+
+            jdbcTemplate.update(
+                    "INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta, un_solo_uso) "
+                            + "VALUES (?, (SELECT id FROM usuarios WHERE rol = 'ADMIN' LIMIT 1), 'plan de pago', ?, false)",
+                    socia.datos().id(),
+                    LocalDate.now(ZONA).plusDays(5));
+            EstadoCuentaResponse conExcepcion = estadoCuenta(socia, tokenAdmin).getBody();
+            EstadoGymResponse gymConExcepcion = llamar(
+                            HttpMethod.GET, "/api/turnos/gym/estado", null, socia.token(), EstadoGymResponse.class)
+                    .getBody();
+            assertThat(conExcepcion.suspendido()).isFalse();
+            assertThat(conExcepcion.suspendido()).isEqualTo(gymConExcepcion.suspendido());
+            assertThat(conExcepcion.excepcion().validaHasta()).isEqualTo(LocalDate.now(ZONA).plusDays(5));
+            assertThat(conExcepcion.excepcion().motivo()).isEqualTo("plan de pago");
+        } finally {
+            jdbcTemplate.update("UPDATE configuracion_gym SET meses_tolerancia_morosidad = ? WHERE id = 1", umbralOriginal);
+        }
     }
 }

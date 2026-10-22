@@ -110,6 +110,23 @@ class SeedIT {
     }
 
     @Test
+    void juanTieneSeisPeriodosImpagosEnElDetalleYLaMismaReglaQueElConteo() {
+        LocalDate inicio = jdbc.queryForObject(
+                "SELECT fecha_inicio_membresia FROM personas WHERE dni = '38100002'", LocalDate.class);
+        Set<LocalDate> pagados = new HashSet<>(jdbc.queryForList(
+                "SELECT pa.periodo FROM pagos pa JOIN personas p ON p.id = pa.persona_id "
+                        + "WHERE p.dni = '38100002' AND pa.concepto = 'CUOTA_MENSUAL'",
+                LocalDate.class));
+
+        var detalle = MorosidadService.periodos(inicio, pagados, hoy());
+
+        assertThat(detalle.stream().filter(p -> p.estado() == MorosidadService.EstadoPeriodo.IMPAGO).count())
+                .isEqualTo(umbral());
+        assertThat(detalle.stream().filter(p -> p.estado() == MorosidadService.EstadoPeriodo.PAGADO).count())
+                .isEqualTo(pagados.size());
+    }
+
+    @Test
     void losReservadosQuedanEnElFuturoYLosCerradosEnElPasado() {
         Integer inconsistentes = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM turnos WHERE (estado = 'RESERVADO') <> (inicio > NOW())", Integer.class);

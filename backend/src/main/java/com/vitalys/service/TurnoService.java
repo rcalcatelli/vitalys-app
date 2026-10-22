@@ -2,7 +2,6 @@ package com.vitalys.service;
 
 import com.vitalys.domain.DisponibilidadProfesional;
 import com.vitalys.domain.EstadoTurno;
-import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.Persona;
 import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
@@ -27,6 +26,7 @@ import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
+import com.vitalys.service.MorosidadService.VeredictoMorosidad;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -158,7 +157,7 @@ public class TurnoService {
         }
         Persona persona = resolverPersona(actor, request.personaId());
 
-        VeredictoMorosidad veredicto = veredictoMorosidad(persona);
+        VeredictoMorosidad veredicto = morosidadService.veredicto(persona);
         if (veredicto.bloqueado()) {
             EstadoDeuda deuda = veredicto.deuda();
             throw new ReglaDeNegocioException(String.format(
@@ -175,27 +174,6 @@ public class TurnoService {
         return TurnoResponse.de(turno);
     }
 
-    /** Deuda de la persona y, solo si está suspendida, la excepción vigente que la habilita (RN-01, RN-09). */
-    private record VeredictoMorosidad(EstadoDeuda deuda, Optional<ExcepcionMorosidad> excepcion) {
-
-        boolean bloqueado() {
-            return deuda.suspendido() && excepcion.isEmpty();
-        }
-    }
-
-    /** Única fuente de verdad de la suspensión: la usan la reserva y el estado que consulta el frontend. */
-    private VeredictoMorosidad veredictoMorosidad(Persona persona) {
-        EstadoDeuda deuda = morosidadService.evaluar(persona);
-        if (!deuda.suspendido()) {
-            return new VeredictoMorosidad(deuda, Optional.empty());
-        }
-        LocalDate hoy = LocalDate.now(clock);
-        Optional<ExcepcionMorosidad> excepcion = excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(persona.getId()).stream()
-                .filter(e -> e.vigenteEl(hoy))
-                .findFirst();
-        return new VeredictoMorosidad(deuda, excepcion);
-    }
-
     /**
      * Estado de gimnasio de una persona para la pantalla de reserva. {@code suspendido} es el
      * veredicto de la reserva: false si hay una excepción vigente aunque la deuda llegue al umbral.
@@ -206,7 +184,7 @@ public class TurnoService {
             throw new AccesoDenegadoException("Un profesional no tiene turnos de gimnasio");
         }
         Persona persona = resolverPersona(actor, personaId, "Solo podés consultar tu propio estado");
-        VeredictoMorosidad veredicto = veredictoMorosidad(persona);
+        VeredictoMorosidad veredicto = morosidadService.veredicto(persona);
         return new EstadoGymResponse(
                 persona.isEsSocioGym(),
                 veredicto.bloqueado(),

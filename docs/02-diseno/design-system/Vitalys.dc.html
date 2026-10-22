@@ -677,7 +677,6 @@ a:hover{color:var(--clin)}
                   </div>
                   <sc-if value="{{ r.in }}" hint-placeholder-val="{{ false }}">
                     <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--ok-soft);color:var(--ok-ink);white-space:nowrap">Ingresó <span style="font-family:'IBM Plex Mono',monospace">{{ r.time }}</span></span>
-                    <button onClick="{{ r.undo }}" style="height:36px;padding:0 8px;border:0;background:transparent;color:var(--text-3);font-size:12.5px">Deshacer</button>
                   </sc-if>
                   <sc-if value="{{ r.out }}" hint-placeholder-val="{{ true }}">
                     <button onClick="{{ r.mark }}" style="height:44px;padding:0 16px;border:0;border-radius:8px;background:var(--gym);color:var(--on-gym);font-weight:600;white-space:nowrap">Marcar ingreso</button>
@@ -1572,8 +1571,7 @@ class Component extends DCLogic {
       const rows = s.ingreso.filter(r => !q || r.name.toLowerCase().includes(q) || r.dni.includes(q))
         .sort((a, b) => (s.checkins[a.id] ? 1 : 0) - (s.checkins[b.id] ? 1 : 0))
         .map(r => ({ name: r.name, dni: r.dni, in: !!s.checkins[r.id], out: !s.checkins[r.id], time: s.checkins[r.id] || '',
-          mark: () => { this.setState(y => ({ checkins: Object.assign({}, y.checkins, { [r.id]: '10:40' }) })); this.flash(r.name + ' ingresó al gimnasio'); },
-          undo: () => this.setState(y => { const c = Object.assign({}, y.checkins); delete c[r.id]; return { checkins: c }; }) }));
+          mark: () => { this.setState(y => ({ checkins: Object.assign({}, y.checkins, { [r.id]: '10:40' }) })); this.flash(r.name + ' ingresó al gimnasio'); } }));
       const n = Object.keys(s.checkins).length, t = s.ingreso.length;
       out.ing = { rows, empty: !rows.length, progress: n + ' de ' + t + ' ingresaron', pct: (n / t * 100) + '%' };
     }

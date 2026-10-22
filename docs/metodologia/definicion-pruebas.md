@@ -197,7 +197,7 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 | PI-74 | JWT todavía vigente de un usuario deshabilitado (`usuarios.activo = false`), por ejemplo un profesional dado de baja | 401: el token no autentica aunque no haya vencido | `ProfesionalIT.tokenVigenteDeUsuarioDeshabilitado_devuelve401`; unitario en `JwtAuthenticationFilterTest.usuarioDeshabilitado_noAutenticaYLaCadenaSigue` |
 | PI-75 | Reactivar un profesional dado de baja | `PATCH /api/profesionales/{id}/reactivar` (ADMIN) deja `activo = true` en `profesionales` y `usuarios`, el login vuelve a funcionar y no reaparecen las franjas borradas en la baja; reactivar de nuevo → 409; no ADMIN → 403; inexistente → 404 | `ProfesionalIT` (`reactivar_trasLaBaja_devuelveAlProfesionalSinFranjasYPuedeLoguearse`, `reactivar_comoNoAdmin_devuelve403_einexistente_devuelve404`); unitarios en `ProfesionalServiceTest` y `ProfesionalTest` |
 
-> **Implementación (Sprint 5, Profesionales).** PI-53 a PI-60 los ejercita `CascadaDisponibilidadIT`
+> **Implementación (Sprint 3, Profesionales).** PI-53 a PI-60 los ejercita `CascadaDisponibilidadIT`
 > (PI-59 en su variante de email, `CascadaEmailFallidoIT`), con fechas calculadas relativas a "ahora"
 > para que el escenario no caduque. Estos ITs corren solo contra Postgres real (Testcontainers) en CI.
 
@@ -209,8 +209,10 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 > `elDniDelPacienteSoloSeExponeEnLaAgendaDelProfesional`. `TurnoGymIT` cubre PI-88
 > (`estadoGym_alDiaSuspendidoYConExcepcion_coincideConLaReserva` y `estadoGym_matrizDeRoles`) y
 > PI-89 (`personaSinMembresiaDeGimnasio_estadoSinMembresiaYLaReservaLaRechazaElMotor`).
-> **Pendiente:** PI-13 y PI-15 (cancelación con la franja ya iniciada) todavía no tienen un IT
-> propio; quedan como seguimiento.
+> PI-13 y PI-15 (cancelación con la franja ya iniciada) los cubre `TurnoFranjaIniciadaIT`: como
+> la API no deja reservar un horario que ya empezó, el turno iniciado y el competidor se insertan
+> directo en la base, y la cancelación pasa por la API. Se verifica que el motor siga contando el
+> lugar como ocupado (`excl_turnos_overlap` en consultorio, "Cupo completo" en gimnasio).
 
 > **Implementación (Sprint 4, gimnasio).** `TurnoServiceTest` cubre TU-03 a TU-06, TU-08 y
 > TU-10; TU-01/TU-02 están en `TurnoTest` (la regla vive en la entidad) y TU-07/TU-09, con la

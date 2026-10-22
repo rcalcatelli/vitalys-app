@@ -5,6 +5,7 @@ import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
 import { MiEstadoCuentaPage } from "../pages/MiEstadoCuentaPage";
 import { MisTurnosPage } from "../pages/MisTurnosPage";
+import { PagosPage } from "../pages/PagosPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
@@ -49,6 +50,15 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
             <PersonasPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/admin/pagos"
+        element={
+          <RoleGuard allowedRoles={["ADMIN"]}>
+            <PagosPage />
           </RoleGuard>
         }
       />

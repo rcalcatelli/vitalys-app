@@ -5,6 +5,7 @@ const ITEMS = [
   { to: "/admin/hoy", etiqueta: "Hoy", conBadge: true },
   { to: "/admin/personas", etiqueta: "Personas", conBadge: false },
   { to: "/admin/profesionales", etiqueta: "Profesionales", conBadge: false },
+  { to: "/admin/pagos", etiqueta: "Pagos", conBadge: false },
 ];
 
 interface Props {

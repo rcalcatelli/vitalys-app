@@ -56,6 +56,7 @@ describe("AppRoutes", () => {
     "/admin/hoy",
     "/admin/personas",
     "/admin/profesionales",
+    "/admin/pagos",
     "/profesional/agenda",
     "/socio/turnos",
     "/socio/estado-cuenta",

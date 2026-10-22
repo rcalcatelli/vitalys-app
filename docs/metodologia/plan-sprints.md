@@ -11,12 +11,16 @@
 
 | Sprint   | Período            | Módulo/s                                     | Resp. primario          | Estado  |
 |----------|--------------------|----------------------------------------------|-------------------------|---------|
-| Sprint 1 | 31/08 – 13/09/2026 | Infraestructura + DDL + Setup inicial         | R. Calcatelli           | 🟡 Parcial (6/9 tareas) |
+| Sprint 1 | 31/08 – 13/09/2026 | Infraestructura + DDL + Setup inicial         | R. Calcatelli           | ✅ Completado |
 | Sprint 2 | 14/09 – 27/09/2026 | Autenticación y roles (JWT)                  | P. Basualdo Arcati      | ✅ Completado |
-| Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | 🔄 En curso |
-| Sprint 4 | 12/10 – 25/10/2026 | Módulo Turnos                                | R. Calcatelli           | ⏳ Pendiente |
-| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | P. Basualdo Arcati      | ⏳ Pendiente |
+| Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | 🟡 Casi completo (falta T3-11) |
+| Sprint 4 | 12/10 – 25/10/2026 | Módulo Turnos                                | Ambos                   | ✅ Completado |
+| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | 🔄 Adelantado en parte (emails); Pagos sin empezar |
 | Cierre   | 09/11 – 14/11/2026 | Estabilización · Informe · Video · Defensa   | Ambos                   | ⏳ Pendiente |
+
+> **Estado verificado el 22/10/2026** contra `main` (PR #24) y el CI en verde. Las fechas de los
+> sprints no cambian; la columna Estado y las tablas "Estado real" de cada sprint reflejan lo que
+> efectivamente está mergeado. El detalle por tarea está debajo de cada sprint.
 
 ---
 
@@ -38,11 +42,20 @@
 | T1-8 | Ejecutar DDL v2 (con todas las correcciones de la 2.ª entrega) | R. Calcatelli | 1 h | ⏳ Pendiente — depende de T1-4 |
 | T1-9 | Ejecutar seed.sql y verificar constraints                  | Ambos          | 2 h | ⏳ Pendiente — depende de T1-4/T1-8 |
 
-**Estado real (verificado 27/09/2026 contra el repositorio):** parcial, 6 de 9 tareas completas. Lo pendiente (T1-4, T1-8, T1-9) es una sola cadena: crear el proyecto en Supabase, correr contra esa base las migraciones (`db/migration/V1__esquema_inicial.sql` a `V5__ensanchar_excl_turnos_overlap.sql`) y verificar `db/dml/seed.sql`. Ningún agente puede hacer esto por su cuenta porque requiere las credenciales de Supabase del equipo; lo demás (repo, ambos proyectos base, conexión JDBC configurada, despliegue y documentación de arranque en frío) está commiteado y es verificable en `backend/`, `frontend/`, `render.yaml`, `frontend/vercel.json` y el README.
+**Estado real (verificado 22/10/2026):** completado. La cadena que quedaba pendiente al 27/09 (T1-4, T1-8 y T1-9) se cerró con el despliegue: el proyecto de Supabase existe y el backend aplica las migraciones con Flyway al arrancar (V1 a V13), así que "ejecutar el DDL" dejó de ser un paso manual. El seed se verifica en el CI con `SeedIT`, que lo carga en una base recién migrada.
 
-**Entregable:** URL pública del frontend y backend respondiendo health-check. Base de datos con esquema y datos de prueba — **pendiente de un proyecto Supabase real** (T1-4/T1-8/T1-9).
+| ID | Estado | Evidencia |
+|----|--------|-----------|
+| T1-1 a T1-3 | ✅ | Repositorio, `backend/` y `frontend/` |
+| T1-4 | ✅ | Proyecto Supabase en uso por el backend de Render |
+| T1-5 | ✅ | Conexión por variables de entorno (`render.yaml`, `application-prod.properties`) |
+| T1-6, T1-7 | ✅ | `render.yaml`, `frontend/vercel.json`, sección "Cold start" del README |
+| T1-8 | ✅ | Migraciones `db/migration/V1` a `V13`, aplicadas por Flyway |
+| T1-9 | ✅ | `db/dml/seed.sql` con fechas relativas a la carga; `SeedIT` verifica cada caso de prueba |
 
-**Criterio de cierre del sprint:** `GET /api/health` devuelve `200 OK` desde la URL de Render. *(Alcanzable con el backend actual; lo que falta para cerrar el sprint es la base de datos real en Supabase, no el código.)*
+**Entregable:** URL pública del frontend y del backend respondiendo el health-check, con la base de datos en Supabase.
+
+**Criterio de cierre del sprint:** `GET /api/health` devuelve `200 OK` desde la URL de Render. Cumplido.
 
 ---
 
@@ -88,18 +101,17 @@
 
 **Criterio de cierre:** ADMIN puede crear, editar y dar de baja personas; el trigger rechaza disponibilidades superpuestas.
 
-**Estado real del módulo de Profesionales (cambio `profesionales-disponibilidad`, rama `feat/5-s3-profesionales`, PR #20):** backend completo, falta solo la pantalla.
+**Estado real (verificado 22/10/2026):**
 
-| Tarea | Estado | Evidencia |
-|-------|--------|-----------|
-| T3-5 | ✅ | Entidades `Profesional` y `DisponibilidadProfesional`; migración `V13__profesionales_disponibilidad.sql` |
-| T3-6 | ✅ | `ProfesionalService` (alta, edición, `/me`, baja lógica en dos pasos, RN-25) |
-| T3-7 | ✅ | `DisponibilidadService` (franja a franja y reemplazo total) y `CascadaDisponibilidadService` (RN-24); anti-solapamiento por `trg_disponibilidad_overlap` |
-| T3-8 | ✅ | `ProfesionalController` y `NotificacionController` (`GET /api/admin/notificaciones?fallidas=true`) |
-| T3-9 | ⏳ Pendiente | Pantalla de disponibilidad (PROFESIONAL / ADMIN): el frontend queda para la última slice del cambio |
-| T3-10 | ✅ | `DisponibilidadIT`, `ProfesionalIT`, `CascadaDisponibilidadIT`, `CascadaEmailFallidoIT`, `MigracionV13IT` (PI-53 a PI-60 y PI-71 a PI-74) |
+| ID | Estado | Evidencia |
+|----|--------|-----------|
+| T3-1 a T3-4 | ✅ | `Persona`, `PersonaService`, `PersonaController` y pantalla W-05 (PR #17) |
+| T3-5 a T3-8 | ✅ | `Profesional`, `DisponibilidadProfesional`, `ProfesionalService`, `DisponibilidadService`, `CascadaDisponibilidadService` (RN-24, RN-25) y migración V13 (PR #20) |
+| T3-9 | ✅ | Pantallas de Profesionales y Disponibilidad (PR #20) |
+| T3-10 | ✅ | `PersonaIT` (PI-61 a PI-70), `DisponibilidadIT`, `ProfesionalIT`, `CascadaDisponibilidadIT`, `CascadaEmailFallidoIT`, `MigracionV13IT` |
+| T3-11 | ⏳ Pendiente | `POST /api/personas/vincular` (RF-31) todavía no está implementado: hoy la única alta de persona es la presencial (RF-05) |
 
-Además del alcance original se incorporó el envío de emails por Brevo (API HTTP) con un reintento y alerta al ADMIN, que el plan ubicaba en T5-6/T5-7: la cancelación en cascada de RN-24 necesita avisar a los pacientes y no podía esperar al Sprint 5. El proveedor es Brevo y no Resend/SendGrid (ver `docs/02-diseno/modulos.md`, Módulo 6).
+Además del alcance original se incorporó el envío de emails por Brevo (API HTTP) con un reintento y alerta al ADMIN, que el plan ubicaba en T5-6/T5-9: la cancelación en cascada de RN-24 necesita avisar a los pacientes y no podía esperar al Sprint 5. El proveedor es Brevo y no Resend/SendGrid (ver `docs/02-diseno/modulos.md`, Módulo 6).
 
 ---
 
@@ -121,19 +133,21 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T4-10 | Pantalla Mis turnos (lista + botón cancelar, SOCIO_PACIENTE)             | P. Basualdo Arcati | 4 h |
 | T4-11 | Tests: solapamiento, 24 h, morosidad, permiso de cancelación             | Ambos         | 4 h |
 | T4-12 | TurnoService.reservarGym (grilla fija 60 min, un turno por persona y día, cupo por franja — reglas de `db/migration/V2__reglas_gimnasio.sql`) | R. Calcatelli | 4 h |
-| T4-13 | GET /api/turnos/disponibles con cupo restante por franja de gym (ocupados / `cupo_por_franja`) | R. Calcatelli | 2 h |
+| T4-13 | GET /api/turnos/gym/cupo con cupo restante por franja de gym (ocupados / `cupo_por_franja`) | R. Calcatelli | 2 h |
 | T4-14 | PATCH /api/turnos/{id}/completado — el ADMIN marca el check-in del turno de gimnasio | R. Calcatelli | 2 h |
 | T4-15 | Job de pasaje automático a `AUSENTE` al cerrar la franja de gym, con mitigación de cold-start de Render (ver RG-14) | R. Calcatelli | 3 h |
 | T4-16 | Tests de gimnasio: grilla, cupo, un turno por día, check-in, liberación de cupo al cancelar (PI-30 a PI-36 y PI-84 a PI-87) | Ambos | 3 h |
 
-**Estado real de las tareas de frontend (T4-8 a T4-11), rama `feat/6-s4-turnos-frontend`:**
+**Estado real (verificado 22/10/2026):** completado.
 
-| ID | Estado | Detalle |
-|----|--------|---------|
-| T4-8 | ✅ | La reserva quedó en dos pantallas, una por tipo de turno: gimnasio (`/socio/reservar-gimnasio`, W-08) y consultorio (`/socio/reservar-consultorio`, W-02). La de gimnasio consulta primero `GET /api/turnos/gym/estado` y bloquea la reserva si el socio no tiene membresía o está suspendido |
-| T4-9 | ✅ | Agenda del profesional (`/profesional/agenda`, W-03) como lista agrupada por día, de hoy a siete días, con nombre y DNI del paciente; COMPLETADO y AUSENTE se habilitan según la ventana horaria que valida el backend |
-| T4-10 | ✅ | Mis turnos (`/socio/turnos`) con cancelación y motivo obligatorio, indicando si la cancelación es en término (24 h consultorio, 2 h gimnasio) |
-| T4-11 | 🔄 Parcial | Cubiertos PI-09 y PI-12 (consultorio) y los nuevos PI-88 a PI-90; PI-13 y PI-15 (cancelación con la franja ya iniciada) siguen sin IT propio |
+| ID | Estado | Evidencia |
+|----|--------|-----------|
+| T4-1 a T4-7 | ✅ | `Turno`, `ExcepcionMorosidad`, `MorosidadService`, `TurnoService`, `TurnoController`, `ExcepcionMorosidadController` (PR #18 gimnasio, PR #21 consultorio). La reserva de consultorio toma el lock de fila del profesional, el mismo que la cascada de RN-24 |
+| T4-8 | ✅ | Reserva en dos pantallas: gimnasio (`/socio/reservar-gimnasio`, W-08), que consulta antes `GET /api/turnos/gym/estado`, y consultorio (`/socio/reservar-consultorio`, W-02) (PR #24) |
+| T4-9 | ✅ | Agenda del profesional (`/profesional/agenda`, W-03), de hoy a siete días, con nombre y DNI del paciente (PR #24) |
+| T4-10 | ✅ | Mis turnos (`/socio/turnos`) con cancelación y motivo obligatorio (PR #24) |
+| T4-11 | ✅ | `TurnoServiceTest`, `TurnoTest`, `MorosidadServiceTest`, `TurnoGymIT`, `TurnoConsultorioIT` (PI-07 a PI-12, PI-88 a PI-90) y `TurnoFranjaIniciadaIT` (PI-13 y PI-15) |
+| T4-12 a T4-16 | ✅ | Reserva y cupo de gimnasio, check-in del ADMIN y `JobAusentesGym` (PI-30 a PI-36 y PI-84 a PI-87) |
 
 **Criterio de cierre:** la BD rechaza solapamientos por EXCLUDE; el servicio aplica la regla de 24 h; AUSENTE y COMPLETADO solo los puede marcar el profesional (consultorio) o el ADMIN vía check-in (gimnasio); la reserva de gym respeta grilla y cupo por franja, y cancelar libera el cupo.
 
@@ -150,13 +164,25 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T5-3 | PagoService.calcularMorosidad (RN-01)                                    | P. Basualdo Arcati | 3 h |
 | T5-4 | PagoController: GET estado de cuenta, POST registrar pago                | P. Basualdo Arcati | 3 h |
 | T5-5 | Pantalla Estado de cuenta (W-04, SOCIO_PACIENTE y ADMIN)                 | P. Basualdo Arcati | 5 h |
-| T5-6 | Integración proveedor email (Resend o SendGrid, tier gratuito)           | R. Calcatelli      | 3 h |
+| T5-6 | Integración proveedor email (tier gratuito; se eligió Brevo)             | R. Calcatelli      | 3 h |
 | T5-7 | NotificacionService (confirmación reserva, aviso cancelación)            | R. Calcatelli      | 3 h |
 | T5-8 | Tarea programada @Scheduled: recordatorio 24 h antes de cada turno       | R. Calcatelli      | 3 h |
 | T5-9 | Entidad Notificacion + log de envíos (historial para ADMIN)              | R. Calcatelli      | 2 h |
 | T5-10 | Tests: unicidad de cuota, pago por turno, disparo de emails              | Ambos              | 3 h |
 
 **Criterio de cierre:** ADMIN registra cuota y sesión; el sistema detecta morosidad; se envían emails de confirmación y cancelación.
+
+**Estado real (verificado 22/10/2026):** el sprint no empezó formalmente, pero parte del trabajo se adelantó en los sprints 3 y 4.
+
+| ID | Estado | Evidencia |
+|----|--------|-----------|
+| T5-1, T5-2, T5-4, T5-5 | ⏳ Pendiente | Módulo de Pagos: no existe todavía. Es lo más urgente del MVP |
+| T5-3 | 🟡 Adelantada | El cálculo de RN-01 ya existe en `MorosidadService` (PU-01 a PU-12) y lo usa la reserva de gimnasio; falta exponerlo en el estado de cuenta |
+| T5-6 | ✅ | Brevo por API HTTP detrás de `NotificadorEmail` (PR #20) |
+| T5-7 | 🟡 Parcial | Ya se avisa la cancelación en cascada (RN-24); faltan la confirmación de reserva y el aviso cuando cancela el paciente |
+| T5-8 | ⏳ Pendiente | Recordatorio 24 h antes |
+| T5-9 | ✅ | Entidad `Notificacion`, reintento y alertas en "Hoy en el centro" (PR #20) |
+| T5-10 | ⏳ Pendiente | |
 
 ---
 

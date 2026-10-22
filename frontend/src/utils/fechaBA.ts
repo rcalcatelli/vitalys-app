@@ -68,7 +68,7 @@ export function instanteBA(fecha: string, hora: string): string {
 
 /** Minutos que faltan para `inicio` desde `ahora` (negativo si ya empezó). */
 export function minutosHasta(inicio: string, ahora: Date): number {
-  return Math.floor((new Date(inicio).getTime() - ahora.getTime()) / 60000);
+  return Math.ceil((new Date(inicio).getTime() - ahora.getTime()) / 60000);
 }
 
 /** Horas que faltan para `inicio` desde `ahora` (negativo si ya empezó). */

@@ -1411,7 +1411,7 @@ class Component extends DCLogic {
         days, slots, closed: !hours.length && !this.FERIADOS[date], feriado: !!this.FERIADOS[date], feriadoText: this.FERIADOS[date] ? 'Feriado: ' + this.FERIADOS[date] + '. El gimnasio está cerrado.' : '', dayTitle: this.long(date) + (s.gymDay === 0 ? ' · hoy' : ''),
         dayHours: !hours.length ? 'Cerrado' : this.dOf(date).getDay() === 6 ? '09:00 – 13:00' : '07:00 – 22:00',
         lock, exc: me.fee.st === 'bloqueado' && !blocked, excText: '',
-        lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Tu cuota está vencida hace ' + me.fee.dias + ' días',
+        lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Reserva de gimnasio suspendida',
         lockText: noGym ? 'Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.' : 'Alcanzaste el límite de períodos impagos y la reserva de gimnasio está suspendida. Las consultas siguen habilitadas.',
         hasSel: !!sel, selLabel: sel ? this.long(sel.date) + ' · ' + this.p2(sel.hour) + ':00 – ' + this.p2(sel.hour + 1) + ':00' : '',
         clear: () => this.setState({ gymSel: null }),

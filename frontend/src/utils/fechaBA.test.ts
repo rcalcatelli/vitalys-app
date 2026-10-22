@@ -55,4 +55,10 @@ describe("fechaBA", () => {
     expect(minutosHasta("2026-10-26T09:50:00-03:00", ahora)).toBe(-10);
     expect(horasHasta("2026-10-27T10:00:00-03:00", ahora)).toBe(24);
   });
+
+  it("minutosHasta redondea hacia arriba: faltando 59 s todavía falta 1 minuto", () => {
+    const ahora = new Date("2026-10-26T13:00:01Z");
+    expect(minutosHasta("2026-10-26T10:01:00-03:00", ahora)).toBe(1);
+    expect(minutosHasta("2026-10-26T10:00:00-03:00", new Date("2026-10-26T13:00:00Z"))).toBe(0);
+  });
 });

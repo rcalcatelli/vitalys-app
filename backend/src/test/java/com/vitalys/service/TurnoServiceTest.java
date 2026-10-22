@@ -304,6 +304,16 @@ class TurnoServiceTest {
     }
 
     @Test
+    void estadoGym_enElUmbral_unPeriodoAntesNoSuspendeYEnElUmbralSi() {
+        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(5, 6, false));
+        assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, false, 5, 6, false));
+
+        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(6, 6, true));
+        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
+        assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, true, 6, 6, false));
+    }
+
+    @Test
     void estadoGym_sinMembresia_devuelveCeros() {
         personaSocio.definirMembresiaGym(false, null);
         when(morosidadService.evaluar(any())).thenReturn(EstadoDeuda.SIN_MEMBRESIA);
@@ -317,7 +327,9 @@ class TurnoServiceTest {
         assertThat(service.estadoGym(socio, 20L).esSocioGym()).isTrue();
         assertThatThrownBy(() -> service.estadoGym(admin, null)).isInstanceOf(DatosInvalidosException.class);
         assertThatThrownBy(() -> service.estadoGym(admin, 404L)).isInstanceOf(RecursoNoEncontradoException.class);
-        assertThatThrownBy(() -> service.estadoGym(socio, 99L)).isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.estadoGym(socio, 99L))
+                .isInstanceOf(AccesoDenegadoException.class)
+                .hasMessage("Solo podés consultar tu propio estado");
         assertThatThrownBy(() -> service.estadoGym(profesional, null)).isInstanceOf(AccesoDenegadoException.class);
         assertThatThrownBy(() -> service.estadoGym(otroSocio, null))
                 .isInstanceOf(ReglaDeNegocioException.class)

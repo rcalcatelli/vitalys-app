@@ -205,7 +205,7 @@ public class TurnoService {
         if (actor.getRol() == RolUsuario.PROFESIONAL) {
             throw new AccesoDenegadoException("Un profesional no tiene turnos de gimnasio");
         }
-        Persona persona = resolverPersona(actor, personaId);
+        Persona persona = resolverPersona(actor, personaId, "Solo podés consultar tu propio estado");
         VeredictoMorosidad veredicto = veredictoMorosidad(persona);
         return new EstadoGymResponse(
                 persona.isEsSocioGym(),
@@ -331,6 +331,10 @@ public class TurnoService {
     }
 
     private Persona resolverPersona(Usuario actor, Long personaId) {
+        return resolverPersona(actor, personaId, "Solo podés reservar turnos para vos");
+    }
+
+    private Persona resolverPersona(Usuario actor, Long personaId, String mensajeAjena) {
         if (esAdmin(actor)) {
             if (personaId == null) {
                 throw new DatosInvalidosException("Indicá para qué persona es el turno");
@@ -344,7 +348,7 @@ public class TurnoService {
                 .orElseThrow(() -> new ReglaDeNegocioException(
                         "Tu ficha todavía no fue cargada por el centro: no podés reservar turnos"));
         if (personaId != null && !personaId.equals(propia.getId())) {
-            throw new AccesoDenegadoException("Solo podés reservar turnos para vos");
+            throw new AccesoDenegadoException(mensajeAjena);
         }
         return propia;
     }

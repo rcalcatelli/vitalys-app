@@ -76,13 +76,22 @@ describe("PersonaForm", () => {
     await user.click(screen.getByLabelText("Socio del gimnasio"));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(onSubmit.mock.calls[0][0].datos).toMatchObject({ esSocioGym: false, fechaInicioMembresia: null });
+    expect(onSubmit.mock.calls[0][0].datos).toMatchObject({
+      esSocioGym: false,
+      fechaInicioMembresia: null,
+    });
   });
 
   it("muestra el error del servidor y permite cancelar", async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
-    render(<PersonaForm onSubmit={vi.fn()} onCancel={onCancel} error="Ya existe una persona con el DNI 38100002" />);
+    render(
+      <PersonaForm
+        onSubmit={vi.fn()}
+        onCancel={onCancel}
+        error="Ya existe una persona con el DNI 38100002"
+      />,
+    );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Ya existe una persona");
     await user.click(screen.getByRole("button", { name: "Cancelar" }));

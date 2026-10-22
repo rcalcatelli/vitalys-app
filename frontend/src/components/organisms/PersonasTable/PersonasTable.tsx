@@ -17,7 +17,8 @@ function fechaCorta(iso: string): string {
   return `${dia}/${mes}/${anio}`;
 }
 
-const chipBase = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
+const chipBase =
+  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
 
 /**
  * Listado de W-05. En mobile cada persona es una tarjeta; desde `md:` pasa a
@@ -25,7 +26,13 @@ const chipBase = "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 te
  * en la misma fila: es una acción sobre la ficha de otra persona y no se
  * dispara con un solo toque.
  */
-export function PersonasTable({ personas, onEditar, onBaja, onReactivar, ocupado = false }: PersonasTableProps) {
+export function PersonasTable({
+  personas,
+  onEditar,
+  onBaja,
+  onReactivar,
+  ocupado = false,
+}: PersonasTableProps) {
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
 
   if (personas.length === 0) {
@@ -76,7 +83,9 @@ export function PersonasTable({ personas, onEditar, onBaja, onReactivar, ocupado
                 )}
               </span>
               <span className="justify-self-end md:justify-self-start">
-                <span className={`${chipBase} ${activa ? "bg-ok-soft text-ok-ink" : "bg-surface-2 text-ink-3"}`}>
+                <span
+                  className={`${chipBase} ${activa ? "bg-ok-soft text-ok-ink" : "bg-surface-2 text-ink-3"}`}
+                >
                   <span className="h-1.5 w-1.5 rounded-full bg-current" />
                   {activa ? "Activo" : "Inactivo"}
                 </span>
@@ -103,15 +112,30 @@ export function PersonasTable({ personas, onEditar, onBaja, onReactivar, ocupado
                   </>
                 ) : activa ? (
                   <>
-                    <Button type="button" variant="outline" disabled={ocupado} onClick={() => onEditar(p)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={ocupado}
+                      onClick={() => onEditar(p)}
+                    >
                       Editar
                     </Button>
-                    <Button type="button" variant="outline" disabled={ocupado} onClick={() => setConfirmandoId(p.id)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={ocupado}
+                      onClick={() => setConfirmandoId(p.id)}
+                    >
                       Baja
                     </Button>
                   </>
                 ) : (
-                  <Button type="button" variant="outline" disabled={ocupado} onClick={() => onReactivar(p)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={ocupado}
+                    onClick={() => onReactivar(p)}
+                  >
                     Reactivar
                   </Button>
                 )}

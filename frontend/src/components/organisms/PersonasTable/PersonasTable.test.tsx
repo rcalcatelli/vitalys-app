@@ -8,7 +8,15 @@ function renderTabla(overrides: Partial<Parameters<typeof PersonasTable>[0]> = {
   const props = {
     personas: [
       unaPersona(),
-      unaPersona({ id: 6, nombre: "Pedro", apellido: "Gómez", dni: "38100006", estado: "INACTIVO", esSocioGym: false, fechaBaja: "2026-05-31" }),
+      unaPersona({
+        id: 6,
+        nombre: "Pedro",
+        apellido: "Gómez",
+        dni: "38100006",
+        estado: "INACTIVO",
+        esSocioGym: false,
+        fechaBaja: "2026-05-31",
+      }),
     ],
     onEditar: vi.fn(),
     onBaja: vi.fn(),
@@ -58,7 +66,9 @@ describe("PersonasTable", () => {
   it("editar entrega la persona de la fila", async () => {
     const user = userEvent.setup();
     const props = renderTabla();
-    await user.click(within(screen.getByTestId("persona-1")).getByRole("button", { name: "Editar" }));
+    await user.click(
+      within(screen.getByTestId("persona-1")).getByRole("button", { name: "Editar" }),
+    );
     expect(props.onEditar).toHaveBeenCalledWith(expect.objectContaining({ dni: "38100002" }));
   });
 

@@ -34,7 +34,13 @@ function vacioANull(valor: string): string | null {
  * socios del gimnasio) para dar el error al lado del campo; el servidor sigue
  * siendo quien decide, en particular la unicidad del DNI.
  */
-export function PersonaForm({ persona, onSubmit, onCancel, error = null, cargando = false }: PersonaFormProps) {
+export function PersonaForm({
+  persona,
+  onSubmit,
+  onCancel,
+  error = null,
+  cargando = false,
+}: PersonaFormProps) {
   const esAlta = persona === undefined;
   const [email, setEmail] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -44,7 +50,9 @@ export function PersonaForm({ persona, onSubmit, onCancel, error = null, cargand
   const [telefono, setTelefono] = useState(persona?.telefono ?? "");
   const [fechaNacimiento, setFechaNacimiento] = useState(persona?.fechaNacimiento ?? "");
   const [esSocioGym, setEsSocioGym] = useState(persona?.esSocioGym ?? false);
-  const [fechaInicioMembresia, setFechaInicioMembresia] = useState(persona?.fechaInicioMembresia ?? "");
+  const [fechaInicioMembresia, setFechaInicioMembresia] = useState(
+    persona?.fechaInicioMembresia ?? "",
+  );
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   function validar(): string | null {
@@ -52,7 +60,8 @@ export function PersonaForm({ persona, onSubmit, onCancel, error = null, cargand
     if (esAlta && contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
     if (!nombre.trim() || !apellido.trim()) return "Ingresá nombre y apellido.";
     if (!DNI_VALIDO.test(dni)) return "El DNI tiene que tener entre 7 y 9 dígitos, sin puntos.";
-    if (esSocioGym && !fechaInicioMembresia) return "Un socio del gimnasio necesita fecha de inicio de membresía.";
+    if (esSocioGym && !fechaInicioMembresia)
+      return "Un socio del gimnasio necesita fecha de inicio de membresía.";
     return null;
   }
 
@@ -91,8 +100,20 @@ export function PersonaForm({ persona, onSubmit, onCancel, error = null, cargand
 
       {esAlta && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="persona-email" label="Email" type="email" value={email} onChange={setEmail} autoComplete="off" />
-          <PasswordInput id="persona-contrasena" label="Contraseña inicial" value={contrasena} onChange={setContrasena} />
+          <FormField
+            id="persona-email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="off"
+          />
+          <PasswordInput
+            id="persona-contrasena"
+            label="Contraseña inicial"
+            value={contrasena}
+            onChange={setContrasena}
+          />
         </div>
       )}
 

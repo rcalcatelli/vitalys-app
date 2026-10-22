@@ -4,10 +4,12 @@ import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.CancelacionRequest;
+import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
+import com.vitalys.dto.TurnoAgendaResponse;
 import com.vitalys.dto.TurnoResponse;
 import com.vitalys.service.TurnoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,6 +50,12 @@ public class TurnoController {
         return turnoService.cupoGym(fecha);
     }
 
+    @GetMapping("/gym/estado")
+    @Operation(summary = "Estado de gimnasio", description = "Membresía y morosidad con el mismo veredicto que la reserva (RN-01, RN-09). ADMIN debe indicar personaId; el socio consulta el suyo.")
+    public EstadoGymResponse estadoGym(@AuthenticationPrincipal Usuario actor, @RequestParam(required = false) Long personaId) {
+        return turnoService.estadoGym(actor, personaId);
+    }
+
     @PostMapping("/gym")
     @Operation(summary = "Reservar turno de gimnasio", description = "Aplica la regla de morosidad (RN-01) y las excepciones vigentes (RN-09).")
     public ResponseEntity<TurnoResponse> reservarGym(
@@ -70,8 +78,8 @@ public class TurnoController {
     }
 
     @GetMapping("/mi-agenda")
-    @Operation(summary = "Mi agenda", description = "Turnos de consultorio del profesional autenticado. Por defecto, de hoy a siete días.")
-    public List<TurnoResponse> miAgenda(
+    @Operation(summary = "Mi agenda", description = "Turnos de consultorio del profesional autenticado, con el DNI del paciente. Por defecto, de hoy a siete días.")
+    public List<TurnoAgendaResponse> miAgenda(
             @AuthenticationPrincipal Usuario actor,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {

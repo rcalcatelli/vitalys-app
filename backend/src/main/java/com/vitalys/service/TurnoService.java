@@ -9,10 +9,12 @@ import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
+import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
+import com.vitalys.dto.TurnoAgendaResponse;
 import com.vitalys.dto.TurnoResponse;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.DatosInvalidosException;
@@ -156,27 +158,61 @@ public class TurnoService {
         }
         Persona persona = resolverPersona(actor, request.personaId());
 
-        Optional<ExcepcionMorosidad> excepcion = Optional.empty();
-        EstadoDeuda deuda = morosidadService.evaluar(persona);
-        if (deuda.suspendido()) {
-            LocalDate hoy = LocalDate.now(clock);
-            excepcion = excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(persona.getId()).stream()
-                    .filter(e -> e.vigenteEl(hoy))
-                    .findFirst();
-            if (excepcion.isEmpty()) {
-                throw new ReglaDeNegocioException(String.format(
-                        "Reserva de gimnasio suspendida por morosidad: %d períodos impagos (el límite es %d). "
-                                + "Regularizá la cuota o pedí una excepción en administración.",
-                        deuda.periodosImpagos(), deuda.umbral()));
-            }
+        VeredictoMorosidad veredicto = veredictoMorosidad(persona);
+        if (veredicto.bloqueado()) {
+            EstadoDeuda deuda = veredicto.deuda();
+            throw new ReglaDeNegocioException(String.format(
+                    "Reserva de gimnasio suspendida por morosidad: %d períodos impagos (el límite es %d). "
+                            + "Regularizá la cuota o pedí una excepción en administración.",
+                    deuda.periodosImpagos(), deuda.umbral()));
         }
 
         Turno turno = guardar(Turno.deGimnasio(persona, actor.getId(), request.inicio()));
-        excepcion.ifPresent(e -> {
+        veredicto.excepcion().ifPresent(e -> {
             e.consumirEn(turno.getId());
             excepcionRepository.save(e);
         });
         return TurnoResponse.de(turno);
+    }
+
+    /** Deuda de la persona y, solo si está suspendida, la excepción vigente que la habilita (RN-01, RN-09). */
+    private record VeredictoMorosidad(EstadoDeuda deuda, Optional<ExcepcionMorosidad> excepcion) {
+
+        boolean bloqueado() {
+            return deuda.suspendido() && excepcion.isEmpty();
+        }
+    }
+
+    /** Única fuente de verdad de la suspensión: la usan la reserva y el estado que consulta el frontend. */
+    private VeredictoMorosidad veredictoMorosidad(Persona persona) {
+        EstadoDeuda deuda = morosidadService.evaluar(persona);
+        if (!deuda.suspendido()) {
+            return new VeredictoMorosidad(deuda, Optional.empty());
+        }
+        LocalDate hoy = LocalDate.now(clock);
+        Optional<ExcepcionMorosidad> excepcion = excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(persona.getId()).stream()
+                .filter(e -> e.vigenteEl(hoy))
+                .findFirst();
+        return new VeredictoMorosidad(deuda, excepcion);
+    }
+
+    /**
+     * Estado de gimnasio de una persona para la pantalla de reserva. {@code suspendido} es el
+     * veredicto de la reserva: false si hay una excepción vigente aunque la deuda llegue al umbral.
+     */
+    @Transactional(readOnly = true)
+    public EstadoGymResponse estadoGym(Usuario actor, Long personaId) {
+        if (actor.getRol() == RolUsuario.PROFESIONAL) {
+            throw new AccesoDenegadoException("Un profesional no tiene turnos de gimnasio");
+        }
+        Persona persona = resolverPersona(actor, personaId, "Solo podés consultar tu propio estado");
+        VeredictoMorosidad veredicto = veredictoMorosidad(persona);
+        return new EstadoGymResponse(
+                persona.isEsSocioGym(),
+                veredicto.bloqueado(),
+                veredicto.deuda().periodosImpagos(),
+                veredicto.deuda().umbral(),
+                veredicto.deuda().suspendido() && veredicto.excepcion().isPresent());
     }
 
     // ---------------------------------------------------------------- consultorio
@@ -247,7 +283,7 @@ public class TurnoService {
 
     /** Agenda del profesional autenticado (W-03). Por defecto, de hoy a siete días. */
     @Transactional(readOnly = true)
-    public List<TurnoResponse> miAgenda(Usuario actor, LocalDate desde, LocalDate hasta) {
+    public List<TurnoAgendaResponse> miAgenda(Usuario actor, LocalDate desde, LocalDate hasta) {
         if (actor.getRol() != RolUsuario.PROFESIONAL) {
             throw new AccesoDenegadoException("La agenda es del rol PROFESIONAL");
         }
@@ -265,7 +301,7 @@ public class TurnoService {
                         inicio.atStartOfDay(ZONA).toOffsetDateTime(),
                         fin.plusDays(1).atStartOfDay(ZONA).toOffsetDateTime())
                 .stream()
-                .map(TurnoResponse::de)
+                .map(TurnoAgendaResponse::de)
                 .toList();
     }
 
@@ -295,6 +331,10 @@ public class TurnoService {
     }
 
     private Persona resolverPersona(Usuario actor, Long personaId) {
+        return resolverPersona(actor, personaId, "Solo podés reservar turnos para vos");
+    }
+
+    private Persona resolverPersona(Usuario actor, Long personaId, String mensajeAjena) {
         if (esAdmin(actor)) {
             if (personaId == null) {
                 throw new DatosInvalidosException("Indicá para qué persona es el turno");
@@ -308,7 +348,7 @@ public class TurnoService {
                 .orElseThrow(() -> new ReglaDeNegocioException(
                         "Tu ficha todavía no fue cargada por el centro: no podés reservar turnos"));
         if (personaId != null && !personaId.equals(propia.getId())) {
-            throw new AccesoDenegadoException("Solo podés reservar turnos para vos");
+            throw new AccesoDenegadoException(mensajeAjena);
         }
         return propia;
     }

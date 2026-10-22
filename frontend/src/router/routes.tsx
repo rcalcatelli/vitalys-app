@@ -1,12 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { AgendaPage } from "../pages/AgendaPage";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
+import { MisTurnosPage } from "../pages/MisTurnosPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
+import { ReservarConsultorioPage } from "../pages/ReservarConsultorioPage";
+import { ReservarGimnasioPage } from "../pages/ReservarGimnasioPage";
 import { RoleGuard } from "./RoleGuard";
 
 /**
@@ -79,7 +83,25 @@ export function AppRoutes() {
         path="/profesional/agenda"
         element={
           <RoleGuard allowedRoles={["PROFESIONAL"]}>
-            <PlaceholderHomePage title="Agenda del profesional" />
+            <AgendaPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/socio/reservar-gimnasio"
+        element={
+          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
+            <ReservarGimnasioPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/socio/reservar-consultorio"
+        element={
+          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
+            <ReservarConsultorioPage />
           </RoleGuard>
         }
       />
@@ -88,7 +110,7 @@ export function AppRoutes() {
         path="/socio/turnos"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <PlaceholderHomePage title="Mis turnos" />
+            <MisTurnosPage />
           </RoleGuard>
         }
       />

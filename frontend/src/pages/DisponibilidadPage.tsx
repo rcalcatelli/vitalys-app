@@ -7,6 +7,7 @@ import { FieldError } from "../components/atoms/FieldError";
 import { Label } from "../components/atoms/Label";
 import { Select } from "../components/atoms/Select";
 import { Modal } from "../components/molecules/Modal";
+import { ProfesionalNav } from "../components/molecules/ProfesionalNav";
 import { ConfirmarImpactoDialog } from "../components/organisms/ConfirmarImpactoDialog";
 import { FranjasEditor } from "../components/organisms/FranjasEditor";
 import { SemanaGrid } from "../components/organisms/SemanaGrid";
@@ -181,6 +182,8 @@ export function DisponibilidadPage() {
           </Button>
         </div>
       </header>
+
+      {!esAdmin && <ProfesionalNav />}
 
       {esAdmin && (
         <div className="flex flex-col gap-2">

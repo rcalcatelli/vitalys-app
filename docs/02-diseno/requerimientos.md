@@ -32,8 +32,8 @@
 | RF-20 | Turnos | El sistema aplica automáticamente la regla de anticipación al cancelar, según el tipo de turno (24 h en consultorio, 2 h en gimnasio — ver RN-02). |
 | RF-21 | Turnos | Un ADMIN puede cancelar cualquier turno y marcar ausencias. |
 | RF-22 | Turnos | El PROFESIONAL puede ver su agenda y marcar turnos de CONSULTORIO como completados o como ausencia. Los turnos de GYM no tienen profesional asignado; su cierre lo gestiona el ADMIN en el check-in (RF-34, RF-35). |
-| RF-23 | Pagos | El ADMIN puede registrar un pago de cuota mensual para un socio. |
-| RF-24 | Pagos | El ADMIN puede registrar un pago de sesión de consultorio asociado a un turno. |
+| RF-23 | Pagos | El ADMIN puede registrar un pago de cuota mensual para un socio, indicando el medio de pago (efectivo, transferencia, débito o crédito). |
+| RF-24 | Pagos | El ADMIN puede registrar un pago de sesión de consultorio asociado a un turno, indicando el medio de pago. |
 | RF-25 | Pagos | El ADMIN y el propio SOCIO_PACIENTE pueden consultar el historial de pagos y el estado de cuenta. |
 | RF-26 | Notificaciones | El sistema envía un email de confirmación al reservar un turno. |
 | RF-27 | Notificaciones | El sistema envía un email de aviso al cancelar un turno. |
@@ -46,7 +46,7 @@
 | RF-34 | Turnos | El ADMIN marca un turno de gimnasio como `COMPLETADO` en el momento del check-in de la persona en el gimnasio. Los turnos GYM no tienen profesional asignado, por lo que esta acción no la ejecuta un PROFESIONAL como en RF-22 (que aplica solo a turnos de CONSULTORIO). |
 | RF-35 | Turnos | El sistema marca automáticamente como `AUSENTE` todo turno de gimnasio que sigue en estado `RESERVADO` una vez finalizada su franja horaria, sin que se haya registrado el check-in (RF-34). |
 | RF-36 | Auth | El sistema permite iniciar sesión con email o con DNI (`identificador` en el body de `POST /api/auth/login`, junto a `contrasena`). El login por DNI busca la persona en `personas.dni` y resuelve el `usuario` asociado por `usuario_id`; solo funciona para quien ya tiene ficha cargada ahí. Un usuario recién autorregistrado no tiene esa ficha todavía (queda pendiente de que el ADMIN la complete, CA-01-6) y un PROFESIONAL no tiene DNI en el esquema (solo `personas` lo tiene): ambos perfiles solo pueden ingresar con email. El 401 es el mismo, con el mismo mensaje, para identificador (email o DNI) inexistente, contraseña incorrecta y cuenta deshabilitada (RF-32) — ningún caso es distinguible de otro. |
-| RF-37 | Notificaciones | El sistema notifica por email al socio de gimnasio que acumula al menos un período mensual impago, informando cuántos adeuda y cuántos le restan para quedar suspendido (RN-01, estado "con deuda"). El aviso se repite al registrarse cada nuevo período impago, y el último —al alcanzar el umbral— comunica la suspensión efectiva. Cierra el hueco detectado para el perfil SP-02 del relevamiento: RF-26 a RF-28 cubren notificaciones de turnos, no de estado de cuenta, y sin este aviso la suspensión llegaría sin preaviso. El relevamiento de campo confirma que la notificación progresiva precede al bloqueo (ver AS-IS del RFC-001). Cada envío se registra en `notificaciones` (RF-29). |
+| RF-37 | Notificaciones | El sistema notifica por email al socio de gimnasio que acumula al menos un período mensual impago, informando cuántos adeuda y cuántos le restan para quedar suspendido (RN-01, estado "con deuda"). El aviso se repite al registrarse cada nuevo período impago, y el último —al alcanzar el umbral— comunica la suspensión efectiva. Cierra el hueco detectado para el perfil SP-02 del relevamiento: RF-26 a RF-28 cubren notificaciones de turnos, no de estado de cuenta, y sin este aviso la suspensión llegaría sin preaviso. El relevamiento de campo confirma que la notificación progresiva precede al bloqueo (ver AS-IS del RFC-001). Cada envío se registra en `notificaciones` (RF-29). _Estado: el estado de cuenta ya informa la deuda y la suspensión (Sprint 5); el envío de estos emails (T5-10) queda diferido._ |
 | RF-38 | Turnos | El sistema sincroniza el calendario de feriados desde el dataset **Feriados Nacionales** del catálogo de datos abiertos del Estado (`datos.gob.ar`, publicado por el Ministerio del Interior): `https://www.argentina.gob.ar/sites/default/files/holidays-{año}-es.json`, JSON-LD con `mainEntity.itemListElement[].item` (`startDate`, `name`, `additionalProperty.value` = tipo). El importador escribe en `feriados` marcando `origen = 'OFICIAL'` y `cierra_gimnasio = TRUE` salvo para el tipo `no_laborable`, que son festividades religiosas de quien las profesa y no un cierre del establecimiento. Cuando la fuente lista varias festividades en la misma fecha conserva la de mayor peso (`fecha` es clave primaria). **La reserva nunca consulta la API**: lee la tabla, para que una caída del servicio externo no impida vender turnos. El ADMIN puede corregir cualquier fila o agregar cierres propios del centro con `origen = 'MANUAL'`. La sincronización corre **todos los días a las 03:00 de Argentina** (`vitalys.feriados.cron`) sobre el año en curso y el siguiente: los trasladables se corren cada año y pueden declararse feriados por decreto en cualquier momento — en 2026, el 09/11 por la visita papal —, así que una carga única queda desactualizada sin que nadie se entere. Un año que falle no impide sincronizar los demás, y ante un error el calendario de ese año queda como estaba: nunca se interpreta "no pude leer la fuente" como "no hay feriados". El ADMIN puede forzarla con `POST /api/admin/feriados/sincronizar`, que devuelve **207** si algún año no se pudo leer. |
 
 ---
@@ -171,6 +171,9 @@
 - CA-04-4: No se puede registrar un segundo pago para el mismo turno (error 409).
 - CA-04-5: El monto debe ser mayor a cero.
 - CA-04-6: El campo `registrado_por_usuario` queda registrado con el usuario ADMIN que ejecutó la operación.
+- CA-04-7: Todo pago lleva un `medio` obligatorio (`EFECTIVO`, `TRANSFERENCIA`, `DEBITO` o `CREDITO`); si falta o no es uno de esos valores, el sistema responde 400. Mercado Pago queda fuera del alcance (RFC-001), pero `medio_pago` está pensado para sumar `MERCADO_PAGO` más adelante con su propia migración.
+- CA-04-8: Un pago de `SESION_CONSULTORIO` se rechaza (422) si el turno es de gimnasio, es de otra persona o está cancelado (`CANCELADO_EN_TIEMPO`, `CANCELADO_TARDE` o `CANCELADO_POR_PROFESIONAL`). La cancelación tardía queda registrada para la sanción, pero no genera cobro (RN-02).
+- CA-04-9: La cuota mensual solo se registra para una persona con `es_socio_gym = TRUE` y para un período no anterior a su `fecha_inicio_membresia`; se admiten períodos futuros (adelantos). Una persona dada de baja sigue siendo cobrable.
 
 ---
 
@@ -198,8 +201,8 @@
 
 **Criterios de aceptación:**
 
-- CA-06-1: El endpoint devuelve el listado de cuotas mensuales con estado (pagada / vencida) y el listado de sesiones abonadas.
-- CA-06-2: Una cuota figura como vencida si `NOW() > (periodo + 1 mes)`.
+- CA-06-1: El endpoint devuelve el listado de cuotas mensuales con estado (`PAGADO` / `IMPAGO` / `PENDIENTE`, con el monto, el medio y la fecha del pago) y el listado de sesiones abonadas.
+- CA-06-2: ~~Una cuota figura como vencida si `NOW() > (periodo + 1 mes)`.~~ _Reemplazado por RN-01: cada período tiene 10 días de gracia después de vencer. Con `limite = periodo + 1 mes + 10 días`, hasta `hoy == limite` figura `PENDIENTE` y recién desde `limite + 1` figura `IMPAGO`; con cuota registrada figura `PAGADO`._
 - CA-06-3: Un SOCIO_PACIENTE solo puede ver su propio estado de cuenta; un ADMIN puede ver el de cualquier persona.
 - CA-06-4: El estado de cuenta informa la cantidad de períodos impagos según RN-01 (un período es impago a los 10 días de vencido sin cuota registrada). Si esa cantidad alcanza `configuracion_gym.meses_tolerancia_morosidad`, el sistema indica explícitamente que la persona está suspendida y no puede reservar turnos GYM; por debajo del umbral indica que tiene deuda pero conserva el acceso.
 

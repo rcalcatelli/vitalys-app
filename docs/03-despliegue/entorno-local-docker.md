@@ -169,7 +169,9 @@ db/migration/
 ├── V9__grilla_gym_hora_de_cierre.sql       21:00 y 12:00 son hora de cierre
 ├── V10__feriados_gimnasio.sql              calendario oficial de feriados
 ├── V11__validaciones_pendientes.sql        las cinco validaciones que faltaban
-└── V12__cancelacion_por_profesional.sql    cancelación en cascada por disponibilidad
+├── V12__cancelacion_por_profesional.sql    cancelación en cascada por disponibilidad
+├── V13__profesionales_disponibilidad.sql   profesionales y disponibilidad
+└── V14__pagos_medio.sql                    medio de pago de cada cobro
 ```
 
 > El orden lo da el **número de versión**, no el orden alfabético. `V10` va después de
@@ -284,6 +286,8 @@ agregues ahí se empaqueta y se ejecuta automáticamente.
 | `V10__feriados_gimnasio.sql` | Tabla `feriados` y validación en el trigger del gimnasio. La puebla el importador contra el dataset oficial del Ministerio del Interior (RF-38); nunca se consulta la API al reservar. |
 | `V12__cancelacion_por_profesional.sql` | Estado `CANCELADO_POR_PROFESIONAL`: cuando un profesional reduce su disponibilidad, los turnos futuros afectados se cancelan en cascada (RN-24) y quedan distinguibles de una cancelación del paciente. `fn_turno_ocupa_lugar` no necesitó cambios. |
 | `V11__validaciones_pendientes.sql` | Cierra las cinco validaciones que la base aceptaba: pago de sesión sobre un turno de gimnasio o a nombre de otra persona, turno para alguien dado de baja, turnos superpuestos de la misma persona, y excepción de morosidad apuntando al turno de otro. Además invierte el sentido de `excepciones_morosidad.turno_id`: pasa a registrar qué turno consumió la excepción (RN-23). |
+| `V13__profesionales_disponibilidad.sql` | Ajustes de profesionales y disponibilidad del Sprint 3 (ver `MigracionV13IT`). |
+| `V14__pagos_medio.sql` | Tipo `medio_pago` (`EFECTIVO`, `TRANSFERENCIA`, `DEBITO`, `CREDITO`) y columna `pagos.medio NOT NULL` (backfill `EFECTIVO` para las filas existentes y sin DEFAULT de ahí en más). Mercado Pago se sumaría con su propia migración. |
 
 > **Ojo con el orden al aplicarlas a mano.** Flyway ordena por número de versión, pero un `ls db/migration/V*.sql` del shell ordena alfabéticamente y pone `V10` entre `V1` y `V2`. Si las corrés sueltas, usá `ls db/migration/V*.sql | sort -V`. Con `docker compose` no hace falta: lo resuelve Flyway.
 

@@ -204,7 +204,7 @@ sequenceDiagram
     actor U as Usuario (Socio / Admin)
     participant API as TurnoController
     participant TS as TurnoService
-    participant PS as PagoService
+    participant PS as MorosidadService
     participant DB as Base de datos
 
     U->>API: POST /api/turnos/gym {persona_id, inicio}
@@ -212,12 +212,12 @@ sequenceDiagram
 
     Note over TS: No se consulta disponibilidad de profesional:<br/>el turno de gimnasio no tiene profesional asignado<br/>(profesional_id = NULL)
 
-    TS->>PS: contarPeriodosImpagos(persona_id)
+    TS->>PS: veredicto(persona)
     PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
     PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
     DB-->>PS: períodos efectivamente pagados
     Note over PS: Recorre mes a mes DESDE fecha_inicio_membresia.<br/>Cuenta impago todo período P con NOW() > P + 1 mes + 10 días<br/>sin cuota registrada. Un mes salteado sigue contando aunque<br/>se hayan pagado los posteriores: NO se usa el último período<br/>pagado como referencia (RN-01).
-    PS-->>TS: impagos (int)
+    PS-->>TS: EstadoDeuda (impagos, umbral, suspendido)
 
     TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
     DB-->>TS: umbral
@@ -447,7 +447,7 @@ sequenceDiagram
     participant ES as ExcepcionMorosidadService
     participant TC as TurnoController
     participant TS as TurnoService
-    participant PS as PagoService
+    participant PS as MorosidadService
     participant DB as Base de datos
 
     Note over A,DB: 1) El ADMIN registra la excepción
@@ -468,12 +468,12 @@ sequenceDiagram
     U->>TC: POST /api/turnos/gym {persona_id, inicio}
     TC->>TS: reservarTurnoGym(request, usuarioActual)
 
-    TS->>PS: contarPeriodosImpagos(persona_id)
+    TS->>PS: veredicto(persona)
     PS->>DB: SELECT fecha_inicio_membresia FROM personas WHERE id = ?
     PS->>DB: SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'
     DB-->>PS: períodos efectivamente pagados
     Note over PS: Cuenta los períodos impagos ACUMULADOS desde el inicio de<br/>la membresía. No toma el último período pagado como referencia:<br/>un mes salteado sigue contando (RN-01).
-    PS-->>TS: impagos (int)
+    PS-->>TS: EstadoDeuda (impagos, umbral, suspendido)
 
     TS->>DB: SELECT meses_tolerancia_morosidad FROM configuracion_gym
     DB-->>TS: umbral
@@ -583,6 +583,7 @@ classDiagram
         +Long id
         +ConceptoPago concepto
         +BigDecimal monto
+        +MedioPago medio
         +LocalDate periodo
         +ZonedDateTime fechaPago
         +esCuotaMensual() Boolean

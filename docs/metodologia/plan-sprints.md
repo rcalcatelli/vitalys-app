@@ -15,7 +15,7 @@
 | Sprint 2 | 14/09 – 27/09/2026 | Autenticación y roles (JWT)                  | P. Basualdo Arcati      | ✅ Completado |
 | Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | ✅ Completado (T3-11 cerrada en el Sprint 5) |
 | Sprint 4 | 12/10 – 25/10/2026 | Módulo Turnos                                | Ambos                   | ✅ Completado |
-| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | 🔄 Adelantado en parte (emails); Pagos sin empezar |
+| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | 🔄 Pagos completado (registro, estado de cuenta, medio de pago); Notificaciones adelantadas en parte |
 | Cierre   | 09/11 – 14/11/2026 | Estabilización · Informe · Video · Defensa   | Ambos                   | ⏳ Pendiente |
 
 > **Estado verificado el 22/10/2026** contra `main` (PR #24) y el CI en verde. Las fechas de los
@@ -50,7 +50,7 @@
 | T1-4 | ✅ | Proyecto Supabase en uso por el backend de Render |
 | T1-5 | ✅ | Conexión por variables de entorno (`render.yaml`, `application-prod.properties`) |
 | T1-6, T1-7 | ✅ | `render.yaml`, `frontend/vercel.json`, sección "Cold start" del README |
-| T1-8 | ✅ | Migraciones `db/migration/V1` a `V13`, aplicadas por Flyway |
+| T1-8 | ✅ | Migraciones `db/migration/V1` a `V14`, aplicadas por Flyway |
 | T1-9 | ✅ | `db/dml/seed.sql` con fechas relativas a la carga; `SeedIT` verifica cada caso de prueba |
 
 **Entregable:** URL pública del frontend y del backend respondiendo el health-check, con la base de datos en Supabase.
@@ -161,28 +161,29 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 |------|----------------------------------------------------------------------------|--------------------|------------|
 | T5-1 | Entidad JPA: Pago, ConceptoPago (ENUM), validación concepto excluyente    | P. Basualdo Arcati | 3 h |
 | T5-2 | PagoService.registrar (CUOTA_MENSUAL y SESION_CONSULTORIO)               | P. Basualdo Arcati | 4 h |
-| T5-3 | PagoService.calcularMorosidad (RN-01)                                    | P. Basualdo Arcati | 3 h |
-| T5-4 | PagoController: GET estado de cuenta, POST registrar pago                | P. Basualdo Arcati | 3 h |
-| T5-5 | Pantalla Estado de cuenta (W-04, SOCIO_PACIENTE y ADMIN)                 | P. Basualdo Arcati | 5 h |
+| T5-3 | MorosidadService: cálculo de RN-01 compartido con el estado de cuenta     | P. Basualdo Arcati | 3 h |
+| T5-4 | PagoController: POST registrar pago, GET estado de cuenta (admin y propio) | P. Basualdo Arcati | 3 h |
+| T5-5 | Pantallas de pagos: estado de cuenta del socio (W-04) y Pagos / Registrar pago del ADMIN | P. Basualdo Arcati | 5 h |
 | T5-6 | Integración proveedor email (tier gratuito; se eligió Brevo)             | R. Calcatelli      | 3 h |
 | T5-7 | NotificacionService (confirmación reserva, aviso cancelación)            | R. Calcatelli      | 3 h |
 | T5-8 | Tarea programada @Scheduled: recordatorio 24 h antes de cada turno       | R. Calcatelli      | 3 h |
 | T5-9 | Entidad Notificacion + log de envíos (historial para ADMIN)              | R. Calcatelli      | 2 h |
-| T5-10 | Tests: unicidad de cuota, pago por turno, disparo de emails              | Ambos              | 3 h |
+| T5-10 | Tests: unicidad de cuota, pago por turno, medio de pago y estado de cuenta (el disparo de emails queda diferido) | Ambos              | 3 h |
 
 **Criterio de cierre:** ADMIN registra cuota y sesión; el sistema detecta morosidad; se envían emails de confirmación y cancelación.
 
-**Estado real (verificado 22/10/2026):** el sprint no empezó formalmente, pero parte del trabajo se adelantó en los sprints 3 y 4.
+**Estado real (verificado 22/10/2026):** el sprint no empezó formalmente, pero el Módulo de Pagos ya está implementado y parte de las notificaciones se adelantó en los sprints 3 y 4. Mercado Pago queda fuera del alcance (RFC-001): los cobros se cargan a mano con su medio, y `medio_pago` admite sumar `MERCADO_PAGO` con una migración propia.
 
 | ID | Estado | Evidencia |
 |----|--------|-----------|
-| T5-1, T5-2, T5-4, T5-5 | ⏳ Pendiente | Módulo de Pagos: no existe todavía. Es lo más urgente del MVP |
-| T5-3 | 🟡 Adelantada | El cálculo de RN-01 ya existe en `MorosidadService` (PU-01 a PU-12) y lo usa la reserva de gimnasio; falta exponerlo en el estado de cuenta |
+| T5-1, T5-2, T5-4 | ✅ | `Pago`, `ConceptoPago`, `MedioPago` (V14), `PagoService.registrar` y `PagoController` (`POST /api/pagos`, `GET /api/pagos/persona/{id}/estado-cuenta`, `GET /api/pagos/mi-estado-cuenta`). Los listados `GET /api/pagos` y `GET /api/pagos/{id}` quedan diferidos |
+| T5-5 | ✅ | Estado de cuenta del socio (`/socio/estado-cuenta`) y Pagos del ADMIN con el modal de registro (`/admin/pagos`); PU-13 a PU-30 |
+| T5-3 | ✅ | El cálculo de RN-01 vive en `MorosidadService` (PU-01 a PU-12) y lo comparten la reserva de gimnasio y el estado de cuenta (PI-103), con 10 días de gracia |
 | T5-6 | ✅ | Brevo por API HTTP detrás de `NotificadorEmail` (PR #20) |
 | T5-7 | 🟡 Parcial | Ya se avisa la cancelación en cascada (RN-24); faltan la confirmación de reserva y el aviso cuando cancela el paciente |
 | T5-8 | ⏳ Pendiente | Recordatorio 24 h antes |
 | T5-9 | ✅ | Entidad `Notificacion`, reintento y alertas en "Hoy en el centro" (PR #20) |
-| T5-10 | ⏳ Pendiente | |
+| T5-10 | 🟡 Parcial | `PagoControllerIT` (PI-76 a PI-80 y PI-91 a PI-104) cubre unicidad de cuota, pago por turno, medio de pago y estado de cuenta; falta el test de disparo de emails, que sigue a los emails de morosidad (RF-37, diferidos) |
 
 ---
 

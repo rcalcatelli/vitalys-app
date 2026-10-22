@@ -16,6 +16,7 @@
 | `tipo_turno` | `CONSULTORIO` · `GYM` |
 | `estado_turno` | `RESERVADO` · `COMPLETADO` · `AUSENTE` · `CANCELADO_EN_TIEMPO` · `CANCELADO_TARDE` · `CANCELADO_POR_PROFESIONAL` |
 | `concepto_pago` | `CUOTA_MENSUAL` · `SESION_CONSULTORIO` |
+| `medio_pago` | `EFECTIVO` · `TRANSFERENCIA` · `DEBITO` · `CREDITO` (V14; `MERCADO_PAGO` se sumaría con `ALTER TYPE ... ADD VALUE` en una migración propia) |
 | `tipo_feriado` | `INAMOVIBLE` · `TRASLADABLE` · `TURISTICO` · `NO_LABORABLE` |
 | `origen_feriado` | `OFICIAL` · `MANUAL` |
 | `tipo_notificacion` | `CONFIRMACION_TURNO` · `AVISO_CANCELACION` · `RECORDATORIO` · `AVISO_DEUDA` · `AVISO_SUSPENSION` |
@@ -260,16 +261,17 @@ Registro de pagos realizados. Maneja dos conceptos diferenciados: cuotas mensual
 | `periodo` | `DATE` | SÍ | Día 1 del mes · Solo si CUOTA_MENSUAL | Mes al que corresponde la cuota (p.ej. 2026-09-01) |
 | `turno_id` | `BIGINT` | SÍ | FK turnos · UNIQUE · Solo si SESION | Turno abonado; garantiza un único pago por turno |
 | `registrado_por_usuario` | `BIGINT` | NO | FK usuarios | Admin que registró el pago (siempre requerido en MVP) |
+| `medio` | `medio_pago` | NO | ENUM · sin DEFAULT (V14) | Medio con el que se cobró, cargado a mano por el ADMIN: cada INSERT debe indicarlo |
 | `fecha_pago` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Momento en que se registró el pago |
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 
 **Restricciones:**
 - `chk_concepto_datos`: `(concepto = 'CUOTA_MENSUAL' AND periodo IS NOT NULL AND turno_id IS NULL AND EXTRACT(DAY FROM periodo) = 1) OR (concepto = 'SESION_CONSULTORIO' AND turno_id IS NOT NULL AND periodo IS NULL)`
 
-  El concepto es mutuamente excluyente, y **la regla del primer día del mes está dentro de esta misma restricción**: no existe una `chk_periodo_primer_dia` aparte. `periodo` identifica un mes, no un día — normalizarlo al día 1 es lo que hace que `uq_cuota_mensual` pueda detectar dos cuotas del mismo período.
+  El concepto es mutuamente excluyente, y **la regla del primer día del mes está dentro de esta misma restricción**: no existe una `chk_periodo_primer_dia` aparte. `periodo` identifica un mes, no un día: la base **rechaza** cualquier fecha que no sea día 1 (no la normaliza; la API responde 422, PI-80). Que el período sea siempre día 1 es lo que permite a `uq_cuota_mensual` detectar dos cuotas del mismo mes.
 
 - `uq_pago_por_turno`: índice único parcial sobre `turno_id WHERE turno_id IS NOT NULL`
-- `uq_cuota_mensual`: índice único parcial sobre `(persona_id, periodo) WHERE periodo IS NOT NULL`
+- `uq_cuota_mensual`: índice único parcial sobre `(persona_id, periodo) WHERE concepto = 'CUOTA_MENSUAL'`
 
 **Coherencia con el turno abonado (RN-20, `trg_pago_sesion`):** un pago `SESION_CONSULTORIO` tiene que apuntar a un turno de tipo `CONSULTORIO` y estar a nombre de la persona de ese turno.
 

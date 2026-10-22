@@ -13,7 +13,7 @@
 |----------|--------------------|----------------------------------------------|-------------------------|---------|
 | Sprint 1 | 31/08 – 13/09/2026 | Infraestructura + DDL + Setup inicial         | R. Calcatelli           | ✅ Completado |
 | Sprint 2 | 14/09 – 27/09/2026 | Autenticación y roles (JWT)                  | P. Basualdo Arcati      | ✅ Completado |
-| Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | 🟡 Casi completo (falta T3-11) |
+| Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | ✅ Completado (T3-11 cerrada en el Sprint 5) |
 | Sprint 4 | 12/10 – 25/10/2026 | Módulo Turnos                                | Ambos                   | ✅ Completado |
 | Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | 🔄 Adelantado en parte (emails); Pagos sin empezar |
 | Cierre   | 09/11 – 14/11/2026 | Estabilización · Informe · Video · Defensa   | Ambos                   | ⏳ Pendiente |
@@ -109,7 +109,7 @@
 | T3-5 a T3-8 | ✅ | `Profesional`, `DisponibilidadProfesional`, `ProfesionalService`, `DisponibilidadService`, `CascadaDisponibilidadService` (RN-24, RN-25) y migración V13 (PR #20) |
 | T3-9 | ✅ | Pantallas de Profesionales y Disponibilidad (PR #20) |
 | T3-10 | ✅ | `PersonaIT` (PI-61 a PI-70), `DisponibilidadIT`, `ProfesionalIT`, `CascadaDisponibilidadIT`, `CascadaEmailFallidoIT`, `MigracionV13IT` |
-| T3-11 | ⏳ Pendiente | `POST /api/personas/vincular` (RF-31) todavía no está implementado: hoy la única alta de persona es la presencial (RF-05) |
+| T3-11 | ✅ | `POST /api/personas/vincular` (RF-31) y opción "Vincular usuario existente" en W-05; `PersonaVinculoIT` (PI-19 a PI-21). Quedó sin hacer en el Sprint 3 y se cerró en el Sprint 5 (issue #26) |
 
 Además del alcance original se incorporó el envío de emails por Brevo (API HTTP) con un reintento y alerta al ADMIN, que el plan ubicaba en T5-6/T5-9: la cancelación en cascada de RN-24 necesita avisar a los pacientes y no podía esperar al Sprint 5. El proveedor es Brevo y no Resend/SendGrid (ver `docs/02-diseno/modulos.md`, Módulo 6).
 

@@ -80,6 +80,15 @@ El mockup muestra cinco cuentas de demostración. Cuatro tienen correlato real e
 `db/dml/seed.sql`; la quinta no existe. En su lugar se usa la cuenta de administración que sí
 está cargada. Una tarjeta que autocompleta credenciales inexistentes es peor que no tenerla.
 
+### El ingreso al gimnasio no tiene "Deshacer"
+
+El mockup permitía revertir un check-in con un botón "Deshacer". Se quitó del diseño: ningún
+requerimiento lo pide y no hay endpoint que lo respalde. `PATCH /api/turnos/{id}/completado` es
+la única transición del check-in, y un turno COMPLETADO no vuelve a RESERVADO. Si el ADMIN marca
+por error, el registro queda y se corrige a mano; si en el futuro hace falta revertir, es un caso
+de uso nuevo con su regla (hasta cuándo se puede y quién), no un botón en la pantalla. Por el
+mismo motivo la agenda del profesional tampoco lo tiene.
+
 ## Vistas que el mockup define y todavía no se construyeron
 
 El mockup incluye, además de la autenticación, tres vistas completas de la aplicación:

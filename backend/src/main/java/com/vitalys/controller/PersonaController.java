@@ -5,6 +5,7 @@ import com.vitalys.domain.Usuario;
 import com.vitalys.dto.PersonaAltaRequest;
 import com.vitalys.dto.PersonaDatosRequest;
 import com.vitalys.dto.PersonaResponse;
+import com.vitalys.dto.PersonaVinculoRequest;
 import com.vitalys.service.PersonaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,6 +60,13 @@ public class PersonaController {
     public ResponseEntity<PersonaResponse> crear(
             @AuthenticationPrincipal Usuario actor, @Valid @RequestBody PersonaAltaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(personaService.crear(actor, request));
+    }
+
+    @PostMapping("/vincular")
+    @Operation(summary = "Vincular usuario existente", description = "Crea la ficha de una persona para un usuario que ya se registró, buscándolo por email; sin contraseña. ADMIN (RF-31). 403 antes de resolver el email; 404 si no existe; 409 si ya está vinculado.")
+    public ResponseEntity<PersonaResponse> vincular(
+            @AuthenticationPrincipal Usuario actor, @Valid @RequestBody PersonaVinculoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(personaService.vincular(actor, request));
     }
 
     @PutMapping("/{id}")

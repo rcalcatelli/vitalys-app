@@ -77,7 +77,7 @@ describe("AppRoutes", () => {
       let cuerpo: unknown = [];
       if (url.includes("/api/auth/me")) cuerpo = { id: 1, email: "u@vitalys.test", rol };
       else if (url.includes("/gym/estado")) cuerpo = unEstadoGym();
-      else if (url.includes("/estado-cuenta")) cuerpo = unEstadoCuenta();
+      else if (url.includes("/api/pagos/mi-estado-cuenta")) cuerpo = unEstadoCuenta();
       return Promise.resolve({
         ok: true,
         status: 200,

@@ -47,7 +47,7 @@ class ErroresDeBaseTest {
 
     @Test
     void otroUnico_conservaElTextoDeTurnos() {
-        RuntimeException r = ErroresDeBase.traducir(error("duplicate key \"uq_turno_gym_dia\"", "23505"));
+        RuntimeException r = ErroresDeBase.traducir(error("duplicate key \"uq_turno_gym_persona_dia\"", "23505"));
 
         assertThat(r).isInstanceOf(ConflictoException.class).hasMessageContaining("turno de gimnasio");
     }

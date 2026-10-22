@@ -201,24 +201,24 @@ INSERT INTO disponibilidad_profesional (profesional_id, dia_semana, hora_inicio,
 -- la fecha de carga.
 
 -- María Pérez: socia desde mes - 3, cuotas de mes - 3 a mes pagas. 0 impagos. AL DÍA.
-INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
+INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario, medio) VALUES
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '3 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'TRANSFERENCIA'),
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '2 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'TRANSFERENCIA'),
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '1 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'TRANSFERENCIA'),
   ((SELECT id FROM personas WHERE dni = '38100001'), 'CUOTA_MENSUAL', 15000.00, (SELECT mes FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'TRANSFERENCIA');
 
 -- Juan García: socio desde mes - 8, pagó solo mes - 2 y mes - 1.
 -- Impagos: mes - 8 a mes - 3 = 6. Alcanza exactamente el umbral (6) → SUSPENDIDO
 -- para gym. Caso de borde: el bloqueo se dispara con "alcanza o supera".
-INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
+INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario, medio) VALUES
   ((SELECT id FROM personas WHERE dni = '38100002'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '2 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100002'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '1 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO');
 
 -- Lucía Rojas: socia desde este mes, SIN cuotas registradas. Su único período
 -- todavía no venció: 0 impagos. Un socio recién incorporado no queda bloqueado.
@@ -226,17 +226,17 @@ INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario)
 -- Ana Fernández: socia desde mes - 6, salteó mes - 6 y mes - 5 y pagó de mes - 4
 -- a mes. Impagos: 2. Los pagos posteriores NO compensan los meses salteados
 -- (RN-01), pero 2 < 6 → CON DEUDA sin bloqueo: conserva el acceso al gym.
-INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario) VALUES
+INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario, medio) VALUES
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '4 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '3 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '2 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '1 months')::date FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT mes FROM seed_ref),
-   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'));
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO');
 
 -- ---------------------------------------------------------------------------
 -- 6. TURNOS — todos los estados representados
@@ -376,13 +376,14 @@ INSERT INTO turnos (
 -- ---------------------------------------------------------------------------
 
 -- Pago de la sesión completada de Carlos (T2)
-INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario) VALUES (
+INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario, medio) VALUES (
   (SELECT id FROM personas WHERE dni = '38100004'),
   'SESION_CONSULTORIO',
   8000.00,
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100004')
      AND estado = 'COMPLETADO' LIMIT 1),
-  (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com')
+  (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'),
+  'TRANSFERENCIA'
 );
 
 -- ---------------------------------------------------------------------------

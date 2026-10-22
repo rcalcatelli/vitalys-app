@@ -256,7 +256,7 @@ class TurnoServiceTest {
         doThrow(sinSql).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null))).isSameAs(sinSql);
 
-        DataIntegrityViolationException fk = rechazoDelMotor("23503", "fk");
+        DataIntegrityViolationException fk = rechazoDelMotor("23502", "not null");
         doThrow(fk).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null))).isSameAs(fk);
     }

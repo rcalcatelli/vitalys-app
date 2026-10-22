@@ -293,6 +293,8 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 
 **Regla:** el vínculo es ADMIN-only (403 si el actor no es ADMIN, verificado en la capa de servicio, RNF-03).
 
+> **Implementación (Sprint 5).** Se resolvió en un solo paso, sin búsqueda previa: el panel "Vincular usuario existente" de W-05 pide el email junto con los datos de la persona, sin contraseña, y la respuesta de `POST /api/personas/vincular` decide el caso. Con 404 aparece "Crear con credenciales nuevas", que abre el alta presencial; con 409 se muestra el aviso y no se ofrece ninguna acción. Se evita así un endpoint de consulta de emails que no figura en `modulos.md`.
+
 ---
 
 ## W-08 — Reserva de turno de gimnasio (SOCIO_PACIENTE)

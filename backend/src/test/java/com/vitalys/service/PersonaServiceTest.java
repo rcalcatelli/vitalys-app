@@ -16,11 +16,13 @@ import com.vitalys.domain.Usuario;
 import com.vitalys.dto.PersonaAltaRequest;
 import com.vitalys.dto.PersonaDatosRequest;
 import com.vitalys.dto.PersonaResponse;
+import com.vitalys.dto.PersonaVinculoRequest;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.ConflictoException;
 import com.vitalys.exception.DatosInvalidosException;
 import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RecursoNoEncontradoException;
+import com.vitalys.exception.ReglaDeNegocioException;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.UsuarioRepository;
 import java.time.Clock;
@@ -286,5 +288,79 @@ class PersonaServiceTest {
     @Test
     void reactivar_comoSocio_esRechazado() {
         assertThatThrownBy(() -> service.reactivar(socio, 10L)).isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    // ------------------------------------------------------------------ vínculo (RF-31)
+
+    private PersonaVinculoRequest vinculo(String email) {
+        return new PersonaVinculoRequest(email, datos("40000010", false, null), null);
+    }
+
+    @Test
+    void vincular_creaLaFichaConElUsuarioExistenteSinCrearOtro() {
+        when(usuarioRepository.findByEmail("maria@mail.com")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.empty());
+
+        PersonaResponse r = service.vincular(admin, vinculo(" maria@mail.com "));
+
+        assertThat(r.usuarioId()).isEqualTo(2L);
+        assertThat(r.estado()).isEqualTo(EstadoPersona.ACTIVO);
+        assertThat(r.fechaAlta()).isEqualTo(HOY);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void vincular_comoSocio_403SinBuscarElEmail() {
+        assertThatThrownBy(() -> service.vincular(socio, vinculo("nadie@mail.com")))
+                .isInstanceOf(AccesoDenegadoException.class);
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
+    void vincular_emailInexistente_404() {
+        when(usuarioRepository.findByEmail("nadie@mail.com")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.vincular(admin, vinculo("nadie@mail.com")))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void vincular_usuarioYaVinculado_409() {
+        when(usuarioRepository.findByEmail("maria@mail.com")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.of(persona(10L, socio)));
+        assertThatThrownBy(() -> service.vincular(admin, vinculo("maria@mail.com")))
+                .isInstanceOf(ConflictoException.class)
+                .hasMessageContaining("ya está vinculado");
+    }
+
+    @Test
+    void vincular_usuarioQueNoEsSocioPaciente_422() {
+        when(usuarioRepository.findByEmail("admin@vitalys.com")).thenReturn(Optional.of(admin));
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.vincular(admin, vinculo("admin@vitalys.com")))
+                .isInstanceOf(ReglaDeNegocioException.class);
+    }
+
+    @Test
+    void vincular_dniRepetido_409() {
+        when(usuarioRepository.findByEmail("maria@mail.com")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.empty());
+        when(personaRepository.existsByDni("40000010")).thenReturn(true);
+        assertThatThrownBy(() -> service.vincular(admin, vinculo("maria@mail.com")))
+                .isInstanceOf(ConflictoException.class)
+                .hasMessageContaining("DNI");
+    }
+
+    @Test
+    void vincular_conContrasena_400() {
+        PersonaVinculoRequest conClave = new PersonaVinculoRequest("maria@mail.com", datos("40000010", false, null), "x");
+        assertThatThrownBy(() -> service.vincular(admin, conClave)).isInstanceOf(DatosInvalidosException.class);
+    }
+
+    @Test
+    void vincular_socioGymSinFecha_400() {
+        when(usuarioRepository.findByEmail("maria@mail.com")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.empty());
+        PersonaVinculoRequest req = new PersonaVinculoRequest("maria@mail.com", datos("40000010", true, null), null);
+        assertThatThrownBy(() -> service.vincular(admin, req)).isInstanceOf(DatosInvalidosException.class);
     }
 }

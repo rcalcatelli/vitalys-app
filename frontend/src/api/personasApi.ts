@@ -1,5 +1,11 @@
 import { http } from "./http";
-import type { FiltroPersonas, Persona, PersonaAlta, PersonaDatos } from "../types/persona";
+import type {
+  FiltroPersonas,
+  Persona,
+  PersonaAlta,
+  PersonaDatos,
+  PersonaVinculo,
+} from "../types/persona";
 
 /** Traduce el filtro de W-05 a los query params de GET /api/personas (RF-06). */
 export function construirQuery(filtro: FiltroPersonas, texto: string): string {
@@ -19,6 +25,10 @@ export function listarPersonas(filtro: FiltroPersonas, texto: string): Promise<P
 
 export function crearPersona(alta: PersonaAlta): Promise<Persona> {
   return http.post<Persona>("/api/personas", alta);
+}
+
+export function vincularPersona(vinculo: PersonaVinculo): Promise<Persona> {
+  return http.post<Persona>("/api/personas/vincular", vinculo);
 }
 
 export function actualizarPersona(id: number, datos: PersonaDatos): Promise<Persona> {

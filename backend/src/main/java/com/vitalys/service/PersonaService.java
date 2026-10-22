@@ -7,11 +7,13 @@ import com.vitalys.domain.Usuario;
 import com.vitalys.dto.PersonaAltaRequest;
 import com.vitalys.dto.PersonaDatosRequest;
 import com.vitalys.dto.PersonaResponse;
+import com.vitalys.dto.PersonaVinculoRequest;
 import com.vitalys.exception.AccesoDenegadoException;
 import com.vitalys.exception.ConflictoException;
 import com.vitalys.exception.DatosInvalidosException;
 import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RecursoNoEncontradoException;
+import com.vitalys.exception.ReglaDeNegocioException;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.PersonaSpecifications;
 import com.vitalys.repository.UsuarioRepository;
@@ -85,6 +87,36 @@ public class PersonaService {
 
         Usuario usuario = usuarioRepository.save(new Usuario(
                 request.email(), passwordEncoder.encode(request.contrasena()), RolUsuario.SOCIO_PACIENTE));
+        Persona persona = new Persona(usuario, hoy());
+        aplicarDatos(persona, datos);
+        return PersonaResponse.de(guardar(persona));
+    }
+
+    /**
+     * Vínculo (RF-31, HU-07): crea la ficha de una persona para un usuario que ya se registró
+     * solo, sin crear un usuario nuevo. El rol se verifica antes de buscar el email: un actor que
+     * no es ADMIN recibe 403 y nunca llega a saber si la dirección está registrada (CA-07-4).
+     */
+    @Transactional
+    public PersonaResponse vincular(Usuario actor, PersonaVinculoRequest request) {
+        exigirAdmin(actor);
+        if (request.contrasena() != null) {
+            throw new DatosInvalidosException("El vínculo no lleva contraseña: el usuario ya tiene la suya");
+        }
+        Usuario usuario = usuarioRepository
+                .findByEmail(request.email().trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe un usuario registrado con ese email"));
+        if (personaRepository.findByUsuarioId(usuario.getId()).isPresent()) {
+            throw new ConflictoException("Ese usuario ya está vinculado a una persona");
+        }
+        if (usuario.getRol() != RolUsuario.SOCIO_PACIENTE) {
+            throw new ReglaDeNegocioException("Solo se vinculan usuarios con rol SOCIO_PACIENTE");
+        }
+        PersonaDatosRequest datos = request.datos();
+        validarMembresia(datos);
+        if (personaRepository.existsByDni(datos.dni())) {
+            throw new ConflictoException("Ya existe una persona con el DNI " + datos.dni());
+        }
         Persona persona = new Persona(usuario, hoy());
         aplicarDatos(persona, datos);
         return PersonaResponse.de(guardar(persona));

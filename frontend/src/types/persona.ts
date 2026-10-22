@@ -36,5 +36,11 @@ export interface PersonaAlta {
   datos: PersonaDatos;
 }
 
+/** Vínculo con un usuario ya registrado (POST /api/personas/vincular, RF-31): sin contraseña. */
+export interface PersonaVinculo {
+  email: string;
+  datos: PersonaDatos;
+}
+
 /** Filtros de W-05. `soloGym` es independiente del estado. */
 export type FiltroPersonas = "TODOS" | "ACTIVOS" | "INACTIVOS" | "GYM";

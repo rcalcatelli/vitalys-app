@@ -6,6 +6,7 @@ import {
   darDeBajaPersona,
   listarPersonas,
   reactivarPersona,
+  vincularPersona,
 } from "./personasApi";
 
 function ok(body: unknown): Response {
@@ -47,6 +48,7 @@ describe("personasApi", () => {
     await actualizarPersona(4, datos);
     await darDeBajaPersona(4);
     await reactivarPersona(4);
+    await vincularPersona({ email: "a@b.c", datos });
 
     const llamadas = vi.mocked(fetch).mock.calls.map(([url, init]) => `${init?.method} ${url}`);
     expect(llamadas).toEqual([
@@ -54,6 +56,7 @@ describe("personasApi", () => {
       "PUT /api/personas/4",
       "PATCH /api/personas/4/baja",
       "PATCH /api/personas/4/reactivar",
+      "POST /api/personas/vincular",
     ]);
   });
 });

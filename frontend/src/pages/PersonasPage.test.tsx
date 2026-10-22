@@ -22,6 +22,7 @@ vi.mock("../api/personasApi", async (importOriginal) => {
     actualizarPersona: vi.fn(),
     darDeBajaPersona: vi.fn(),
     reactivarPersona: vi.fn(),
+    vincularPersona: vi.fn(),
   };
 });
 
@@ -174,5 +175,72 @@ describe("PersonasPage", () => {
     await user.click(fila.getByRole("button", { name: "Baja" }));
     await user.click(fila.getByRole("button", { name: "Sí, dar de baja" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("La persona ya está dada de baja");
+  });
+
+  it("vincula una ficha a un usuario ya registrado, sin pedir contraseña", async () => {
+    const user = userEvent.setup();
+    vi.mocked(personasApi.vincularPersona).mockResolvedValue(
+      unaPersona({ id: 12, nombre: "Laura", apellido: "Benítez" }),
+    );
+    renderWithRouter(<PersonasPage />);
+    await screen.findByText("García, Juan");
+
+    await user.click(screen.getByRole("button", { name: "Vincular usuario existente" }));
+    const form = within(screen.getByRole("form", { name: "Vincular usuario existente" }));
+    expect(form.queryByLabelText("Contraseña inicial")).not.toBeInTheDocument();
+    await user.type(form.getByLabelText("Email con el que se registró"), "laura@mail.com");
+    await user.type(form.getByLabelText("Nombre"), "Laura");
+    await user.type(form.getByLabelText("Apellido"), "Benítez");
+    await user.type(form.getByLabelText("DNI"), "40000012");
+    await user.click(form.getByRole("button", { name: "Vincular ficha" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Benítez, Laura quedó vinculada a su cuenta.",
+    );
+    expect(personasApi.vincularPersona).toHaveBeenCalledWith({
+      email: "laura@mail.com",
+      datos: expect.objectContaining({ dni: "40000012", nombre: "Laura" }),
+    });
+  });
+
+  it("si el email no tiene usuario, ofrece el alta con credenciales nuevas (W-07)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(personasApi.vincularPersona).mockRejectedValue(new ApiError(404, "x"));
+    renderWithRouter(<PersonasPage />);
+    await screen.findByText("García, Juan");
+
+    await user.click(screen.getByRole("button", { name: "Vincular usuario existente" }));
+    const form = within(screen.getByRole("form", { name: "Vincular usuario existente" }));
+    await user.type(form.getByLabelText("Email con el que se registró"), "nadie@mail.com");
+    await user.type(form.getByLabelText("Nombre"), "Laura");
+    await user.type(form.getByLabelText("Apellido"), "Benítez");
+    await user.type(form.getByLabelText("DNI"), "40000012");
+    await user.click(form.getByRole("button", { name: "Vincular ficha" }));
+
+    expect(await form.findByRole("alert")).toHaveTextContent("No existe un usuario registrado");
+    await user.click(screen.getByRole("button", { name: "Crear con credenciales nuevas →" }));
+    expect(screen.getByRole("form", { name: "Nueva persona" })).toBeInTheDocument();
+  });
+
+  it("si el usuario ya está vinculado muestra el 409 y no ofrece el alta", async () => {
+    const user = userEvent.setup();
+    vi.mocked(personasApi.vincularPersona).mockRejectedValue(
+      new ApiError(409, "Ese usuario ya está vinculado a una persona"),
+    );
+    renderWithRouter(<PersonasPage />);
+    await screen.findByText("García, Juan");
+
+    await user.click(screen.getByRole("button", { name: "Vincular usuario existente" }));
+    const form = within(screen.getByRole("form", { name: "Vincular usuario existente" }));
+    await user.type(form.getByLabelText("Email con el que se registró"), "juan@mail.com");
+    await user.type(form.getByLabelText("Nombre"), "Juan");
+    await user.type(form.getByLabelText("Apellido"), "García");
+    await user.type(form.getByLabelText("DNI"), "38100002");
+    await user.click(form.getByRole("button", { name: "Vincular ficha" }));
+
+    expect(await form.findByRole("alert")).toHaveTextContent("ya está vinculado");
+    expect(
+      screen.queryByRole("button", { name: "Crear con credenciales nuevas →" }),
+    ).not.toBeInTheDocument();
   });
 });

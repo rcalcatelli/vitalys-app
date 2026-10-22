@@ -21,7 +21,11 @@ const FILTROS: [FiltroPersonas, string][] = [
 /** Espera antes de consultar mientras se escribe en el buscador. */
 const DEMORA_BUSQUEDA_MS = 300;
 
-type Panel = { modo: "cerrado" } | { modo: "alta" } | { modo: "edicion"; persona: Persona };
+type Panel =
+  | { modo: "cerrado" }
+  | { modo: "alta" }
+  | { modo: "vinculo" }
+  | { modo: "edicion"; persona: Persona };
 
 function mensajeDeError(err: unknown): string {
   if (err instanceof ApiError) {
@@ -45,6 +49,8 @@ export function PersonasPage() {
   const [errorLista, setErrorLista] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>({ modo: "cerrado" });
   const [errorPanel, setErrorPanel] = useState<string | null>(null);
+  /** El vínculo no encontró el email: se ofrece seguir con el alta presencial (W-07). */
+  const [sinUsuario, setSinUsuario] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -67,6 +73,7 @@ export function PersonasPage() {
 
   function abrir(nuevo: Panel) {
     setErrorPanel(null);
+    setSinUsuario(false);
     setAviso(null);
     setPanel(nuevo);
   }
@@ -74,20 +81,30 @@ export function PersonasPage() {
   async function guardar(values: PersonaFormValues) {
     setGuardando(true);
     setErrorPanel(null);
+    setSinUsuario(false);
     try {
       const persona =
         panel.modo === "edicion"
           ? await personasApi.actualizarPersona(panel.persona.id, values.datos)
-          : await personasApi.crearPersona(values);
+          : panel.modo === "vinculo"
+            ? await personasApi.vincularPersona({ email: values.email, datos: values.datos })
+            : await personasApi.crearPersona(values);
       setAviso(
         panel.modo === "edicion"
           ? `Se guardaron los cambios de ${persona.apellido}, ${persona.nombre}.`
-          : `${persona.apellido}, ${persona.nombre} se agregó a Personas.`,
+          : panel.modo === "vinculo"
+            ? `${persona.apellido}, ${persona.nombre} quedó vinculada a su cuenta.`
+            : `${persona.apellido}, ${persona.nombre} se agregó a Personas.`,
       );
       setPanel({ modo: "cerrado" });
       await cargar(filtro, texto);
     } catch (err) {
-      setErrorPanel(mensajeDeError(err));
+      if (panel.modo === "vinculo" && err instanceof ApiError && err.status === 404) {
+        setErrorPanel("No existe un usuario registrado con ese email.");
+        setSinUsuario(true);
+      } else {
+        setErrorPanel(mensajeDeError(err));
+      }
     } finally {
       setGuardando(false);
     }
@@ -145,6 +162,14 @@ export function PersonasPage() {
         <Button type="button" className="sm:w-auto" onClick={() => abrir({ modo: "alta" })}>
           + Nueva persona
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12"
+          onClick={() => abrir({ modo: "vinculo" })}
+        >
+          Vincular usuario existente
+        </Button>
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Filtrar personas">
@@ -194,14 +219,27 @@ export function PersonasPage() {
         </section>
 
         {panel.modo !== "cerrado" && (
-          <PersonaForm
-            key={panel.modo === "edicion" ? panel.persona.id : "alta"}
-            persona={panel.modo === "edicion" ? panel.persona : undefined}
-            onSubmit={(values) => void guardar(values)}
-            onCancel={() => setPanel({ modo: "cerrado" })}
-            error={errorPanel}
-            cargando={guardando}
-          />
+          <div className="flex flex-col gap-3">
+            <PersonaForm
+              key={panel.modo === "edicion" ? panel.persona.id : panel.modo}
+              persona={panel.modo === "edicion" ? panel.persona : undefined}
+              modo={panel.modo === "vinculo" ? "vinculo" : "alta"}
+              onSubmit={(values) => void guardar(values)}
+              onCancel={() => setPanel({ modo: "cerrado" })}
+              error={errorPanel}
+              cargando={guardando}
+            />
+            {sinUsuario && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                onClick={() => abrir({ modo: "alta" })}
+              >
+                Crear con credenciales nuevas →
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </main>

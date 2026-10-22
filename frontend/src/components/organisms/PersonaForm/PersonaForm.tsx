@@ -15,6 +15,11 @@ export interface PersonaFormValues {
 export interface PersonaFormProps {
   /** Sin `persona` es un alta presencial (RF-05): pide email y contraseña. Con `persona` es edición (RF-07). */
   persona?: Persona;
+  /**
+   * Solo sin `persona`. `vinculo` (RF-31) pide el email de un usuario que ya se registró y no
+   * pide contraseña: el usuario ya tiene la suya.
+   */
+  modo?: "alta" | "vinculo";
   onSubmit: (values: PersonaFormValues) => void;
   onCancel: () => void;
   error?: string | null;
@@ -36,12 +41,15 @@ function vacioANull(valor: string): string | null {
  */
 export function PersonaForm({
   persona,
+  modo = "alta",
   onSubmit,
   onCancel,
   error = null,
   cargando = false,
 }: PersonaFormProps) {
   const esAlta = persona === undefined;
+  const esVinculo = esAlta && modo === "vinculo";
+  const pideContrasena = esAlta && !esVinculo;
   const [email, setEmail] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [nombre, setNombre] = useState(persona?.nombre ?? "");
@@ -57,7 +65,8 @@ export function PersonaForm({
 
   function validar(): string | null {
     if (esAlta && !email.includes("@")) return "Ingresá un email válido.";
-    if (esAlta && contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    if (pideContrasena && contrasena.length < 8)
+      return "La contraseña debe tener al menos 8 caracteres.";
     if (!nombre.trim() || !apellido.trim()) return "Ingresá nombre y apellido.";
     if (!DNI_VALIDO.test(dni)) return "El DNI tiene que tener entre 7 y 9 dígitos, sin puntos.";
     if (esSocioGym && !fechaInicioMembresia)
@@ -72,7 +81,7 @@ export function PersonaForm({
     if (problema) return;
     onSubmit({
       email: email.trim(),
-      contrasena,
+      contrasena: pideContrasena ? contrasena : "",
       datos: {
         nombre: nombre.trim(),
         apellido: apellido.trim(),
@@ -91,29 +100,44 @@ export function PersonaForm({
     <form
       onSubmit={handleSubmit}
       noValidate
-      aria-label={esAlta ? "Nueva persona" : "Editar persona"}
+      aria-label={
+        esVinculo ? "Vincular usuario existente" : esAlta ? "Nueva persona" : "Editar persona"
+      }
       className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
     >
       <h2 className="font-heading text-lg font-semibold text-ink">
-        {esAlta ? "Nueva persona" : `Editar ${persona.apellido}, ${persona.nombre}`}
+        {esVinculo
+          ? "Vincular usuario existente"
+          : esAlta
+            ? "Nueva persona"
+            : `Editar ${persona.apellido}, ${persona.nombre}`}
       </h2>
+
+      {esVinculo && (
+        <p className="text-sm text-ink-2">
+          Para quien ya se registró en la app. Se busca por su email y no se pide contraseña: ya
+          tiene la suya.
+        </p>
+      )}
 
       {esAlta && (
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             id="persona-email"
-            label="Email"
+            label={esVinculo ? "Email con el que se registró" : "Email"}
             type="email"
             value={email}
             onChange={setEmail}
             autoComplete="off"
           />
-          <PasswordInput
-            id="persona-contrasena"
-            label="Contraseña inicial"
-            value={contrasena}
-            onChange={setContrasena}
-          />
+          {pideContrasena && (
+            <PasswordInput
+              id="persona-contrasena"
+              label="Contraseña inicial"
+              value={contrasena}
+              onChange={setContrasena}
+            />
+          )}
         </div>
       )}
 
@@ -164,7 +188,13 @@ export function PersonaForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={cargando} className="sm:w-auto">
-          {cargando ? "Guardando…" : esAlta ? "Dar de alta" : "Guardar cambios"}
+          {cargando
+            ? "Guardando…"
+            : esVinculo
+              ? "Vincular ficha"
+              : esAlta
+                ? "Dar de alta"
+                : "Guardar cambios"}
         </Button>
       </div>
     </form>

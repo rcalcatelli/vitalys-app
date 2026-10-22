@@ -128,6 +128,10 @@ Prueban el stack completo API + base de datos con un PostgreSQL real en contened
 | PI-20 | Vínculo con usuario ya vinculado                          | POST /api/personas/vincular   | email de usuario con `persona` existente | 409                                            |
 | PI-21 | Vínculo con actor no-ADMIN                                | POST /api/personas/vincular   | JWT de `SOCIO_PACIENTE` + body con email inexistente | 403 (no 404): la autorización se verifica antes de resolver el email |
 
+> **Implementación.** `PersonaVinculoIT` cubre PI-19 a PI-21 y además el camino feliz (la ficha
+> queda con el mismo `usuario_id` y la persona puede loguearse con su DNI), el rechazo de un body
+> con contraseña (400, CA-07-3) y el de un usuario que no es `SOCIO_PACIENTE` (422).
+
 ### Turnos
 
 | ID    | Caso                                                            | Resultado esperado                              |

@@ -3,6 +3,7 @@ import { AgendaPage } from "../pages/AgendaPage";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { HoyPage } from "../pages/HoyPage";
 import { LoginPage } from "../pages/LoginPage";
+import { MiEstadoCuentaPage } from "../pages/MiEstadoCuentaPage";
 import { MisTurnosPage } from "../pages/MisTurnosPage";
 import { PersonasPage } from "../pages/PersonasPage";
 import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
@@ -111,6 +112,15 @@ export function AppRoutes() {
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
             <MisTurnosPage />
+          </RoleGuard>
+        }
+      />
+
+      <Route
+        path="/socio/estado-cuenta"
+        element={
+          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
+            <MiEstadoCuentaPage />
           </RoleGuard>
         }
       />

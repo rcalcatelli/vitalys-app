@@ -12,12 +12,13 @@ function renderNav(ruta: string) {
 }
 
 describe("SocioNav", () => {
-  it("ofrece gimnasio, consultorio y mis turnos con sus rutas", () => {
+  it("ofrece gimnasio, consultorio, mis turnos y estado de cuenta con sus rutas", () => {
     renderNav("/socio/turnos");
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Reservar gimnasio",
       "Turno de consultorio",
       "Mis turnos",
+      "Estado de cuenta",
     ]);
     expect(screen.getByRole("link", { name: "Reservar gimnasio" })).toHaveAttribute(
       "href",

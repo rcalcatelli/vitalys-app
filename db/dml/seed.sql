@@ -25,6 +25,9 @@ BEGIN;
 --    para facilitar el desarrollo local. NUNCA usar texto plano en producción.
 --    Hash verificado: generado con `SELECT crypt('Admin1234!', gen_salt('bf', 10));`
 --    (pgcrypto) para que coincida exactamente con la contraseña documentada.
+--    Los socios usan el dominio example.com (RFC 2606): con Brevo activo, los
+--    avisos de deuda, recordatorios y confirmaciones salen de verdad, y un
+--    dominio real como mail.com le mandaría correo a casillas de terceros.
 -- ---------------------------------------------------------------------------
 
 -- Admin
@@ -40,12 +43,12 @@ INSERT INTO usuarios (email, password_hash, rol) VALUES
 
 -- Socios / Pacientes
 INSERT INTO usuarios (email, password_hash, rol) VALUES
-  ('maria.perez@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('juan.garcia@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('lucia.rojas@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('carlos.soto@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('ana.fernandez@mail.com',  '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('pedro.gomez@mail.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE');
+  ('maria.perez@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('juan.garcia@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('lucia.rojas@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('carlos.soto@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('ana.fernandez@example.com',  '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('pedro.gomez@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE');
   -- password para todos: Admin1234!
 
 -- ---------------------------------------------------------------------------
@@ -152,22 +155,22 @@ FROM h;
 -- asociado al gimnasio hace pocos meses. Derivar la mora de fecha_alta haría
 -- aparecer como deudores a socios que recién se incorporaron.
 INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimiento, estado, es_socio_gym, fecha_alta, fecha_inicio_membresia, fecha_baja) VALUES
-  ((SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'maria.perez@example.com'),
    'María', 'Pérez', '38100001', '11-2001-0001', '1995-03-12', 'ACTIVO', true,  '2024-01-10', (SELECT (mes - INTERVAL '3 months')::date FROM seed_ref), NULL),
 
-  ((SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'juan.garcia@example.com'),
    'Juan', 'García', '38100002', '11-2002-0002', '1990-07-22', 'ACTIVO', true,  '2023-05-15', (SELECT (mes - INTERVAL '8 months')::date FROM seed_ref), NULL),
 
-  ((SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'lucia.rojas@example.com'),
    'Lucía', 'Rojas', '38100003', '11-2003-0003', '1998-11-05', 'ACTIVO', true,  '2024-03-01', (SELECT mes FROM seed_ref), NULL),
 
-  ((SELECT id FROM usuarios WHERE email = 'carlos.soto@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'carlos.soto@example.com'),
    'Carlos', 'Soto', '38100004', '11-2004-0004', '1985-04-18', 'ACTIVO', false, '2025-02-20', NULL, NULL),
 
-  ((SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'ana.fernandez@example.com'),
    'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', (SELECT (mes - INTERVAL '6 months')::date FROM seed_ref), NULL),
 
-  ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@mail.com'),
+  ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@example.com'),
    'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15'),
 
   -- Laura Benítez: la persona de recepción (admin@vitalys.com). Es la ficha del ADMIN: da nombre
@@ -260,7 +263,7 @@ VALUES (
   (SELECT (prox_miercoles + TIME '09:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (prox_miercoles + TIME '09:30') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'RESERVADO',
-  (SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com')
+  (SELECT id FROM usuarios WHERE email = 'maria.perez@example.com')
 );
 
 -- T2: COMPLETADO — Carlos con Rodrigo (Psicología), un martes de hace dos o tres
@@ -286,7 +289,7 @@ VALUES (
   (SELECT (pas_miercoles + TIME '08:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (pas_miercoles + TIME '08:45') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'AUSENTE',
-  (SELECT id FROM usuarios WHERE email = 'lucia.rojas@mail.com')
+  (SELECT id FROM usuarios WHERE email = 'lucia.rojas@example.com')
 );
 
 -- T4: CANCELADO_EN_TIEMPO — Ana con Valentina, el lunes de hace una o dos
@@ -301,9 +304,9 @@ INSERT INTO turnos (
   (SELECT (pas_lunes + TIME '09:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (pas_lunes + TIME '09:30') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'CANCELADO_EN_TIEMPO',
-  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@example.com'),
   (SELECT (pas_lunes - 6 + TIME '10:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
-  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@example.com'),
   'Surgió un imprevisto laboral.'
 );
 
@@ -322,9 +325,9 @@ INSERT INTO turnos (
   (SELECT (pas_jueves + TIME '14:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (pas_jueves + TIME '14:50') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'CANCELADO_TARDE',
-  (SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'juan.garcia@example.com'),
   (SELECT (pas_jueves + TIME '11:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
-  (SELECT id FROM usuarios WHERE email = 'juan.garcia@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'juan.garcia@example.com'),
   'No me siento bien.'
 );
 
@@ -338,7 +341,7 @@ VALUES (
   (SELECT (prox_jueves_gym + TIME '08:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (prox_jueves_gym + TIME '09:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'RESERVADO',
-  (SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com')
+  (SELECT id FROM usuarios WHERE email = 'maria.perez@example.com')
 );
 
 -- T7: GYM — María, turno de gimnasio COMPLETADO, el sábado de hace una o dos
@@ -351,7 +354,7 @@ VALUES (
   (SELECT (pas_sabado_gym + TIME '10:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (pas_sabado_gym + TIME '11:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'COMPLETADO',
-  (SELECT id FROM usuarios WHERE email = 'maria.perez@mail.com')
+  (SELECT id FROM usuarios WHERE email = 'maria.perez@example.com')
 );
 
 -- T8: GYM — Ana canceló con la franja YA EMPEZADA (turno 09:00, aviso 09:01), el
@@ -371,9 +374,9 @@ INSERT INTO turnos (
   (SELECT (pas_viernes_gym + TIME '09:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   (SELECT (pas_viernes_gym + TIME '10:00') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
   'CANCELADO_TARDE',
-  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@example.com'),
   (SELECT (pas_viernes_gym + TIME '09:01') AT TIME ZONE 'America/Argentina/Buenos_Aires' FROM seed_ref),
-  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@mail.com'),
+  (SELECT id FROM usuarios WHERE email = 'ana.fernandez@example.com'),
   'Avisé cuando la franja ya había arrancado.'
 );
 
@@ -430,7 +433,7 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100001')
      AND tipo_turno = 'CONSULTORIO' AND estado = 'RESERVADO' LIMIT 1),
   'CONFIRMACION_TURNO',
-  'maria.perez@mail.com',
+  'maria.perez@example.com',
   true
 );
 
@@ -440,7 +443,7 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100005')
      AND estado = 'CANCELADO_EN_TIEMPO' LIMIT 1),
   'AVISO_CANCELACION',
-  'ana.fernandez@mail.com',
+  'ana.fernandez@example.com',
   true
 );
 
@@ -450,7 +453,7 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso, 
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100002')
      AND estado = 'CANCELADO_TARDE' LIMIT 1),
   'AVISO_CANCELACION',
-  'juan.garcia@mail.com',
+  'juan.garcia@example.com',
   false,  -- simulamos fallo del proveedor SMTP
   'Connection timeout: SMTP server unreachable'
 );
@@ -461,7 +464,7 @@ INSERT INTO notificaciones (persona_id, turno_id, tipo, email_destino, exitoso) 
   (SELECT id FROM turnos WHERE persona_id = (SELECT id FROM personas WHERE dni = '38100001')
      AND tipo_turno = 'CONSULTORIO' AND estado = 'RESERVADO' LIMIT 1),
   'RECORDATORIO',
-  'maria.perez@mail.com',
+  'maria.perez@example.com',
   true
 );
 

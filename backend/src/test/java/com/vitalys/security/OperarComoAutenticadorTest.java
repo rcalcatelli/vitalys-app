@@ -51,6 +51,17 @@ class OperarComoAutenticadorTest {
         when(usuarioRepository.findByEmail("maria@vitalys.test")).thenReturn(Optional.of(socio));
         when(personaRepository.findByUsuarioId(7L)).thenReturn(Optional.of(ficha));
         when(auditoriaRepository.accionesDeSesion(eq(sesion), any())).thenReturn(List.of(AccionOperarComo.INICIO));
+        when(auditoriaRepository.existsBySesionIdAndAccionAndOperadorUsuarioIdAndSujetoUsuarioId(
+                        sesion, AccionOperarComo.INICIO, 1L, 7L))
+                .thenReturn(true);
+    }
+
+    @Test
+    void inicioDeLaSesionDeOtroOperadorOSujeto_noAutentica() {
+        when(auditoriaRepository.existsBySesionIdAndAccionAndOperadorUsuarioIdAndSujetoUsuarioId(
+                        sesion, AccionOperarComo.INICIO, 1L, 7L))
+                .thenReturn(false);
+        assertThat(autenticador.autenticar(valido())).isEmpty();
     }
 
     private JwtService.TokenVerificado token(String actorEmail, Long actorId, String email, Long usuarioId) {

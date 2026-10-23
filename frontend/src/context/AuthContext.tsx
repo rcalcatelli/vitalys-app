@@ -6,6 +6,7 @@ import {
   clearTokenOperarComo,
   getToken,
   getTokenAdmin,
+  getTokenOperarComo,
   onOperarComoVencido,
   setToken as persistToken,
   setTokenOperarComo,
@@ -30,8 +31,9 @@ interface AuthContextValue {
    */
   registrarse: (email: string, contrasena: string) => Promise<Usuario>;
   /**
-   * Logout client-side (Decisión 9 / RNF-10): no existe endpoint de invalidación
-   * server-side, así que solo se descarta el token y se limpia el estado. El
+   * Logout client-side (Decisión 9 / RNF-10): no existe endpoint de invalidación de la sesión
+   * normal, así que solo se descarta el token y se limpia el estado. Si se cierra sesión mientras
+   * se opera como un socio, antes se avisa a `POST /api/operar-como/fin` (best effort). El
    * redirect a /login ocurre porque RoleGuard, al ver isAuthenticated=false,
    * redirige — no hay navegación acoplada acá para no atar el contexto al router.
    */
@@ -165,7 +167,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return iniciarSesionConToken(response.token);
   }
 
+  /**
+   * Avisa al servidor que la sesión de "Operar como" terminó (queda auditado el FIN y la credencial
+   * deja de valer). Best effort: no se espera y un fallo nunca bloquea lo que sigue. Hay que
+   * llamarla ANTES de descartar la credencial, porque es con ella que se autentica el aviso.
+   */
+  function avisarFinOperarComo(): void {
+    if (getTokenOperarComo() === null) return;
+    operarComoApi.terminarOperarComo().catch(() => undefined);
+  }
+
   function logout(): void {
+    avisarFinOperarComo();
     clearToken();
     setTokenState(null);
     setUsuario(null);
@@ -201,6 +214,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUsuario(socio);
       return socio;
     } catch (err) {
+      avisarFinOperarComo();
       clearTokenOperarComo();
       setTokenState(getTokenAdmin());
       throw err;

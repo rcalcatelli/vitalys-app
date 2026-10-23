@@ -15,5 +15,9 @@ public interface AuditoriaOperarComoRepository extends JpaRepository<AuditoriaOp
     List<AccionOperarComo> accionesDeSesion(
             @Param("sesionId") UUID sesionId, @Param("acciones") List<AccionOperarComo> acciones);
 
+    /** Si la fila de la sesión con esa acción fue registrada por ese operador sobre ese sujeto. */
+    boolean existsBySesionIdAndAccionAndOperadorUsuarioIdAndSujetoUsuarioId(
+            UUID sesionId, AccionOperarComo accion, Long operadorUsuarioId, Long sujetoUsuarioId);
+
     List<AuditoriaOperarComo> findBySesionIdOrderByIdAsc(UUID sesionId);
 }

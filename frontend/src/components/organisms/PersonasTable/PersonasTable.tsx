@@ -15,9 +15,13 @@ export interface PersonasTableProps {
   ocupado?: boolean;
 }
 
-// La última columna mide 120px como en el diseño (que solo tiene "Operar como"). Con el ⋯ de
-// Editar/Baja los botones desbordan hacia la izquierda sobre el aire de la columna Cuota.
-const COLUMNAS = "shell:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_120px]";
+// La última columna mide 120px como en el diseño (que solo tiene "Operar como") cuando hay lugar
+// (>= 1280px: los botones desbordan hacia la izquierda sobre el aire de la columna Cuota). Entre
+// 1024 y 1279px el contenido es más angosto y esa columna aloja "Operar como" + ⋯ enteros (156px)
+// para que no pisen los chips de Cuota. Entre 760 y 1023px no hay ancho ni para eso: las acciones
+// pasan a una segunda línea de la fila, alineadas a la derecha.
+const COLUMNAS =
+  "shell:grid-cols-[1.5fr_1fr_1.7fr_1.4fr] min-[1024px]:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_156px] min-[1280px]:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_120px]";
 
 /**
  * Listado de Personas (ADMIN). En mobile cada persona es una tarjeta de dos columnas; desde 760px
@@ -88,9 +92,9 @@ export function PersonasTable({
                 </Chip>
               </span>
               <span
-                className={`col-span-2 flex items-center justify-end gap-1.5 shell:col-span-1 shell:flex-nowrap shell:justify-self-end ${
+                className={`col-span-2 flex items-center justify-end gap-1.5 shell:col-span-4 shell:flex-nowrap shell:justify-self-end min-[1024px]:col-span-1 ${
                   confirmando
-                    ? "flex-wrap shell:absolute shell:top-1/2 shell:right-4 shell:-translate-y-1/2 shell:bg-surface shell:pl-3"
+                    ? "flex-wrap min-[1024px]:absolute min-[1024px]:top-1/2 min-[1024px]:right-4 min-[1024px]:-translate-y-1/2 min-[1024px]:bg-surface min-[1024px]:pl-3"
                     : "flex-wrap"
                 }`}
               >

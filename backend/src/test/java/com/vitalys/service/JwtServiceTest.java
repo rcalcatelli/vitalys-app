@@ -7,6 +7,9 @@ import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
 import com.vitalys.security.JwtService;
 import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +24,7 @@ class JwtServiceTest {
         JwtProperties properties = new JwtProperties();
         properties.setSecret(generarSecretoDeTest());
         properties.setExpirationMs(86_400_000L);
-        jwtService = new JwtService(properties);
+        jwtService = new JwtService(properties, Clock.systemUTC());
     }
 
     private static String generarSecretoDeTest() {
@@ -49,6 +52,27 @@ class JwtServiceTest {
     }
 
     @Test
+    void generarToken_usaElRelojInyectadoParaIatYExp() {
+        JwtProperties properties = new JwtProperties();
+        properties.setSecret(generarSecretoDeTest());
+        properties.setExpirationMs(86_400_000L);
+        Instant fijo = Instant.parse("2026-10-20T15:00:00Z");
+        JwtService servicio = new JwtService(properties, Clock.fixed(fijo, ZoneOffset.UTC));
+
+        String token = servicio.generarToken(usuario());
+
+        var claims = io.jsonwebtoken.Jwts.parser()
+                .verifyWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(
+                        properties.getSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .clock(() -> java.util.Date.from(fijo))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        assertThat(claims.getIssuedAt().toInstant()).isEqualTo(fijo);
+        assertThat(claims.getExpiration().toInstant()).isEqualTo(fijo.plusMillis(86_400_000L));
+    }
+
+    @Test
     void esValido_conTokenMalformado_devuelveFalse() {
         assertThat(jwtService.esValido("esto-no-es-un-jwt")).isFalse();
     }
@@ -58,7 +82,7 @@ class JwtServiceTest {
         JwtProperties properties = new JwtProperties();
         properties.setSecret(generarSecretoDeTest());
         properties.setExpirationMs(-1_000L); // ya vencido al generarse
-        JwtService servicioExpirado = new JwtService(properties);
+        JwtService servicioExpirado = new JwtService(properties, Clock.systemUTC());
 
         String tokenExpirado = servicioExpirado.generarToken(usuario());
 
@@ -72,7 +96,7 @@ class JwtServiceTest {
         JwtProperties otrasPropiedades = new JwtProperties();
         otrasPropiedades.setSecret(generarSecretoDeTest());
         otrasPropiedades.setExpirationMs(86_400_000L);
-        JwtService otroServicio = new JwtService(otrasPropiedades);
+        JwtService otroServicio = new JwtService(otrasPropiedades, Clock.systemUTC());
 
         assertThat(otroServicio.esValido(token)).isFalse();
     }

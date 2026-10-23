@@ -22,7 +22,8 @@ import org.springframework.stereotype.Component;
  *   <li>que el sujeto exista con el mismo id del token, esté habilitado, sea SOCIO_PACIENTE y
  *       tenga ficha de persona activa;
  *   <li>que la sesión haya sido abierta por {@code POST /api/admin/operar-como} (fila INICIO) y no
- *       se haya terminado (sin fila FIN).
+ *       se haya terminado (sin fila FIN), y que la fila INICIO sea de ese mismo operador sobre ese
+ *       mismo sujeto (no alcanza con que el id de sesión exista).
  * </ul>
  *
  * <p>Si algo falla, la request queda sin autenticar y el entry point responde 401. Nunca se cae a
@@ -74,6 +75,11 @@ public class OperarComoAutenticador {
         List<AccionOperarComo> marcas = auditoriaRepository.accionesDeSesion(token.sesionId(), CICLO_DE_VIDA);
         if (!marcas.contains(AccionOperarComo.INICIO) || marcas.contains(AccionOperarComo.FIN)) {
             return rechazar("la sesión no fue iniciada o ya terminó", token);
+        }
+        // El jti solo no alcanza: la fila INICIO tiene que ser de ESTE operador sobre ESTE sujeto.
+        if (!auditoriaRepository.existsBySesionIdAndAccionAndOperadorUsuarioIdAndSujetoUsuarioId(
+                token.sesionId(), AccionOperarComo.INICIO, operador.get().getId(), sujeto.get().getId())) {
+            return rechazar("la sesión fue iniciada por otro operador o sobre otro sujeto", token);
         }
         return Optional.of(new OperarComoAuthentication(sujeto.get(), operador.get(), token.sesionId(), token.expiraEn()));
     }

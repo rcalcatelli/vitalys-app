@@ -8,6 +8,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -34,9 +35,11 @@ public class JwtService {
     static final String CLAIM_ACTOR = "act";
 
     private final JwtProperties jwtProperties;
+    private final Clock clock;
 
-    public JwtService(JwtProperties jwtProperties) {
+    public JwtService(JwtProperties jwtProperties, Clock clock) {
         this.jwtProperties = jwtProperties;
+        this.clock = clock;
     }
 
     /** El ADMIN que opera detrás de una credencial de "Operar como". */
@@ -57,7 +60,7 @@ public class JwtService {
     public record TokenOperarComo(String token, UUID sesionId, Instant expiraEn) {}
 
     public String generarToken(Usuario usuario) {
-        Date ahora = new Date();
+        Date ahora = Date.from(clock.instant());
         Date expiracion = new Date(ahora.getTime() + jwtProperties.getExpirationMs());
 
         return Jwts.builder()
@@ -75,7 +78,7 @@ public class JwtService {
      * = sesión, vence a los {@code vitalys.jwt.operar-como-expiration-ms} (30 min).
      */
     public TokenOperarComo generarOperarComo(Usuario sujeto, Usuario operador, UUID sesionId) {
-        Date ahora = new Date();
+        Date ahora = Date.from(clock.instant());
         Date expiracion = new Date(ahora.getTime() + jwtProperties.getOperarComoExpirationMs());
 
         String token = Jwts.builder()

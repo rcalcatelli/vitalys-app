@@ -12,6 +12,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -40,7 +41,7 @@ class OperarComoTokenTest {
         new SecureRandom().nextBytes(bytes);
         properties.setSecret(Base64.getEncoder().encodeToString(bytes));
         properties.setExpirationMs(86_400_000L);
-        jwtService = new JwtService(properties);
+        jwtService = new JwtService(properties, Clock.systemUTC());
     }
 
     private static Usuario usuario(Long id, String email, RolUsuario rol) {
@@ -151,7 +152,7 @@ class OperarComoTokenTest {
         byte[] bytes = new byte[32];
         new SecureRandom().nextBytes(bytes);
         otras.setSecret(Base64.getEncoder().encodeToString(bytes));
-        String ajeno = new JwtService(otras).generarOperarComo(socio, admin, UUID.randomUUID()).token();
+        String ajeno = new JwtService(otras, Clock.systemUTC()).generarOperarComo(socio, admin, UUID.randomUUID()).token();
 
         assertThatThrownBy(() -> jwtService.verificar(ajeno)).isInstanceOf(JwtException.class);
     }

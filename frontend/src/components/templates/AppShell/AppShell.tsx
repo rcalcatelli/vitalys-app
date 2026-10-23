@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import type { Theme } from "../../../hooks/useTheme";
 import { SidebarNav, TabBar } from "./NavItems";
 import type { NavItemVista } from "./NavItems";
@@ -61,8 +63,30 @@ export function AppShell({
   banner,
   children,
 }: AppShellProps) {
+  const mainRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  const rutaAnterior = useRef(pathname);
+
+  // Al navegar, el foco pasa al contenido: sin esto queda en el link del menú y quien navega con
+  // teclado o lector de pantalla no se entera de que la pantalla cambió.
+  useEffect(() => {
+    if (rutaAnterior.current === pathname) return;
+    rutaAnterior.current = pathname;
+    mainRef.current?.focus({ preventScroll: true });
+  }, [pathname]);
+
   return (
     <div className="flex min-h-screen">
+      <a
+        href="#contenido"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:text-small focus:font-semibold focus:text-ink focus:shadow-lg focus:outline-2 focus:outline-clin"
+      >
+        Saltar al contenido
+      </a>
       {!mobile && (
         <aside className="sticky top-0 flex h-screen w-[248px] shrink-0 flex-col gap-5 border-r border-border bg-surface px-3.5 py-[22px]">
           <div className="flex items-center gap-2.5 px-2">
@@ -137,8 +161,11 @@ export function AppShell({
         {banner}
 
         <main
+          id="contenido"
+          ref={mainRef}
+          tabIndex={-1}
           className={[
-            "mx-auto w-full max-w-[1160px] flex-1",
+            "mx-auto w-full max-w-[1160px] flex-1 outline-none",
             mobile ? "px-4 pt-[18px] pb-24" : "px-9 pt-8 pb-14",
           ].join(" ")}
         >

@@ -42,7 +42,7 @@ const CREDENCIAL = {
 };
 
 function Harness() {
-  const { usuario, isLoading, operarComo, volverARecepcion, login } = useAuth();
+  const { usuario, isLoading, operarComo, volverARecepcion, login, logout } = useAuth();
   return (
     <div>
       <span data-testid="loading">{String(isLoading)}</span>
@@ -59,6 +59,7 @@ function Harness() {
       >
         ping doble
       </button>
+      <button onClick={() => logout()}>salir</button>
       <button onClick={() => void login("admin@vitalys.com", "clave1234")}>login</button>
     </div>
   );
@@ -127,6 +128,10 @@ describe("AuthContext: Operar como (RF-39)", () => {
     await waitFor(() => expect(getTokenOperarComo()).toBeNull());
     expect(screen.getByTestId("usuario")).toHaveTextContent("Laura Benítez");
     expect(getToken()).toBe("jwt-admin");
+    // La sesión abierta en el servidor no queda colgada: se avisa el fin con la credencial.
+    const [fin, finInit] = vi.mocked(fetch).mock.calls[3];
+    expect(fin).toBe("/api/operar-como/fin");
+    expect(autorizacion(finInit)).toBe("Bearer jwt-operar-como");
   });
 
   it("volverARecepcion avisa al servidor, descarta la credencial y recupera al ADMIN sin nuevo login", async () => {
@@ -149,6 +154,52 @@ describe("AuthContext: Operar como (RF-39)", () => {
     expect(getTokenOperarComo()).toBeNull();
     expect(screen.getByTestId("operador")).toHaveTextContent("");
     expect(screen.getByTestId("rol")).toHaveTextContent("ADMIN");
+  });
+
+  it("cerrar sesión operando como un socio avisa el fin con la credencial y descarta todo", async () => {
+    const user = userEvent.setup();
+    setTokenOperarComo("jwt-operar-como");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(respuesta(200, SOCIO))
+      .mockResolvedValueOnce(respuesta(204));
+    montar();
+    await esperarSesion("María Pérez");
+
+    await user.click(screen.getByText("salir"));
+
+    await waitFor(() => expect(screen.getByTestId("usuario")).toHaveTextContent(""));
+    const [fin, finInit] = vi.mocked(fetch).mock.calls[1];
+    expect(fin).toBe("/api/operar-como/fin");
+    expect(autorizacion(finInit)).toBe("Bearer jwt-operar-como");
+    expect(getToken()).toBeNull();
+    expect(getTokenOperarComo()).toBeNull();
+  });
+
+  it("cerrar sesión cierra igual si el aviso del fin falla", async () => {
+    const user = userEvent.setup();
+    setTokenOperarComo("jwt-operar-como");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(respuesta(200, SOCIO))
+      .mockRejectedValueOnce(new Error("sin red"));
+    montar();
+    await esperarSesion("María Pérez");
+
+    await user.click(screen.getByText("salir"));
+
+    await waitFor(() => expect(screen.getByTestId("usuario")).toHaveTextContent(""));
+    expect(getToken()).toBeNull();
+  });
+
+  it("cerrar sesión sin operar como no llama a /fin", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockResolvedValueOnce(respuesta(200, ADMIN));
+    montar();
+    await esperarSesion("Laura Benítez");
+
+    await user.click(screen.getByText("salir"));
+
+    await waitFor(() => expect(screen.getByTestId("usuario")).toHaveTextContent(""));
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
   });
 
   it("volverARecepcion igual vuelve si el aviso al servidor falla", async () => {

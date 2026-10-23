@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AppShell } from "./AppShell";
 import type { AppShellProps } from "./AppShell";
@@ -108,5 +108,37 @@ describe("AppShell", () => {
     montar({ mobile: true }, "/admin/ingreso");
     const activo = screen.getByRole("link", { name: "Ingreso" });
     expect(activo).toHaveClass("text-gym-ink");
+  });
+
+  it("ofrece 'Saltar al contenido' como primer elemento enfocable y manda el foco al <main>", async () => {
+    montar();
+    const salto = screen.getByRole("link", { name: "Saltar al contenido" });
+    await userEvent.tab();
+    expect(salto).toHaveFocus();
+
+    await userEvent.click(salto);
+    expect(screen.getByRole("main")).toHaveFocus();
+  });
+
+  it("al cambiar de ruta el foco pasa al <main>, pero no al montar", async () => {
+    render(
+      <MemoryRouter initialEntries={["/admin/hoy"]}>
+        <AppShell
+          rolLabel="Recepción"
+          items={ITEMS}
+          usuario={{ nombre: "Laura Benítez", detalle: "Recepción", iniciales: "LB" }}
+          theme="light"
+          onToggleTheme={vi.fn()}
+          onLogout={vi.fn()}
+          mobile={false}
+        >
+          <Link to="/admin/ingreso">Ir a ingreso</Link>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("main")).not.toHaveFocus();
+
+    await userEvent.click(screen.getByRole("link", { name: "Ir a ingreso" }));
+    expect(screen.getByRole("main")).toHaveFocus();
   });
 });

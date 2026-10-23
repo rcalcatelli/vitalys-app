@@ -261,7 +261,7 @@ El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de ser
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| POST   | `/api/excepciones-morosidad` | Registrar una excepción para un socio moroso | ADMIN |
+| POST   | `/api/excepciones-morosidad` | Registrar una excepción para un socio moroso. Solo si está suspendido (deuda >= umbral según `MorosidadService.veredicto`); si no, 422. Una excepción ya vigente no impide registrar otra (renovación) | ADMIN |
 | GET    | `/api/excepciones-morosidad/persona/{id}` | Listar excepciones (vigentes e históricas) de una persona | ADMIN |
 
 **Entidades involucradas:** `excepciones_morosidad`, `personas`, `usuarios`, `turnos`

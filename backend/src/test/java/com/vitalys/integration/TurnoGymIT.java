@@ -190,6 +190,26 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     @Test
+    void pi137_excepcionParaSocioNoSuspendido_da422YNoQuedaRegistrada() {
+        Socio alDia = socioAlDia();
+        Map<String, Object> exc = Map.of(
+                "personaId", alDia.persona().id(),
+                "motivo", "Intento sin suspensión",
+                "validaHasta", LocalDate.now(ZONA).plusMonths(1).toString(),
+                "unSoloUso", true);
+
+        ResponseEntity<String> r = llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("no está suspendida por morosidad");
+        assertThat(llamar(
+                                HttpMethod.GET, "/api/excepciones-morosidad/persona/" + alDia.persona().id(), null, tokenAdmin,
+                                ExcepcionMorosidadResponse[].class)
+                        .getBody())
+                .isEmpty();
+    }
+
+    @Test
     void pi85_unTurnoDeGimnasioPorDia_segundoDa409() {
         Socio s = socioAlDia();
         LocalDate dia = diaHabil(2);

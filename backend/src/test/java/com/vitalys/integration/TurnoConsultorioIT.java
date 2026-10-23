@@ -262,8 +262,6 @@ class TurnoConsultorioIT extends IntegrationTestBase {
                 llamar(HttpMethod.GET, "/api/turnos/mis-turnos", null, s.token(), String.class).getBody(),
                 llamar(HttpMethod.GET, "/api/turnos/" + t.id(), null, s.token(), String.class).getBody(),
                 llamar(HttpMethod.GET, "/api/turnos/" + t.id(), null, tokenAdmin, String.class).getBody(),
-                llamar(HttpMethod.GET, "/api/turnos?tipo=CONSULTORIO&personaId=" + s.persona().id(), null, tokenAdmin, String.class)
-                        .getBody(),
                 llamar(
                                 HttpMethod.GET,
                                 "/api/turnos/disponibles?profesionalId=" + profesional.id() + "&fecha=" + dia,
@@ -272,6 +270,12 @@ class TurnoConsultorioIT extends IntegrationTestBase {
                                 String.class)
                         .getBody());
         assertThat(otras).allSatisfy(cuerpo -> assertThat(cuerpo).doesNotContain(dni).doesNotContainIgnoringCase("dni"));
+
+        // El listado del ADMIN (Ingreso, Pagos) si lleva el DNI: es el unico contexto de turnos que lo expone
+        String listadoAdmin = llamar(
+                        HttpMethod.GET, "/api/turnos?tipo=CONSULTORIO&personaId=" + s.persona().id(), null, tokenAdmin, String.class)
+                .getBody();
+        assertThat(listadoAdmin).contains("\"personaDni\":\"" + dni + "\"");
     }
 
     /** PI-09: dos personas piden el mismo slot a la vez; la base decide, nunca dos 201. */

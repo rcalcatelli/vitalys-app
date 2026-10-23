@@ -1,5 +1,6 @@
 package com.vitalys.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Turno;
@@ -16,7 +17,7 @@ public record TurnoResponse(
         String persona,
         String personaNombre,
         String personaApellido,
-        String personaDni,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String personaDni,
         TipoTurno tipoTurno,
         Long profesionalId,
         OffsetDateTime inicio,

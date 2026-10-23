@@ -502,7 +502,7 @@ La fuente visual es `docs/02-diseno/design-system/Vitalys.dc.html` (RNF-03: el b
 | 12 | En móvil, los modales son **hojas inferiores** como en el prototipo, pero los formularios largos hacen scroll | Los formularios de alta no entran en pantalla sin scroll |
 | 13 | Los **datos de ejemplo** del prototipo (fechas, medios de pago, subtítulo del servicio) no se reproducen | Son datos de maqueta; la app muestra los reales. Tampoco se inventaron números |
 
-Además, la pantalla de login conserva el panel de marca y las cuentas de demostración con la descripción actualizada ("Laura Benítez · Recepción", "Socio · reserva de gym suspendida" para Juan García), que coinciden con el seed de desarrollo.
+Además, la pantalla de login conserva el panel de marca y las cuentas de demostración con la descripción actualizada ("Laura Benítez · Recepción", "Socio · 6 períodos impagos · con excepción" para Juan García y "Solo paciente de Psicología" para Carlos Soto), que coinciden con el seed de desarrollo.
 
 ---
 

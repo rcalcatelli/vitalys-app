@@ -266,6 +266,14 @@ En tests el proveedor de email es el que solo loguea, así que se verifican las 
 |--------|------|--------------------|
 | PI-108 | `GET /api/admin/resumen-hoy` con un socio suspendido cargado | 200; el socio aparece en `requierenAtencion` con `suspendido = true`; con JWT de socio, 403 |
 
+### Avisos de deuda (`AvisosDeudaIT`)
+
+| ID     | Caso | Resultado esperado |
+|--------|------|--------------------|
+| PI-109 | Socio con períodos impagos por debajo del umbral, job diario (RF-37) | Un `AVISO_DEUDA` con el período impago más reciente; el socio nuevo sin deuda no recibe nada |
+| PI-110 | Socio que alcanzó el umbral, con el job corrido dos veces | Un único `AVISO_SUSPENSION` |
+| PI-111 | Insertar a mano un segundo aviso del mismo período, o un período en un aviso de turno | Lo rechazan `uq_aviso_deuda_periodo` y `chk_notificacion_periodo` |
+
 ### Pagos
 
 `PagoControllerIT` (Postgres real, Testcontainers) cubre PI-76 a PI-80 y PI-91 a PI-104. El nombre de cada método empieza con su ID (`pi76_…`, `pi91_…`) para que la trazabilidad doc ↔ test sea directa; un mismo PI puede tener más de una variante.

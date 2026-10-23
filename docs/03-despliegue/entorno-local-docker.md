@@ -171,7 +171,8 @@ db/migration/
 ├── V11__validaciones_pendientes.sql        las cinco validaciones que faltaban
 ├── V12__cancelacion_por_profesional.sql    cancelación en cascada por disponibilidad
 ├── V13__profesionales_disponibilidad.sql   profesionales y disponibilidad
-└── V14__pagos_medio.sql                    medio de pago de cada cobro
+├── V14__pagos_medio.sql                    medio de pago de cada cobro
+└── V15__avisos_de_deuda.sql                un aviso de deuda por período impago (RF-37)
 ```
 
 > El orden lo da el **número de versión**, no el orden alfabético. `V10` va después de
@@ -288,6 +289,7 @@ agregues ahí se empaqueta y se ejecuta automáticamente.
 | `V11__validaciones_pendientes.sql` | Cierra las cinco validaciones que la base aceptaba: pago de sesión sobre un turno de gimnasio o a nombre de otra persona, turno para alguien dado de baja, turnos superpuestos de la misma persona, y excepción de morosidad apuntando al turno de otro. Además invierte el sentido de `excepciones_morosidad.turno_id`: pasa a registrar qué turno consumió la excepción (RN-23). |
 | `V13__profesionales_disponibilidad.sql` | Ajustes de profesionales y disponibilidad del Sprint 3 (ver `MigracionV13IT`). |
 | `V14__pagos_medio.sql` | Tipo `medio_pago` (`EFECTIVO`, `TRANSFERENCIA`, `DEBITO`, `CREDITO`) y columna `pagos.medio NOT NULL` (backfill `EFECTIVO` para las filas existentes y sin DEFAULT de ahí en más). Mercado Pago se sumaría con su propia migración. |
+| `V15__avisos_de_deuda.sql` | Columna `notificaciones.periodo` para los avisos de deuda y de suspensión (RF-37), con `chk_notificacion_periodo` y el índice único parcial `uq_aviso_deuda_periodo`: un solo aviso por persona y período. |
 
 > **Ojo con el orden al aplicarlas a mano.** Flyway ordena por número de versión, pero un `ls db/migration/V*.sql` del shell ordena alfabéticamente y pone `V10` entre `V1` y `V2`. Si las corrés sueltas, usá `ls db/migration/V*.sql | sort -V`. Con `docker compose` no hace falta: lo resuelve Flyway.
 

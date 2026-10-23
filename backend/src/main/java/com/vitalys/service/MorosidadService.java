@@ -77,14 +77,32 @@ public class MorosidadService {
         if (!persona.isEsSocioGym() || persona.getFechaInicioMembresia() == null) {
             return EstadoDeuda.SIN_MEMBRESIA;
         }
-        Set<LocalDate> pagados = new HashSet<>(jdbcTemplate.queryForList(
-                "SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'",
-                LocalDate.class,
-                persona.getId()));
+        Set<LocalDate> pagados = cuotasPagadas(persona);
         Integer umbral = jdbcTemplate.queryForObject(
                 "SELECT meses_tolerancia_morosidad FROM configuracion_gym WHERE id = 1", Integer.class);
         int impagos = contarImpagos(persona.getFechaInicioMembresia(), pagados, LocalDate.now(clock));
         return new EstadoDeuda(impagos, umbral, impagos >= umbral);
+    }
+
+    /**
+     * El período impago más reciente, si hay alguno. Es la marca de los avisos de deuda (RF-37):
+     * un aviso por cada período que pasa a impago, nunca dos por el mismo.
+     */
+    public Optional<LocalDate> ultimoPeriodoImpago(Persona persona) {
+        if (!persona.isEsSocioGym() || persona.getFechaInicioMembresia() == null) {
+            return Optional.empty();
+        }
+        return periodos(persona.getFechaInicioMembresia(), cuotasPagadas(persona), LocalDate.now(clock)).stream()
+                .filter(p -> p.estado() == EstadoPeriodo.IMPAGO)
+                .map(PeriodoEstado::periodo)
+                .max(LocalDate::compareTo);
+    }
+
+    private Set<LocalDate> cuotasPagadas(Persona persona) {
+        return new HashSet<>(jdbcTemplate.queryForList(
+                "SELECT periodo FROM pagos WHERE persona_id = ? AND concepto = 'CUOTA_MENSUAL'",
+                LocalDate.class,
+                persona.getId()));
     }
 
     /**

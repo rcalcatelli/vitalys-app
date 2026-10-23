@@ -298,6 +298,9 @@ Log de emails enviados al sistema. Registra todos los envíos para auditoría; n
 | `detalle_error` | `TEXT` | SÍ | — | Mensaje de error del proveedor; NULL si exitoso = TRUE |
 | `intentos` | `INT` | NO | DEFAULT 0 | Intentos de envío realizados (0 a 2): el envío se reintenta una sola vez (`V13`) |
 | `ultimo_intento_en` | `TIMESTAMPTZ` | SÍ | — | Momento del último intento; NULL si todavía no hubo ninguno (`V13`) |
+| `periodo` | `DATE` | SÍ | `chk_notificacion_periodo` | Período impago que originó un `AVISO_DEUDA` o `AVISO_SUSPENSION` (día 1 del mes); NULL en los avisos de turnos (`V15`) |
+
+**Un aviso de deuda por período (`V15`):** `chk_notificacion_periodo` exige `periodo` (día 1) en los avisos de deuda y lo prohíbe en los demás; el índice único parcial `uq_aviso_deuda_periodo` sobre `(persona_id, periodo)` impide avisar dos veces el mismo período, aunque el job corra de nuevo o el servicio se reinicie.
 
 **Estado del envío sin columna `estado`:** se deduce de `exitoso`, `intentos` y `ultimo_intento_en`, para no tener dos fuentes de verdad. `exitoso` → enviada; `NOT exitoso AND intentos < 2` → en curso con reintento pendiente; `NOT exitoso AND intentos >= 2` → alerta definitiva para el ADMIN (`DEFINITIVA`); en curso por más que el umbral `vitalys.email.umbral-huerfanas` → `HUERFANA` (la instancia se reinició entre el fallo y el reintento). Hay una fila por notificación y cada reintento la actualiza.
 

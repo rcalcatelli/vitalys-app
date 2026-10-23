@@ -63,6 +63,9 @@ public class Notificacion {
     @Column(name = "ultimo_intento_en")
     private OffsetDateTime ultimoIntentoEn;
 
+    @Column(name = "periodo")
+    private java.time.LocalDate periodo;
+
     protected Notificacion() {
         // Requerido por JPA
     }
@@ -79,6 +82,21 @@ public class Notificacion {
     public static Notificacion pendiente(
             Persona persona, Turno turno, TipoNotificacion tipo, String emailDestino, OffsetDateTime ahora) {
         return new Notificacion(persona, turno, tipo, emailDestino, ahora);
+    }
+
+    /**
+     * Aviso de deuda o de suspensión (RF-37): no tiene turno y sí el período impago que lo
+     * originó, que es la marca para no avisar dos veces lo mismo (V15).
+     */
+    public static Notificacion deDeuda(
+            Persona persona, TipoNotificacion tipo, String emailDestino, java.time.LocalDate periodo, OffsetDateTime ahora) {
+        Notificacion n = new Notificacion(persona, null, tipo, emailDestino, ahora);
+        n.periodo = periodo;
+        return n;
+    }
+
+    public java.time.LocalDate getPeriodo() {
+        return periodo;
     }
 
     public void registrarExito(OffsetDateTime ahora) {

@@ -280,6 +280,7 @@ Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET    | `/api/notificaciones/persona/{id}` | Historial de notificaciones de una persona | ADMIN |
+| GET    | `/api/admin/resumen-hoy` | Panel "Hoy en el centro": ocupación del gimnasio por franja, turnos de gimnasio y consultas del día, quién está en el gimnasio ahora y socios con períodos impagos (con su estado de suspensión y excepción). Reutiliza `TurnoService.cupoGym` y `MorosidadService.veredicto` | ADMIN |
 | GET    | `/api/admin/notificaciones?fallidas=true` | Alerta de avisos que no llegaron: los `DEFINITIVA` (2 intentos fallidos) y los `HUERFANA` (en curso sin resolver). Es el único listado del endpoint | ADMIN |
 
 **Reglas de los avisos de turnos (RF-26 a RF-28, `AvisosTurnoService`):**

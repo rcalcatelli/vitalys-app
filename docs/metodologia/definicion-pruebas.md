@@ -260,6 +260,12 @@ En tests el proveedor de email es el que solo loguea, así que se verifican las 
 | PI-106 | Cancelar el turno, por el socio o un ADMIN (RF-27)            | Se agrega una fila `AVISO_CANCELACION` |
 | PI-107 | Recordatorio 24 h antes (RF-28), con el job corrido dos veces | Un solo `RECORDATORIO` para el turno reservado con anticipación; ninguno para el reservado hace minutos (ya tuvo su confirmación) ni para el que empieza en más de 24 h |
 
+### Panel del ADMIN (`ResumenHoyIT`)
+
+| ID     | Caso | Resultado esperado |
+|--------|------|--------------------|
+| PI-108 | `GET /api/admin/resumen-hoy` con un socio suspendido cargado | 200; el socio aparece en `requierenAtencion` con `suspendido = true`; con JWT de socio, 403 |
+
 ### Pagos
 
 `PagoControllerIT` (Postgres real, Testcontainers) cubre PI-76 a PI-80 y PI-91 a PI-104. El nombre de cada método empieza con su ID (`pi76_…`, `pi91_…`) para que la trazabilidad doc ↔ test sea directa; un mismo PI puede tener más de una variante.

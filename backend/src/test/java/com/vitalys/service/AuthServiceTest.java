@@ -22,7 +22,13 @@ import com.vitalys.exception.RolNoPermitidoException;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.UsuarioRepository;
+import com.vitalys.security.ActorActual;
 import com.vitalys.security.JwtService;
+import com.vitalys.security.OperarComoAuthentication;
+import java.time.Instant;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +43,7 @@ class AuthServiceTest {
     private AuthService authService;
     private PersonaRepository personaRepository;
     private ProfesionalRepository profesionalRepository;
+    private final ActorActual actorActual = new ActorActual();
 
     @BeforeEach
     void setUp() {
@@ -45,7 +52,8 @@ class AuthServiceTest {
         jwtService = mock(JwtService.class);
         personaRepository = mock(PersonaRepository.class);
         profesionalRepository = mock(ProfesionalRepository.class);
-        authService = new AuthService(usuarioRepository, passwordEncoder, jwtService, personaRepository, profesionalRepository);
+        authService = new AuthService(
+                usuarioRepository, passwordEncoder, jwtService, personaRepository, profesionalRepository, actorActual);
     }
 
     private RegistroRequest registroRequest(String email, String contrasena) {
@@ -256,5 +264,59 @@ class AuthServiceTest {
 
         assertThat(response.getNombre()).isNull();
         assertThat(response.getApellido()).isNull();
+    }
+
+    @AfterEach
+    void limpiarContexto() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void me_fueraDeOperarComo_sinOperador() {
+        Usuario usuario = new Usuario("nuevo@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        usuario.setId(3L);
+        when(usuarioRepository.findByEmail("nuevo@vitalys.test")).thenReturn(Optional.of(usuario));
+
+        MeResponse response = authService.me("nuevo@vitalys.test");
+
+        assertThat(response.getOperadoPor()).isNull();
+        assertThat(response.getOperarComoExpiraEn()).isNull();
+    }
+
+    @Test
+    void me_enOperarComo_traeAlSocioYAlAdminQueOpera() {
+        Usuario socio = new Usuario("maria@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        socio.setId(7L);
+        Usuario admin = new Usuario("laura@vitalys.test", "hash", RolUsuario.ADMIN);
+        admin.setId(1L);
+        com.vitalys.domain.Persona fichaAdmin = new com.vitalys.domain.Persona(admin, java.time.LocalDate.of(2024, 1, 1));
+        fichaAdmin.setNombre("Laura");
+        fichaAdmin.setApellido("Benítez");
+        when(usuarioRepository.findByEmail("maria@vitalys.test")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(7L)).thenReturn(Optional.empty());
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.of(fichaAdmin));
+        Instant vence = Instant.parse("2026-10-20T12:30:00Z");
+        SecurityContextHolder.getContext().setAuthentication(new OperarComoAuthentication(socio, admin, UUID.randomUUID(), vence));
+
+        MeResponse response = authService.me("maria@vitalys.test");
+
+        assertThat(response.getEmail()).isEqualTo("maria@vitalys.test");
+        assertThat(response.getRol()).isEqualTo(RolUsuario.SOCIO_PACIENTE);
+        assertThat(response.getOperadoPor()).isEqualTo(new MeResponse.Operador(1L, "Laura", "Benítez"));
+        assertThat(response.getOperarComoExpiraEn().toInstant()).isEqualTo(vence);
+    }
+
+    @Test
+    void me_enOperarComo_operadorSinFicha_soloElId() {
+        Usuario socio = new Usuario("maria@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        socio.setId(7L);
+        Usuario admin = new Usuario("admin@vitalys.test", "hash", RolUsuario.ADMIN);
+        admin.setId(1L);
+        when(usuarioRepository.findByEmail("maria@vitalys.test")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(any())).thenReturn(Optional.empty());
+        SecurityContextHolder.getContext().setAuthentication(
+                new OperarComoAuthentication(socio, admin, UUID.randomUUID(), Instant.now()));
+
+        assertThat(authService.me("maria@vitalys.test").getOperadoPor()).isEqualTo(new MeResponse.Operador(1L, null, null));
     }
 }

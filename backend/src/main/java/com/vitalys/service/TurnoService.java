@@ -1,5 +1,6 @@
 package com.vitalys.service;
 
+import com.vitalys.domain.AccionOperarComo;
 import com.vitalys.domain.DisponibilidadProfesional;
 import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
@@ -27,6 +28,7 @@ import com.vitalys.repository.FeriadoRepository;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
+import com.vitalys.security.ActorActual;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import com.vitalys.service.MorosidadService.VeredictoMorosidad;
 import com.vitalys.service.notificaciones.AvisosTurnoService;
@@ -53,6 +55,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>La grilla, el cupo, los feriados y la superposición los valida el motor; el servicio
  * valida lo que depende de {@code NOW()} o del actor: morosidad (RN-01), excepciones (RN-09),
  * anticipación de la cancelación (RN-02) y autorización por rol (RNF-03).
+ *
+ * <p>"Operar como" (RN-26/27): el actor es el socio, así que reserva y cancela con SUS reglas;
+ * {@code reservado_por}/{@code cancelado_por} guardan al ADMIN que opera (D8) y cada escritura se
+ * audita en la misma transacción.
  */
 @Service
 public class TurnoService {
@@ -74,6 +80,8 @@ public class TurnoService {
     private final DisponibilidadProfesionalRepository disponibilidadRepository;
     private final JdbcTemplate jdbcTemplate;
     private final AvisosTurnoService avisos;
+    private final ActorActual actorActual;
+    private final AuditoriaOperarComoService auditoria;
     private final Clock clock;
 
     public TurnoService(
@@ -86,6 +94,8 @@ public class TurnoService {
             DisponibilidadProfesionalRepository disponibilidadRepository,
             JdbcTemplate jdbcTemplate,
             AvisosTurnoService avisos,
+            ActorActual actorActual,
+            AuditoriaOperarComoService auditoria,
             Clock clock) {
         this.turnoRepository = turnoRepository;
         this.personaRepository = personaRepository;
@@ -96,6 +106,8 @@ public class TurnoService {
         this.disponibilidadRepository = disponibilidadRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.avisos = avisos;
+        this.actorActual = actorActual;
+        this.auditoria = auditoria;
         this.clock = clock;
     }
 
@@ -175,11 +187,12 @@ public class TurnoService {
                     deuda.periodosImpagos(), deuda.umbral()));
         }
 
-        Turno turno = guardar(Turno.deGimnasio(persona, actor.getId(), request.inicio()));
+        Turno turno = guardar(Turno.deGimnasio(persona, actorActual.idDeQuienOpera(actor), request.inicio()));
         veredicto.excepcion().ifPresent(e -> {
             e.consumirEn(turno.getId());
             excepcionRepository.save(e);
         });
+        auditoria.registrarSiOpera(AccionOperarComo.RESERVA_GYM, turno);
         avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
     }
@@ -266,7 +279,9 @@ public class TurnoService {
                 .findFirst()
                 .orElseThrow(() -> new ReglaDeNegocioException(
                         "Ese horario no está dentro de la disponibilidad del profesional"));
-        Turno turno = guardar(Turno.deConsultorio(persona, profesional.getId(), actor.getId(), slot[0], slot[1]));
+        Turno turno = guardar(Turno.deConsultorio(
+                persona, profesional.getId(), actorActual.idDeQuienOpera(actor), slot[0], slot[1]));
+        auditoria.registrarSiOpera(AccionOperarComo.RESERVA_CONSULTORIO, turno);
         avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
     }
@@ -404,8 +419,9 @@ public class TurnoService {
         if (!turno.estaReservado()) {
             throw new ReglaDeNegocioException("Solo se puede cancelar un turno reservado; este está " + turno.getEstado());
         }
-        turno.cancelar(ahora(), actor.getId(), motivo.trim());
+        turno.cancelar(ahora(), actorActual.idDeQuienOpera(actor), motivo.trim());
         Turno cancelado = guardar(turno);
+        auditoria.registrarSiOpera(AccionOperarComo.CANCELACION, cancelado);
         avisos.avisarCancelacion(cancelado);
         return TurnoResponse.de(cancelado);
     }

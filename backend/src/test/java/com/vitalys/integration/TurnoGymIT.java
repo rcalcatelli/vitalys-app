@@ -85,6 +85,20 @@ class TurnoGymIT extends IntegrationTestBase {
         return d;
     }
 
+    /**
+     * Un día hábil de hace al menos {@code semanas} semanas que no sea feriado. Correr un turno a un
+     * día así no puede chocar con la grilla de un sábado ni con un feriado que cierra el gimnasio.
+     */
+    private LocalDate diaHabilPasado(int semanas) {
+        LocalDate d = LocalDate.now(ZONA).minusWeeks(semanas);
+        while (d.getDayOfWeek() == DayOfWeek.SATURDAY
+                || d.getDayOfWeek() == DayOfWeek.SUNDAY
+                || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
+            d = d.minusDays(1);
+        }
+        return d;
+    }
+
     private static OffsetDateTime franja(LocalDate dia, int hora, int minuto) {
         return dia.atTime(hora, minuto).atZone(ZONA).toOffsetDateTime();
     }
@@ -280,11 +294,15 @@ class TurnoGymIT extends IntegrationTestBase {
     @Test
     void pi124_checkInGuardaCompletadoEnYElListadoDelAdminTraeElDni() {
         Socio s = socioAlDia();
-        TurnoResponse t = reservarOk(s.token(), franja(diaHabil(2), 15, 0));
+        LocalDate dia = diaHabil(2);
+        TurnoResponse t = reservarOk(s.token(), franja(dia, 15, 0));
         assertThat(t.completadoEn()).isNull();
-        // El turno ya empezó: se lo corre dos semanas al pasado, a la misma hora de la grilla
+        // El turno ya empezó: se lo corre a un día hábil pasado que no sea feriado, a la misma hora
+        // de la grilla. Un corrimiento fijo podía caer en un feriado y el motor lo rechazaría.
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(diaHabilPasado(2), dia);
         jdbcTemplate.update(
-                "UPDATE turnos SET inicio = inicio - INTERVAL '28 days', fin = fin - INTERVAL '28 days' WHERE id = ?", t.id());
+                "UPDATE turnos SET inicio = inicio - make_interval(days => ?), fin = fin - make_interval(days => ?) WHERE id = ?",
+                (int) dias, (int) dias, t.id());
 
         ResponseEntity<TurnoResponse> r = llamar(HttpMethod.PATCH, "/api/turnos/" + t.id() + "/completado", null, tokenAdmin, TurnoResponse.class);
 

@@ -12,7 +12,9 @@ import com.vitalys.exception.RolNoPermitidoException;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.UsuarioRepository;
+import com.vitalys.security.ActorActual;
 import com.vitalys.security.JwtService;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,18 +33,21 @@ public class AuthService {
     private final JwtService jwtService;
     private final PersonaRepository personaRepository;
     private final ProfesionalRepository profesionalRepository;
+    private final ActorActual actorActual;
 
     public AuthService(
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             PersonaRepository personaRepository,
-            ProfesionalRepository profesionalRepository) {
+            ProfesionalRepository profesionalRepository,
+            ActorActual actorActual) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.personaRepository = personaRepository;
         this.profesionalRepository = profesionalRepository;
+        this.actorActual = actorActual;
     }
 
     @Transactional
@@ -117,11 +122,25 @@ public class AuthService {
                         .findByUsuarioId(usuario.getId())
                         .map(p -> new String[] {p.getNombre(), p.getApellido()})
                         .orElse(null);
+        // RF-39: en una sesión de "Operar como" el usuario es el socio y además va quién opera,
+        // para que el shell muestre el banner. Lo ve solo el portador de la credencial: el ADMIN.
+        MeResponse.Operador operadoPor = actorActual
+                .operador()
+                .map(op -> personaRepository
+                        .findByUsuarioId(op.getId())
+                        .map(p -> new MeResponse.Operador(op.getId(), p.getNombre(), p.getApellido()))
+                        .orElse(new MeResponse.Operador(op.getId(), null, null)))
+                .orElse(null);
         return new MeResponse(
                 usuario.getId(),
                 usuario.getEmail(),
                 usuario.getRol(),
                 nombre == null ? null : nombre[0],
-                nombre == null ? null : nombre[1]);
+                nombre == null ? null : nombre[1],
+                operadoPor,
+                actorActual
+                        .sesion()
+                        .map(s -> s.getExpiraEn().atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toOffsetDateTime())
+                        .orElse(null));
     }
 }

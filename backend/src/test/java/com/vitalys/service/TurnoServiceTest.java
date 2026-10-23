@@ -75,6 +75,8 @@ class TurnoServiceTest {
     private ProfesionalRepository profesionalRepository;
     private DisponibilidadProfesionalRepository disponibilidadRepository;
     private TurnoService service;
+    private com.vitalys.security.ActorActual actorActual;
+    private AuditoriaOperarComoService auditoria;
 
     private final Usuario admin = usuario(1L, RolUsuario.ADMIN);
     private final Usuario socio = usuario(2L, RolUsuario.SOCIO_PACIENTE);
@@ -94,6 +96,9 @@ class TurnoServiceTest {
         morosidadService = spy(new MorosidadService(jdbcTemplate, excepcionRepository, Clock.fixed(AHORA.toInstant(), ZONA)));
         profesionalRepository = mock(ProfesionalRepository.class);
         disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
+        actorActual = mock(com.vitalys.security.ActorActual.class);
+        when(actorActual.idDeQuienOpera(any(Usuario.class))).thenAnswer(inv -> ((Usuario) inv.getArgument(0)).getId());
+        auditoria = mock(AuditoriaOperarComoService.class);
         service = new TurnoService(
                 turnoRepository,
                 personaRepository,
@@ -104,6 +109,8 @@ class TurnoServiceTest {
                 disponibilidadRepository,
                 jdbcTemplate,
                 avisos,
+                actorActual,
+                auditoria,
                 Clock.fixed(AHORA.toInstant(), ZONA));
 
         personaSocio = new Persona(socio, LocalDate.of(2024, 1, 1));
@@ -794,5 +801,91 @@ class TurnoServiceTest {
         doThrow(rechazoDelMotor("23505", "dup")).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)));
         verify(avisos, never()).confirmarReserva(any());
+    }
+
+    // ------------------------------------------------------------------ RN-26/27: Operar como
+
+    /** La request es de "Operar como": el ADMIN (id 1) opera en nombre del socio. */
+    private void operaElAdmin() {
+        when(actorActual.idDeQuienOpera(any(Usuario.class))).thenReturn(1L);
+    }
+
+    @Test
+    void pi118_operarComo_reservaConLasReglasDelSocioYGuardaAlAdminComoQuienReservo() {
+        operaElAdmin();
+
+        TurnoResponse r = service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
+
+        org.mockito.ArgumentCaptor<Turno> guardado = org.mockito.ArgumentCaptor.forClass(Turno.class);
+        verify(turnoRepository).saveAndFlush(guardado.capture());
+        assertThat(guardado.getValue().getReservadoPorUsuarioId()).isEqualTo(1L);
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+        verify(auditoria).registrarSiOpera(com.vitalys.domain.AccionOperarComo.RESERVA_GYM, guardado.getValue());
+        // Reglas del socio: para otra persona, 403 aunque detrás haya un ADMIN
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, 99L)))
+                .isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    @Test
+    void pi121_operarComo_reservaDeConsultorioAuditada() {
+        nutricionista();
+        operaElAdmin();
+
+        TurnoResponse r = service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9.plusMinutes(30), null));
+
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+        verify(auditoria).registrarSiOpera(eq(com.vitalys.domain.AccionOperarComo.RESERVA_CONSULTORIO), any(Turno.class));
+    }
+
+    @Test
+    void operarComo_cancelacionGuardaAlAdminYSeAudita() {
+        Turno t = turnoDelSocio(LUNES_10);
+        operaElAdmin();
+
+        TurnoResponse r = service.cancelar(socio, 100L, "viaje");
+
+        assertThat(t.getCanceladoPorUsuarioId()).isEqualTo(1L);
+        assertThat(r.canceladoPorRecepcion()).isTrue();
+        assertThat(r.reservadoPorRecepcion()).isFalse();
+        verify(auditoria).registrarSiOpera(com.vitalys.domain.AccionOperarComo.CANCELACION, t);
+    }
+
+    @Test
+    void siLaAuditoriaFalla_laReservaFallaYNoSeConfirma() {
+        operaElAdmin();
+        doThrow(new IllegalStateException("No se pudo registrar la auditoría"))
+                .when(auditoria).registrarSiOpera(any(), any());
+
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)))
+                .isInstanceOf(IllegalStateException.class);
+        verify(avisos, never()).confirmarReserva(any());
+    }
+
+    @Test
+    void pi122_porSiMismo_sinMarcaDeRecepcion() {
+        TurnoResponse r = service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
+        assertThat(r.reservadoPorRecepcion()).isFalse();
+        assertThat(r.canceladoPorRecepcion()).isFalse();
+
+        turnoDelSocio(LUNES_10);
+        TurnoResponse cancelado = service.cancelar(socio, 100L, "viaje");
+        assertThat(cancelado.canceladoPorRecepcion()).isFalse();
+    }
+
+    @Test
+    void pi122_reservaYCancelacionDeRecepcionSinOperarComo_tambienLlevanLaMarca() {
+        TurnoResponse r = service.reservarGym(admin, new ReservaGymRequest(LUNES_10, 20L));
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+
+        turnoDelSocio(LUNES_10);
+        assertThat(service.cancelar(admin, 100L, "cierre").canceladoPorRecepcion()).isTrue();
+    }
+
+    @Test
+    void turnoResponse_canceladoPorProfesional_noEsCancelacionDeRecepcion() {
+        Turno t = Turno.deGimnasio(personaSocio, 2L, LUNES_10);
+        t.cancelarPorProfesional(AHORA, 4L, "baja");
+
+        assertThat(TurnoResponse.de(t).canceladoPorRecepcion()).isFalse();
     }
 }

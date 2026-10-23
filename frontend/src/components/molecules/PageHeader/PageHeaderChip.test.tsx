@@ -6,7 +6,7 @@ import { PageHeader } from "./PageHeader";
 describe("PageHeader dentro del shell", () => {
   it("muestra el chip de fecha y hora cuando el shell lo informa", () => {
     render(
-      <ShellContext.Provider value={{ chipAhora: "Mar 29 sep · 10:40" }}>
+      <ShellContext.Provider value={{ chipAhora: "Mar 29 sep · 10:40", fallidas: null }}>
         <PageHeader titulo="Hoy" />
       </ShellContext.Provider>,
     );
@@ -15,7 +15,7 @@ describe("PageHeader dentro del shell", () => {
 
   it("no lo muestra en mobile (chip nulo)", () => {
     render(
-      <ShellContext.Provider value={{ chipAhora: null }}>
+      <ShellContext.Provider value={{ chipAhora: null, fallidas: null }}>
         <PageHeader titulo="Hoy" />
       </ShellContext.Provider>,
     );

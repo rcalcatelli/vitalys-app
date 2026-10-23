@@ -19,16 +19,16 @@ export function renderWithRouter(
 
   return render(
     <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
+      <ToastProvider>
+        <AuthProvider>
           <MemoryRouter initialEntries={initialEntries}>
             <Routes>
               <Route path={path} element={ui} />
               {extraRoutes}
             </Routes>
           </MemoryRouter>
-        </ToastProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>,
   );
 }

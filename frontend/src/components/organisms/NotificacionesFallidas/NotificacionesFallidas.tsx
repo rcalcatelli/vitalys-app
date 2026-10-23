@@ -10,10 +10,10 @@ export function NotificacionesFallidas({ notificaciones }: Props) {
   return (
     <section aria-labelledby="titulo-fallidas" className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 id="titulo-fallidas" className="font-heading text-[1.0625rem] font-semibold text-ink">
+        <h2 id="titulo-fallidas" className="font-heading text-[17px] font-semibold text-ink">
           Notificaciones fallidas
         </h2>
-        <span className="text-[0.8125rem] text-ink-3">
+        <span className="text-caption text-ink-3">
           La reserva o la cancelación ya quedó registrada; lo que falló es el aviso al socio.
         </span>
       </div>
@@ -23,14 +23,14 @@ export function NotificacionesFallidas({ notificaciones }: Props) {
           <NotificacionFallidaCard key={n.id} notificacion={n} />
         ))}
         {notificaciones.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
+          <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
             No hay notificaciones fallidas.
           </div>
         )}
       </div>
 
       {notificaciones.length > 0 && (
-        <span className="text-[0.8125rem] text-ink-3">
+        <span className="text-caption text-ink-3">
           Avisale al paciente por teléfono o en recepción.
         </span>
       )}

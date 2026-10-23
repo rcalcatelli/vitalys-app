@@ -1,21 +1,20 @@
 import { useMemo, useState } from "react";
 import type { ConceptoPago, EstadoCuenta, MedioPago, RegistrarPago } from "../../../types/pago";
 import type { Turno } from "../../../types/turno";
-import { horaBA } from "../../../utils/fechaBA";
+import { abreviaturaDia } from "../../../utils/diasUi";
+import { fechaBA, horaBA } from "../../../utils/fechaBA";
 import {
   MEDIOS,
   etiquetaMedio,
   etiquetaPeriodo,
+  etiquetaPeriodoEnFrase,
+  fechaDMA,
   parsearMonto,
   sumarMeses,
 } from "../../../utils/pagoUi";
-import { diaCorto } from "../../../utils/turnoUi";
 import { Button } from "../../atoms/Button";
-import { FieldError } from "../../atoms/FieldError";
-import { Input } from "../../atoms/Input";
 import { Label } from "../../atoms/Label";
 import { Select } from "../../atoms/Select";
-import { Aviso } from "../../molecules/Aviso";
 
 /** Meses futuros que se ofrecen después del último período: el backend permite el pago adelantado. */
 const MESES_ADELANTO = 2;
@@ -24,9 +23,14 @@ export type DatosPago = Omit<RegistrarPago, "personaId">;
 
 export interface RegistrarPagoDialogProps {
   nombre: string;
+  dni: string;
   estado: EstadoCuenta;
+  /** La persona está dada de baja: no genera cuotas mensuales. */
+  dadaDeBaja?: boolean;
   /** Turnos de consultorio de la persona; `null` mientras cargan. */
   turnos: Turno[] | null;
+  /** Nombre del profesional de un turno (para que el ADMIN distinga las opciones). */
+  profesionalDe?: (profesionalId: number | null) => string | null;
   /** Los turnos no se pudieron leer: solo se puede registrar la cuota. */
   errorTurnos?: boolean;
   enviando?: boolean;
@@ -36,43 +40,45 @@ export interface RegistrarPagoDialogProps {
   onCancelar: () => void;
 }
 
-interface Errores {
-  periodo?: string;
-  turno?: string;
-  monto?: string;
-  medio?: string;
-}
+type Campo = "periodo" | "turno" | "monto" | "medio";
 
 const CONCEPTOS: { valor: ConceptoPago; etiqueta: string }[] = [
   { valor: "CUOTA_MENSUAL", etiqueta: "Cuota mensual" },
   { valor: "SESION_CONSULTORIO", etiqueta: "Sesión de consultorio" },
 ];
 
+const AYUDA = "text-caption font-normal text-ink-3 text-pretty";
+const ERROR = "text-caption font-normal text-bad-ink";
+
 /**
  * Contenido del modal "Registrar pago" (ADMIN). Presentacional: valida la forma, arma el pedido y
- * delega el envío. Las reglas de negocio (período duplicado, turno ya pagado) las resuelve el
+ * delega el envío. Los errores de cada campo aparecen al tocarlo y el botón queda deshabilitado
+ * mientras haya alguno. Las reglas de negocio (período duplicado, turno ya pagado) las resuelve el
  * servidor y se muestran con `error`.
  */
 export function RegistrarPagoDialog({
   nombre,
+  dni,
   estado,
+  dadaDeBaja = false,
   turnos,
+  profesionalDe,
   errorTurnos = false,
   enviando = false,
   error = null,
   onConfirmar,
   onCancelar,
 }: RegistrarPagoDialogProps) {
+  const conCuota = estado.esSocioGym && !dadaDeBaja;
+
+  /** Un período por mes: los de la cuenta más los adelantos, con el estado que informa el backend. */
   const opcionesPeriodo = useMemo(() => {
-    const existentes = estado.periodos.map((p) => ({
-      periodo: p.periodo,
-      pagado: p.estado === "PAGADO",
-    }));
+    const existentes = estado.periodos.map((p) => ({ periodo: p.periodo, estado: p.estado }));
     const ultimo = estado.periodos.at(-1)?.periodo;
     if (!ultimo) return existentes;
     const adelantos = Array.from({ length: MESES_ADELANTO }, (_, i) => ({
       periodo: sumarMeses(ultimo, i + 1),
-      pagado: false,
+      estado: "PENDIENTE" as const,
     }));
     return [
       ...existentes,
@@ -86,39 +92,43 @@ export function RegistrarPagoDialog({
   );
   const turnosCobrables = useMemo(
     () =>
-      (turnos ?? []).filter(
-        (t) => t.tipoTurno === "CONSULTORIO" && !t.estado.startsWith("CANCELADO"),
-      ),
+      (turnos ?? [])
+        .filter((t) => t.tipoTurno === "CONSULTORIO" && !t.estado.startsWith("CANCELADO"))
+        .sort((a, b) => b.inicio.localeCompare(a.inicio)),
     [turnos],
   );
 
+  const impago = estado.periodos.find((p) => p.estado === "IMPAGO");
   const sugerido =
-    estado.periodos.find((p) => p.estado === "IMPAGO")?.periodo ??
-    opcionesPeriodo.find((o) => !o.pagado)?.periodo ??
-    "";
+    impago?.periodo ?? opcionesPeriodo.find((o) => o.estado !== "PAGADO")?.periodo ?? "";
 
   const [concepto, setConcepto] = useState<ConceptoPago>(
-    estado.esSocioGym ? "CUOTA_MENSUAL" : "SESION_CONSULTORIO",
+    conCuota ? "CUOTA_MENSUAL" : "SESION_CONSULTORIO",
   );
   const [periodo, setPeriodo] = useState(sugerido);
   const [turnoId, setTurnoId] = useState("");
   const [monto, setMonto] = useState("");
   const [medio, setMedio] = useState<MedioPago | "">("");
-  const [errores, setErrores] = useState<Errores>({});
+  const [tocados, setTocados] = useState<Partial<Record<Campo, boolean>>>({});
 
   const esCuota = concepto === "CUOTA_MENSUAL";
+  const importe = parsearMonto(monto);
+
+  const errores: Partial<Record<Campo, string>> = {};
+  if (esCuota && !periodo) errores.periodo = "Elegí el período que se paga.";
+  if (!esCuota && !turnoId) errores.turno = "Elegí el turno que se paga.";
+  if (monto.trim() === "") errores.monto = "Ingresá el monto.";
+  else if (importe === null || importe <= 0) errores.monto = "El monto tiene que ser mayor a 0.";
+  if (!medio) errores.medio = "Elegí un medio de pago.";
+
+  const mostrar = (campo: Campo) => (tocados[campo] ? errores[campo] : undefined);
+  const tocar = (campo: Campo) => setTocados((t) => ({ ...t, [campo]: true }));
+  const invalido = Object.keys(errores).length > 0;
+
+  const bordeSelect = (campo: Campo) => (mostrar(campo) ? "border-bad" : "");
 
   function confirmar() {
-    if (enviando) return;
-    const nuevos: Errores = {};
-    if (esCuota && !periodo) nuevos.periodo = "Elegí el período que se paga.";
-    if (!esCuota && !turnoId) nuevos.turno = "Elegí el turno que se paga.";
-    const importe = parsearMonto(monto);
-    if (importe === null || importe <= 0) nuevos.monto = "Ingresá un monto mayor a cero.";
-    if (!medio) nuevos.medio = "Elegí el medio de pago.";
-    setErrores(nuevos);
-    if (Object.keys(nuevos).length > 0 || importe === null || !medio) return;
-
+    if (enviando || invalido || importe === null || !medio) return;
     onConfirmar(
       esCuota
         ? { concepto, monto: importe, medio, periodo }
@@ -128,19 +138,25 @@ export function RegistrarPagoDialog({
 
   return (
     <>
-      <span className="text-sm text-ink-2">{nombre}</span>
+      <span className="text-ink-2">
+        {nombre} · DNI <span className="font-mono">{dni}</span>
+      </span>
 
       {error && (
-        <Aviso tono="bad" titulo="No se pudo registrar el pago">
-          {error}
-        </Aviso>
+        <div
+          role="alert"
+          className="flex flex-col gap-[3px] rounded-[10px] bg-bad-soft px-3.5 py-3 text-[13.5px] text-bad-ink"
+        >
+          <strong className="font-semibold">No se pudo registrar el pago</strong>
+          <span className="text-pretty">{error}</span>
+        </div>
       )}
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-ink-2">Concepto</span>
+        <span className="text-small font-medium text-ink-2">Concepto</span>
         <div role="group" aria-label="Concepto" className="grid grid-cols-2 gap-2">
           {CONCEPTOS.map(({ valor, etiqueta }) => {
-            const deshabilitado = valor === "CUOTA_MENSUAL" && !estado.esSocioGym;
+            const deshabilitado = (valor === "CUOTA_MENSUAL" && !conCuota) || enviando;
             const activo = concepto === valor;
             return (
               <button
@@ -148,15 +164,12 @@ export function RegistrarPagoDialog({
                 type="button"
                 aria-pressed={activo}
                 disabled={deshabilitado}
-                onClick={() => {
-                  setConcepto(valor);
-                  setErrores({});
-                }}
+                onClick={() => setConcepto(valor)}
                 className={[
-                  "min-h-11 rounded-md border-[1.5px] px-2.5 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50",
+                  "min-h-11 rounded-md border-[1.5px] px-2.5 py-1.5 text-[13.5px] font-medium disabled:cursor-not-allowed disabled:opacity-45",
                   activo
                     ? "border-clin bg-clin-soft text-clin-ink"
-                    : "border-border-2 bg-surface text-ink",
+                    : "border-border-2 bg-surface text-ink-2",
                 ].join(" ")}
               >
                 {etiqueta}
@@ -164,9 +177,11 @@ export function RegistrarPagoDialog({
             );
           })}
         </div>
-        {!estado.esSocioGym && (
-          <span className="text-xs text-ink-3">
-            No es socio del gimnasio: solo se le pueden registrar sesiones de consultorio.
+        {!conCuota && (
+          <span className={AYUDA}>
+            {dadaDeBaja
+              ? `${nombre} tiene el gimnasio dado de baja, así que no genera cuotas mensuales. Solo podés registrar sesiones de consultorio.`
+              : `${nombre} no es socio/a del gimnasio, así que no tiene cuotas mensuales. Solo podés registrar sesiones de consultorio.`}
           </span>
         )}
       </div>
@@ -177,22 +192,28 @@ export function RegistrarPagoDialog({
           <Select
             id="pago-periodo"
             value={periodo}
-            onChange={setPeriodo}
-            aria-invalid={errores.periodo ? true : undefined}
+            onChange={(v) => {
+              setPeriodo(v);
+              tocar("periodo");
+            }}
+            aria-invalid={mostrar("periodo") ? true : undefined}
+            className={bordeSelect("periodo")}
           >
             <option value="">Elegí un período</option>
             {opcionesPeriodo.map((o) => (
-              <option key={o.periodo} value={o.periodo} disabled={o.pagado}>
-                {o.pagado
-                  ? `${etiquetaPeriodo(o.periodo)} (ya pagado)`
-                  : etiquetaPeriodo(o.periodo)}
+              <option key={o.periodo} value={o.periodo} disabled={o.estado === "PAGADO"}>
+                {`${etiquetaPeriodo(o.periodo)} · ${etiquetaEstadoEnOpcion(o.estado)}${o.periodo === sugerido ? " · sugerido" : ""}`}
               </option>
             ))}
           </Select>
-          <span className="text-xs text-ink-3">
-            Se sugiere el primer período impago. También podés cobrar un mes por adelantado.
+          <span className={AYUDA}>
+            {impago
+              ? `Sugerido: ${etiquetaPeriodoEnFrase(impago.periodo)}, el primer período impago. Un pago no cancela otro mes salteado.`
+              : sugerido
+                ? `Sugerido: ${etiquetaPeriodoEnFrase(sugerido)}, el próximo período a pagar.`
+                : "Elegí el período que se paga."}
           </span>
-          {errores.periodo && <FieldError>{errores.periodo}</FieldError>}
+          {mostrar("periodo") && <span className={ERROR}>{mostrar("periodo")}</span>}
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
@@ -200,11 +221,16 @@ export function RegistrarPagoDialog({
             <span className="text-sm text-ink-3">Cargando turnos…</span>
           )}
           {errorTurnos && (
-            <Aviso tono="bad">No se pudieron cargar los turnos de consultorio.</Aviso>
+            <div
+              role="alert"
+              className="rounded-[10px] bg-bad-soft px-3.5 py-3 text-[13.5px] text-bad-ink"
+            >
+              No se pudieron cargar los turnos de consultorio.
+            </div>
           )}
           {turnos !== null && turnosCobrables.length === 0 && (
-            <div className="rounded-md border border-dashed border-border-2 p-3.5 text-center text-sm text-ink-2">
-              No tiene turnos de consultorio para cobrar.
+            <div className="rounded-[10px] border border-dashed border-border-2 p-3.5 text-center text-[13.5px] text-pretty text-ink-2">
+              No tiene turnos de consultorio para cobrar. Los turnos cancelados no se pueden cobrar.
             </div>
           )}
           {turnosCobrables.length > 0 && (
@@ -213,22 +239,28 @@ export function RegistrarPagoDialog({
               <Select
                 id="pago-turno"
                 value={turnoId}
-                onChange={setTurnoId}
-                aria-invalid={errores.turno ? true : undefined}
+                onChange={(v) => {
+                  setTurnoId(v);
+                  tocar("turno");
+                }}
+                aria-invalid={mostrar("turno") ? true : undefined}
+                className={bordeSelect("turno")}
               >
                 <option value="">Elegí un turno</option>
                 {turnosCobrables.map((t) => {
                   const pagado = turnosPagados.has(t.id);
-                  const texto = `${diaCorto(t.inicio)} · ${horaBA(t.inicio)}`;
+                  const fecha = fechaBA(t.inicio);
+                  const pro = profesionalDe?.(t.profesionalId);
+                  const texto = `${abreviaturaDia(fecha)} ${fechaDMA(fecha)} · ${horaBA(t.inicio)}${pro ? ` · ${pro}` : ""}`;
                   return (
                     <option key={t.id} value={t.id} disabled={pagado}>
-                      {pagado ? `${texto} (ya pagado)` : texto}
+                      {pagado ? `${texto} · ya pagado` : texto}
                     </option>
                   );
                 })}
               </Select>
-              <span className="text-xs text-ink-3">No se muestran los turnos cancelados.</span>
-              {errores.turno && <FieldError>{errores.turno}</FieldError>}
+              <span className={AYUDA}>No se muestran los turnos cancelados.</span>
+              {mostrar("turno") && <span className={ERROR}>{mostrar("turno")}</span>}
             </>
           )}
         </div>
@@ -237,24 +269,41 @@ export function RegistrarPagoDialog({
       <div className="grid grid-cols-2 items-start gap-2.5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pago-monto">Monto</Label>
-          <Input
-            id="pago-monto"
-            inputMode="decimal"
-            placeholder="0"
-            value={monto}
-            onChange={setMonto}
-            aria-invalid={errores.monto ? true : undefined}
-          />
-          {errores.monto && <FieldError>{errores.monto}</FieldError>}
+          <span className="relative block">
+            <span
+              aria-hidden="true"
+              className="absolute top-1/2 left-3 -translate-y-1/2 font-mono text-sm text-ink-3"
+            >
+              $
+            </span>
+            <input
+              id="pago-monto"
+              inputMode="decimal"
+              placeholder="0"
+              value={monto}
+              onChange={(e) => {
+                setMonto(e.target.value.replace(/[^\d.,]/g, ""));
+                tocar("monto");
+              }}
+              onBlur={() => tocar("monto")}
+              aria-invalid={mostrar("monto") ? true : undefined}
+              className={`h-11 w-full rounded-md border bg-surface pr-3 pl-7 font-mono text-[15px] text-ink focus:ring-[3px] focus:ring-clin-soft focus:outline-none ${mostrar("monto") ? "border-bad" : "border-border-2"}`}
+            />
+          </span>
+          {mostrar("monto") && <span className={ERROR}>{mostrar("monto")}</span>}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pago-medio">Medio de pago</Label>
           <Select
             id="pago-medio"
             value={medio}
-            onChange={(v) => setMedio(v as MedioPago | "")}
-            aria-invalid={errores.medio ? true : undefined}
-            className="h-12"
+            onChange={(v) => {
+              setMedio(v as MedioPago | "");
+              tocar("medio");
+            }}
+            onBlur={() => tocar("medio")}
+            aria-invalid={mostrar("medio") ? true : undefined}
+            className={bordeSelect("medio")}
           >
             <option value="">Elegí un medio</option>
             {MEDIOS.map((m) => (
@@ -263,18 +312,23 @@ export function RegistrarPagoDialog({
               </option>
             ))}
           </Select>
-          {errores.medio && <FieldError>{errores.medio}</FieldError>}
+          {mostrar("medio") && <span className={ERROR}>{mostrar("medio")}</span>}
         </div>
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" size="lg" onClick={onCancelar}>
+        <Button type="button" variant="neutral" size="modal" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button type="button" size="lg" disabled={enviando} onClick={confirmar}>
-          {enviando ? "Registrando…" : "Registrar pago"}
+        <Button type="button" size="modal" disabled={invalido || enviando} onClick={confirmar}>
+          {enviando ? "Guardando…" : "Registrar pago"}
         </Button>
       </div>
     </>
   );
+}
+
+function etiquetaEstadoEnOpcion(estado: "PAGADO" | "IMPAGO" | "PENDIENTE"): string {
+  if (estado === "PAGADO") return "pagado";
+  return estado === "IMPAGO" ? "impago" : "pendiente";
 }

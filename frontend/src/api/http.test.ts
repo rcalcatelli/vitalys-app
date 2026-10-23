@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearToken, http, setToken } from "./http";
+import {
+  ApiError,
+  clearToken,
+  getToken,
+  getTokenAdmin,
+  getTokenOperarComo,
+  http,
+  onOperarComoVencido,
+  setToken,
+  setTokenOperarComo,
+} from "./http";
 
 function jsonResponse(status: number, body?: unknown): Response {
   return {
@@ -101,5 +111,75 @@ describe("http", () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(init?.method).toBe("DELETE");
+  });
+});
+
+describe("http: credencial de Operar como", () => {
+  beforeEach(() => {
+    clearToken();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it("la credencial de la pestaña gana sobre el token del ADMIN", async () => {
+    setToken("jwt-admin");
+    setTokenOperarComo("jwt-operar-como");
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, {}));
+
+    await http.get("/api/auth/me");
+
+    const headers = vi.mocked(fetch).mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer jwt-operar-como");
+    expect(getTokenAdmin()).toBe("jwt-admin");
+  });
+
+  it("clearToken descarta las dos credenciales", () => {
+    setToken("jwt-admin");
+    setTokenOperarComo("jwt-operar-como");
+    clearToken();
+    expect(getToken()).toBeNull();
+    expect(getTokenOperarComo()).toBeNull();
+  });
+
+  it("un 401 hecho con la credencial avisa a quien la registró", async () => {
+    const alVencer = vi.fn();
+    const desregistrar = onOperarComoVencido(alVencer);
+    setToken("jwt-admin");
+    setTokenOperarComo("jwt-operar-como");
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(401, { message: "vencida" }));
+
+    await expect(http.get("/api/turnos/mis-turnos")).rejects.toMatchObject({ status: 401 });
+    expect(alVencer).toHaveBeenCalledTimes(1);
+
+    desregistrar();
+    await expect(http.get("/api/turnos/mis-turnos")).rejects.toMatchObject({ status: 401 });
+    expect(alVencer).toHaveBeenCalledTimes(1);
+  });
+
+  it("un 401 sin credencial de Operar como, o de una request pública, no avisa", async () => {
+    const alVencer = vi.fn();
+    const desregistrar = onOperarComoVencido(alVencer);
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(401, { message: "x" }));
+
+    setToken("jwt-admin");
+    await expect(http.get("/api/auth/me")).rejects.toMatchObject({ status: 401 });
+
+    setTokenOperarComo("jwt-operar-como");
+    await expect(http.post("/api/auth/login", {}, false)).rejects.toMatchObject({ status: 401 });
+    expect(alVencer).not.toHaveBeenCalled();
+    desregistrar();
+  });
+
+  it("desregistrar un callback viejo no pisa al nuevo", async () => {
+    const primero = vi.fn();
+    const segundo = vi.fn();
+    const desregistrarPrimero = onOperarComoVencido(primero);
+    const desregistrarSegundo = onOperarComoVencido(segundo);
+    desregistrarPrimero();
+    setTokenOperarComo("jwt-operar-como");
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(401));
+
+    await expect(http.get("/api/x")).rejects.toMatchObject({ status: 401 });
+    expect(segundo).toHaveBeenCalledTimes(1);
+    desregistrarSegundo();
   });
 });

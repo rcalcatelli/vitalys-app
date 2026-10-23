@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
-import { listarFallidas } from "../api/notificacionesApi";
+import { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { obtenerResumenHoy } from "../api/resumenApi";
 import { FieldError } from "../components/atoms/FieldError";
 import { PageHeader } from "../components/molecules/PageHeader";
 import { NotificacionesFallidas } from "../components/organisms/NotificacionesFallidas";
 import { PanelHoy } from "../components/organisms/PanelHoy";
+import { ShellContext } from "../components/templates/AppShell/ShellContext";
 import { useAhora } from "../hooks/useAhora";
-import type { NotificacionFallida } from "../types/notificacion";
+import { useFallidas } from "../hooks/useFallidas";
 import type { ResumenHoy } from "../types/resumen";
 import { horaBA } from "../utils/fechaBA";
 import { fechaLarga } from "../utils/formato";
@@ -15,23 +16,20 @@ import { fechaLarga } from "../utils/formato";
  * "Hoy en el centro" (ADMIN): pantalla de inicio del administrador. Arriba el resumen del día
  * (indicadores, ocupación del gimnasio y socios con impagos) y abajo las notificaciones que no
  * llegaron. Contenedor: consulta las dos fuentes por separado, así una falla no tapa a la otra.
+ * Las notificaciones fallidas ya las pidió el shell para el badge del menú: se leen de ahí y solo
+ * se consultan acá si la pantalla se usa fuera del shell.
  */
 export function HoyPage() {
   const ahora = useAhora();
-  const [fallidas, setFallidas] = useState<NotificacionFallida[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const compartidas = useContext(ShellContext)?.fallidas ?? null;
+  const propias = useFallidas(compartidas !== null);
+  const { lista: fallidas, error: errorFallidas } = compartidas ?? propias;
   const [resumen, setResumen] = useState<ResumenHoy | null>(null);
   const [errorResumen, setErrorResumen] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
-    listarFallidas()
-      .then((lista) => {
-        if (vigente) setFallidas(lista);
-      })
-      .catch(() => {
-        if (vigente) setError("No se pudieron cargar las notificaciones. Intentá de nuevo.");
-      });
     obtenerResumenHoy()
       .then((r) => {
         if (vigente) setResumen(r);
@@ -55,10 +53,14 @@ export function HoyPage() {
         {resumen === null && !errorResumen && (
           <p className="text-sm text-ink-3">Cargando el resumen…</p>
         )}
-        {resumen && <PanelHoy resumen={resumen} ahora={ahora} />}
+        {resumen && (
+          <PanelHoy resumen={resumen} ahora={ahora} onIrAPagos={() => navigate("/admin/pagos")} />
+        )}
 
-        {error && <FieldError>{error}</FieldError>}
-        {fallidas === null && !error && <p className="text-sm text-ink-3">Cargando…</p>}
+        {errorFallidas && (
+          <FieldError>No se pudieron cargar las notificaciones. Intentá de nuevo.</FieldError>
+        )}
+        {fallidas === null && !errorFallidas && <p className="text-sm text-ink-3">Cargando…</p>}
         {fallidas && <NotificacionesFallidas notificaciones={fallidas} />}
       </div>
     </>

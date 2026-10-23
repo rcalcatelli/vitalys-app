@@ -8,11 +8,11 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
             <AppRoutes />
-          </ToastProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </ToastProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

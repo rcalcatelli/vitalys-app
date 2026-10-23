@@ -4,23 +4,25 @@ import { ApiError } from "../api/http";
 import * as profesionalesApi from "../api/profesionalesApi";
 import { Button } from "../components/atoms/Button";
 import { FieldError } from "../components/atoms/FieldError";
-import { Input } from "../components/atoms/Input";
+import { Buscador } from "../components/atoms/Buscador";
+import { FiltroPildoras } from "../components/molecules/FiltroPildoras";
 import { Modal } from "../components/molecules/Modal";
 import { BajaProfesionalDialog } from "../components/organisms/BajaProfesionalDialog";
 import { ProfesionalForm } from "../components/organisms/ProfesionalForm";
 import type { ProfesionalFormValues } from "../components/organisms/ProfesionalForm";
 import { ProfesionalesTable } from "../components/organisms/ProfesionalesTable";
 import { PageHeader } from "../components/molecules/PageHeader";
+import { useToast } from "../hooks/useToast";
 import type { FiltroProfesionales, Impacto, Profesional } from "../types/profesional";
 import { nombreProfesional } from "../utils/formato";
 
-const FILTROS: [FiltroProfesionales, string][] = [
+const FILTROS = [
   ["TODOS", "Todos"],
   ["NUTRICION", "Nutrición"],
   ["PSICOLOGIA", "Psicología"],
   ["KINESIOLOGIA", "Kinesiología"],
   ["INACTIVOS", "Inactivos"],
-];
+] as const;
 
 type Modo =
   | { modo: "cerrado" }
@@ -56,6 +58,7 @@ function coincide(p: Profesional, filtro: FiltroProfesionales, texto: string): b
  */
 export function ProfesionalesPage() {
   const navigate = useNavigate();
+  const { mostrar } = useToast();
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [cargandoLista, setCargandoLista] = useState(true);
   const [errorLista, setErrorLista] = useState<string | null>(null);
@@ -64,7 +67,6 @@ export function ProfesionalesPage() {
   const [modal, setModal] = useState<Modo>({ modo: "cerrado" });
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargandoLista(true);
@@ -86,7 +88,6 @@ export function ProfesionalesPage() {
 
   function abrir(nuevo: Modo) {
     setErrorModal(null);
-    setAviso(null);
     setModal(nuevo);
   }
 
@@ -109,7 +110,7 @@ export function ProfesionalesPage() {
         modal.modo === "edicion"
           ? await profesionalesApi.actualizarProfesional(modal.profesional.id, values.datos)
           : await profesionalesApi.crearProfesional(values);
-      setAviso(
+      mostrar(
         modal.modo === "edicion"
           ? "Cambios guardados"
           : `${nombreProfesional(profesional)} se agregó a Profesionales`,
@@ -130,7 +131,7 @@ export function ProfesionalesPage() {
     setErrorModal(null);
     try {
       await profesionalesApi.darDeBajaProfesional(profesional.id, impacto.cantidad > 0);
-      setAviso("Profesional dado de baja");
+      mostrar("Profesional dado de baja");
       cerrar();
       await cargar();
     } catch (err) {
@@ -149,11 +150,10 @@ export function ProfesionalesPage() {
 
   async function reactivar(profesional: Profesional) {
     setGuardando(true);
-    setAviso(null);
     setErrorLista(null);
     try {
       await profesionalesApi.reactivar(profesional.id);
-      setAviso("Profesional reactivado. Cargá su disponibilidad para que pueda recibir turnos.");
+      mostrar("Profesional reactivado. Cargá su disponibilidad para que pueda recibir turnos.");
       await cargar();
     } catch (err) {
       setErrorLista(mensajeDeError(err));
@@ -171,49 +171,26 @@ export function ProfesionalesPage() {
         titulo="Profesionales"
         subtitulo="Equipo de consultorios del centro."
       />
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3.5">
         <div className="flex flex-wrap gap-2.5">
-          <Input
+          <Buscador
             aria-label="Buscar por nombre o email"
             placeholder="Buscar por nombre o email"
             value={texto}
             onChange={setTexto}
             className="min-w-0 flex-[1_1_240px]"
           />
-          <Button type="button" onClick={() => abrir({ modo: "alta" })}>
+          <Button type="button" esquinas="lg" onClick={() => abrir({ modo: "alta" })}>
             + Nuevo profesional
           </Button>
         </div>
 
-        <div
-          className="flex gap-1.5 overflow-x-auto"
-          role="group"
-          aria-label="Filtrar profesionales"
-        >
-          {FILTROS.map(([clave, etiqueta]) => {
-            const activo = filtro === clave;
-            return (
-              <button
-                key={clave}
-                type="button"
-                aria-pressed={activo}
-                onClick={() => setFiltro(clave)}
-                className={[
-                  "h-9 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap",
-                  activo ? "border-ink bg-ink text-bg" : "border-border bg-surface text-ink-2",
-                ].join(" ")}
-              >
-                {etiqueta}
-              </button>
-            );
-          })}
-        </div>
-
-        {aviso && (
-          <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
-            {aviso}
-          </div>
-        )}
+        <FiltroPildoras
+          etiqueta="Filtrar profesionales"
+          opciones={FILTROS}
+          valor={filtro}
+          onChange={setFiltro}
+        />
 
         <section
           aria-label="Listado de profesionales"

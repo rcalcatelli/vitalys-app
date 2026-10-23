@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  clasesEstadoPeriodo,
   etiquetaEstadoPeriodo,
   etiquetaMedio,
   etiquetaPeriodo,
+  etiquetaPeriodoEnFrase,
   fechaDMA,
   fechaInstanteDMA,
   formatearMonto,
   parsearMonto,
   sumarMeses,
+  tonoEstadoPeriodo,
 } from "./pagoUi";
 
 describe("pagoUi", () => {
@@ -16,6 +17,7 @@ describe("pagoUi", () => {
     expect(etiquetaPeriodo("2026-10-01")).toBe("Octubre 2026");
     expect(etiquetaPeriodo("2027-01-01")).toBe("Enero 2027");
     expect(fechaDMA("2026-10-05")).toBe("05/10/2026");
+    expect(etiquetaPeriodoEnFrase("2026-09-01")).toBe("septiembre 2026");
   });
 
   it("convierte un instante a fecha de Buenos Aires, no UTC", () => {
@@ -24,7 +26,8 @@ describe("pagoUi", () => {
   });
 
   it("formatea montos en pesos argentinos", () => {
-    expect(formatearMonto(15000)).toBe("$ 15.000,00");
+    expect(formatearMonto(15000)).toBe("$ 15.000");
+    expect(formatearMonto(241000)).toBe("$ 241.000");
     expect(formatearMonto(8000.5)).toBe("$ 8.000,50");
   });
 
@@ -49,8 +52,8 @@ describe("pagoUi", () => {
   it("traduce medios y estados de período", () => {
     expect(etiquetaMedio("DEBITO")).toBe("Débito");
     expect(etiquetaEstadoPeriodo("PENDIENTE")).toBe("Pendiente");
-    expect(clasesEstadoPeriodo("PAGADO")).toContain("ok");
-    expect(clasesEstadoPeriodo("IMPAGO")).toContain("bad");
-    expect(clasesEstadoPeriodo("PENDIENTE")).toContain("warn");
+    expect(tonoEstadoPeriodo("PAGADO")).toBe("ok");
+    expect(tonoEstadoPeriodo("IMPAGO")).toBe("bad");
+    expect(tonoEstadoPeriodo("PENDIENTE")).toBe("warn");
   });
 });

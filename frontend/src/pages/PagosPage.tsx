@@ -1,32 +1,50 @@
 import { useCallback, useEffect, useState } from "react";
+import { autorizarExcepcion } from "../api/excepcionesApi";
 import { estadoCuentaDe, registrarPago } from "../api/pagosApi";
 import { listarPersonas } from "../api/personasApi";
+import { listarProfesionales } from "../api/profesionalesApi";
 import { listarTurnos } from "../api/turnosApi";
 import { Button } from "../components/atoms/Button";
-import { Input } from "../components/atoms/Input";
+import { Buscador } from "../components/atoms/Buscador";
+import { Chip } from "../components/atoms/Chip";
 import { Aviso } from "../components/molecules/Aviso";
 import { Modal } from "../components/molecules/Modal";
-import { EstadoCuentaView } from "../components/organisms/EstadoCuentaView";
-import { RegistrarPagoDialog, type DatosPago } from "../components/organisms/RegistrarPagoDialog";
 import { PageHeader } from "../components/molecules/PageHeader";
+import { EstadoCuentaView } from "../components/organisms/EstadoCuentaView";
+import { ExcepcionDialog, type DatosExcepcion } from "../components/organisms/ExcepcionDialog";
+import { PersonaPagoCard } from "../components/organisms/PersonaPagoCard";
+import { RegistrarPagoDialog, type DatosPago } from "../components/organisms/RegistrarPagoDialog";
+import { useAhora } from "../hooks/useAhora";
+import { useToast } from "../hooks/useToast";
 import type { EstadoCuenta } from "../types/pago";
 import type { Persona } from "../types/persona";
+import type { Profesional } from "../types/profesional";
 import type { Turno } from "../types/turno";
 import { mensajeDeError } from "../utils/errores";
-import { formatearMonto } from "../utils/pagoUi";
+import { hoyBA } from "../utils/fechaBA";
+import { nombreProfesional } from "../utils/formato";
+import { etiquetaPeriodoEnFrase, fechaDMA } from "../utils/pagoUi";
+import { chipCuota } from "../utils/personaUi";
 
 /** Espera antes de consultar mientras se escribe en el buscador. */
 const DEMORA_BUSQUEDA_MS = 300;
+/** Cuántos resultados se listan: el buscador es para ubicar a una persona, no para recorrer la base. */
+const MAXIMO_RESULTADOS = 6;
+
+type Dialogo = "ninguno" | "pago" | "excepcion";
 
 function nombreDe(p: Pick<Persona, "apellido" | "nombre">): string {
   return `${p.nombre} ${p.apellido}`;
 }
 
 /**
- * Pagos (ADMIN, nav "Pagos"): se busca a una persona por nombre o DNI, se ve su estado de cuenta y
- * se registra un pago (cuota mensual o sesión de consultorio) en un modal. Contenedor.
+ * Pagos (ADMIN, nav "Pagos"): se busca a una persona por nombre o DNI, se ve su estado de cuenta,
+ * se registra un pago (cuota mensual o sesión de consultorio) y, si está suspendida, se autoriza
+ * una excepción (RN-09). Contenedor: cada modal es presentacional y esta página hace los pedidos.
  */
 export function PagosPage() {
+  const ahora = useAhora();
+  const { mostrar } = useToast();
   const [texto, setTexto] = useState("");
   const [resultados, setResultados] = useState<Persona[] | null>(null);
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
@@ -35,12 +53,12 @@ export function PagosPage() {
   const [estado, setEstado] = useState<EstadoCuenta | null>(null);
   const [errorEstado, setErrorEstado] = useState<string | null>(null);
 
-  const [dialogo, setDialogo] = useState(false);
+  const [dialogo, setDialogo] = useState<Dialogo>("ninguno");
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
+  const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [errorTurnos, setErrorTurnos] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [errorPago, setErrorPago] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [errorDialogo, setErrorDialogo] = useState<string | null>(null);
 
   useEffect(() => {
     const q = texto.trim();
@@ -85,7 +103,8 @@ export function PagosPage() {
     setPersona(elegida);
     setEstado(null);
     setErrorEstado(null);
-    setAviso(null);
+    setTexto("");
+    setResultados(null);
     void cargarEstado(elegida.id);
   }
 
@@ -93,35 +112,78 @@ export function PagosPage() {
     setPersona(null);
     setEstado(null);
     setErrorEstado(null);
-    setAviso(null);
   }
 
-  function abrirDialogo() {
+  function cerrarDialogo() {
+    setDialogo("ninguno");
+  }
+
+  function abrirPago() {
     if (!persona) return;
-    setErrorPago(null);
+    setErrorDialogo(null);
     setTurnos(null);
     setErrorTurnos(false);
-    setDialogo(true);
+    setDialogo("pago");
     listarTurnos({ personaId: persona.id, tipo: "CONSULTORIO" })
       .then(setTurnos)
       .catch(() => setErrorTurnos(true));
+    // Solo sirve para rotular las opciones de turno: si falla, se listan sin el profesional.
+    listarProfesionales()
+      .then(setProfesionales)
+      .catch(() => undefined);
   }
 
-  async function confirmar(datos: DatosPago) {
+  function abrirExcepcion() {
+    setErrorDialogo(null);
+    setDialogo("excepcion");
+  }
+
+  async function confirmarPago(datos: DatosPago) {
     if (!persona || enviando) return;
     setEnviando(true);
-    setErrorPago(null);
+    setErrorDialogo(null);
     try {
-      const pago = await registrarPago({ personaId: persona.id, ...datos });
-      setDialogo(false);
-      setAviso(`Se registró el pago de ${formatearMonto(pago.monto)} de ${nombreDe(persona)}.`);
+      await registrarPago({ personaId: persona.id, ...datos });
+      cerrarDialogo();
+      mostrar(
+        `Pago registrado · ${
+          datos.periodo
+            ? `cuota de ${etiquetaPeriodoEnFrase(datos.periodo)}`
+            : "sesión de consultorio"
+        } · ${nombreDe(persona)}`,
+      );
       await cargarEstado(persona.id);
     } catch (err) {
-      setErrorPago(mensajeDeError(err));
+      setErrorDialogo(mensajeDeError(err));
     } finally {
       setEnviando(false);
     }
   }
+
+  async function confirmarExcepcion(datos: DatosExcepcion) {
+    if (!persona || enviando) return;
+    setEnviando(true);
+    setErrorDialogo(null);
+    try {
+      await autorizarExcepcion({ personaId: persona.id, ...datos });
+      cerrarDialogo();
+      mostrar(
+        `Excepción registrada para ${nombreDe(persona)} hasta ${fechaDMA(datos.validaHasta)}`,
+      );
+      await cargarEstado(persona.id);
+    } catch (err) {
+      setErrorDialogo(mensajeDeError(err));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  function profesionalDe(profesionalId: number | null): string | null {
+    const p = profesionales.find((x) => x.id === profesionalId);
+    return p ? nombreProfesional(p) : null;
+  }
+
+  const buscando = texto.trim() !== "";
 
   return (
     <>
@@ -130,112 +192,125 @@ export function PagosPage() {
         titulo="Pagos"
         subtitulo="Estado de cuenta y pagos de cada persona."
       />
-      <div className="flex flex-col gap-4">
-        {aviso && <Aviso tono="ok">{aviso}</Aviso>}
-
-        {!persona && (
-          <>
-            <Input
-              aria-label="Buscar por nombre o DNI"
-              placeholder="Buscar por nombre o DNI"
-              value={texto}
-              onChange={alBuscar}
-            />
-            {errorBusqueda && <Aviso tono="bad">{errorBusqueda}</Aviso>}
-            {!texto.trim() && (
-              <div className="rounded-2xl border border-dashed border-border-2 px-4 py-6 text-center text-sm text-ink-2">
-                Buscá a una persona por nombre o DNI para ver su estado de cuenta.
-              </div>
+      <div className="flex flex-col gap-3.5">
+        <Buscador
+          aria-label="Buscar por nombre o DNI"
+          placeholder="Buscar por nombre o DNI"
+          value={texto}
+          onChange={alBuscar}
+        />
+        {errorBusqueda && <Aviso tono="bad">{errorBusqueda}</Aviso>}
+        {buscando && resultados && (
+          <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+            {resultados.length === 0 && (
+              <li className="px-4 py-5 text-ink-3">No encontramos a nadie con ese nombre o DNI.</li>
             )}
-            {texto.trim() && resultados && (
-              <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
-                {resultados.length === 0 && (
-                  <li className="px-4 py-5 text-sm text-ink-3">
-                    No encontramos a nadie con ese nombre o DNI.
-                  </li>
-                )}
-                {resultados.map((p) => (
-                  <li key={p.id} className="border-t border-border first:border-t-0">
-                    <button
-                      type="button"
-                      onClick={() => elegir(p)}
-                      className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2"
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="font-medium text-ink">{`${p.apellido}, ${p.nombre}`}</span>
-                        <span className="text-xs text-ink-3">
-                          DNI <span className="font-mono">{p.dni}</span>
-                        </span>
+            {resultados.slice(0, MAXIMO_RESULTADOS).map((p) => {
+              const cuota = chipCuota(p);
+              return (
+                <li key={p.id} className="border-t border-border first:border-t-0">
+                  <button
+                    type="button"
+                    onClick={() => elegir(p)}
+                    className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2"
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="font-medium text-ink">{nombreDe(p)}</span>
+                      <span className="text-caption text-ink-3">
+                        DNI <span className="font-mono">{p.dni}</span>
                       </span>
-                      {p.esSocioGym && (
-                        <span className="rounded-md bg-gym-soft px-2 py-0.5 text-xs font-semibold text-gym-ink">
-                          Socio gym
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+                    </span>
+                    <Chip tone={cuota.tone} dot>
+                      {cuota.label}
+                    </Chip>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
-
-        {persona && (
-          <>
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5">
-              <div className="flex min-w-0 flex-1 basis-52 flex-col gap-0.5">
-                <span className="font-heading text-lg font-semibold text-ink">
-                  {nombreDe(persona)}
-                </span>
-                <span className="text-xs text-ink-3">
-                  DNI <span className="font-mono">{persona.dni}</span>
-                </span>
-              </div>
-              <div className="ml-auto flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="md" onClick={cambiarPersona}>
-                  Cambiar persona
-                </Button>
-                <Button type="button" disabled={!estado} onClick={abrirDialogo}>
-                  Registrar pago
-                </Button>
-              </div>
-            </div>
-
-            {errorEstado && (
-              <>
-                <Aviso tono="bad">{errorEstado}</Aviso>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="self-start"
-                  onClick={() => void cargarEstado(persona.id)}
-                >
-                  Reintentar
-                </Button>
-              </>
-            )}
-            {!estado && !errorEstado && (
-              <p className="text-sm text-ink-3">Cargando estado de cuenta…</p>
-            )}
-            {estado && <EstadoCuentaView estado={estado} vista="admin" />}
-          </>
+        {!buscando && !persona && (
+          <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
+            Buscá a una persona por nombre o DNI para ver su estado de cuenta y registrar pagos.
+          </div>
         )}
-
-        {dialogo && persona && estado && (
-          <Modal titulo="Registrar pago" onClose={() => setDialogo(false)}>
-            <RegistrarPagoDialog
-              nombre={nombreDe(persona)}
-              estado={estado}
-              turnos={turnos}
-              errorTurnos={errorTurnos}
-              enviando={enviando}
-              error={errorPago}
-              onConfirmar={(datos) => void confirmar(datos)}
-              onCancelar={() => setDialogo(false)}
-            />
-          </Modal>
+        {persona && !buscando && (
+          <PersonaPagoCard
+            persona={persona}
+            pagoDeshabilitado={!estado}
+            onCambiar={cambiarPersona}
+            onRegistrarPago={abrirPago}
+            onAutorizarExcepcion={
+              estado?.suspendido && persona.estado === "ACTIVO" ? abrirExcepcion : undefined
+            }
+          />
         )}
       </div>
+
+      {persona && !buscando && (
+        <div className="mt-4 flex flex-col gap-4">
+          {errorEstado && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-bad bg-bad-soft px-4 py-3.5 text-bad-ink">
+              <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">
+                <strong className="font-semibold">No pudimos cargar el estado de cuenta</strong>
+                <span className="text-[13.5px]">{errorEstado}</span>
+              </div>
+              <Button
+                type="button"
+                variant="neutral"
+                className="border-current text-inherit"
+                onClick={() => void cargarEstado(persona.id)}
+              >
+                Reintentar
+              </Button>
+            </div>
+          )}
+          {!estado && !errorEstado && (
+            <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
+              Cargando estado de cuenta…
+            </div>
+          )}
+          {estado && (
+            <EstadoCuentaView
+              estado={estado}
+              vista="admin"
+              dadaDeBaja={persona.estado === "INACTIVO"}
+            />
+          )}
+        </div>
+      )}
+
+      {dialogo === "pago" && persona && estado && (
+        <Modal titulo="Registrar pago" onClose={cerrarDialogo}>
+          <RegistrarPagoDialog
+            nombre={nombreDe(persona)}
+            dni={persona.dni}
+            estado={estado}
+            dadaDeBaja={persona.estado === "INACTIVO"}
+            turnos={turnos}
+            profesionalDe={profesionalDe}
+            errorTurnos={errorTurnos}
+            enviando={enviando}
+            error={errorDialogo}
+            onConfirmar={(datos) => void confirmarPago(datos)}
+            onCancelar={cerrarDialogo}
+          />
+        </Modal>
+      )}
+
+      {dialogo === "excepcion" && persona && estado && (
+        <Modal titulo="Autorizar excepción" onClose={cerrarDialogo}>
+          <ExcepcionDialog
+            nombre={nombreDe(persona)}
+            periodosImpagos={estado.periodosImpagos}
+            hoy={hoyBA(ahora)}
+            enviando={enviando}
+            error={errorDialogo}
+            onConfirmar={(datos) => void confirmarExcepcion(datos)}
+            onCancelar={cerrarDialogo}
+          />
+        </Modal>
+      )}
     </>
   );
 }

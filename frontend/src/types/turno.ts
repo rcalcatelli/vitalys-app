@@ -14,14 +14,25 @@ export type EstadoTurno =
 export interface Turno {
   id: number;
   personaId: number;
+  /** "Apellido, Nombre". */
   persona: string;
+  personaNombre: string;
+  personaApellido: string;
+  /** Solo en el listado del ADMIN (`GET /api/turnos`). */
+  personaDni?: string;
   tipoTurno: TipoTurno;
   profesionalId: number | null;
   inicio: string;
   fin: string;
   estado: EstadoTurno;
+  /** Instante del ingreso (check-in); `null` mientras no se completó y en turnos previos a V16. */
+  completadoEn: string | null;
   canceladoEn: string | null;
   motivoCancelacion: string | null;
+  /** El turno lo reservó Recepción en nombre del socio (RN-27). */
+  reservadoPorRecepcion: boolean;
+  /** Lo canceló Recepción en nombre del socio. */
+  canceladoPorRecepcion: boolean;
 }
 
 /** TurnoAgendaResponse (mi-agenda): vista plana y la única que trae el DNI del paciente. */

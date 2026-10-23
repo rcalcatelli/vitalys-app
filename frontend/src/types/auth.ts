@@ -13,6 +13,26 @@ export interface Usuario {
    */
   nombre?: string | null;
   apellido?: string | null;
+  /**
+   * ADMIN que opera en nombre de este socio (RF-39). Solo viene con la credencial de "Operar como";
+   * `null`/ausente en una sesión normal.
+   */
+  operadoPor?: Operador | null;
+  /** Vencimiento (ISO con offset de BA) de la credencial de "Operar como". */
+  operarComoExpiraEn?: string | null;
+}
+
+export interface Operador {
+  usuarioId: number;
+  nombre: string | null;
+  apellido: string | null;
+}
+
+/** POST /api/admin/operar-como: credencial de vida corta (30 min) para operar en nombre de un socio. */
+export interface OperarComoResponse {
+  token: string;
+  expiraEn: string;
+  persona: { id: number; nombre: string; apellido: string };
 }
 
 // `identificador` acepta DNI o email (W-01 / diseño Vitalys.dc.html: "DNI o

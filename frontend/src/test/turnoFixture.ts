@@ -4,14 +4,19 @@ export function unTurno(overrides: Partial<Turno> = {}): Turno {
   return {
     id: 1,
     personaId: 3,
-    persona: "Juan García",
+    persona: "García, Juan",
+    personaNombre: "Juan",
+    personaApellido: "García",
     tipoTurno: "CONSULTORIO",
     profesionalId: 1,
     inicio: "2026-10-28T10:00:00-03:00",
     fin: "2026-10-28T10:30:00-03:00",
     estado: "RESERVADO",
+    completadoEn: null,
     canceladoEn: null,
     motivoCancelacion: null,
+    reservadoPorRecepcion: false,
+    canceladoPorRecepcion: false,
     ...overrides,
   };
 }

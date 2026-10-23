@@ -199,10 +199,10 @@ export function ProfesionalForm({
       {error && <FieldError>{error}</FieldError>}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" size="md" onClick={onCancel}>
+        <Button type="button" variant="neutral" size="modal" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={invalido || cargando}>
+        <Button type="submit" size="modal" disabled={invalido || cargando}>
           {cargando ? "Guardando…" : esAlta ? "Crear profesional" : "Guardar cambios"}
         </Button>
       </div>

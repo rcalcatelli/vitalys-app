@@ -1,23 +1,28 @@
-import { useMemo } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { OperarComoBanner } from "../components/molecules/OperarComoBanner";
 import { AppShell } from "../components/templates/AppShell";
 import type { NavItemVista, UsuarioVista } from "../components/templates/AppShell";
 import { ShellContext } from "../components/templates/AppShell/ShellContext";
 import { useAuth } from "../context/AuthContext";
 import { useAhora } from "../hooks/useAhora";
-import { useConteoFallidas } from "../hooks/useConteoFallidas";
+import { useFallidas } from "../hooks/useFallidas";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useTheme } from "../hooks/useTheme";
 import type { Usuario } from "../types/auth";
 import { etiquetaAhora } from "../utils/formato";
 import { ETIQUETAS_ROL, NAV_POR_ROL } from "./navConfig";
 
+function nombreCompleto(usuario: Usuario): string {
+  return [usuario.nombre, usuario.apellido].filter(Boolean).join(" ");
+}
+
 /** Nombre completo si el backend lo informa; si no, el email (sin ficha o antes de RF-40). */
 function usuarioVista(usuario: Usuario): UsuarioVista {
-  const nombreCompleto = [usuario.nombre, usuario.apellido].filter(Boolean).join(" ");
-  const nombre = nombreCompleto || usuario.email;
-  const iniciales = nombreCompleto
-    ? nombreCompleto
+  const completo = nombreCompleto(usuario);
+  const nombre = completo || usuario.email;
+  const iniciales = completo
+    ? completo
         .split(/\s+/)
         .slice(0, 2)
         .map((palabra) => palabra.charAt(0))
@@ -38,26 +43,40 @@ function etiquetaConBadge(etiqueta: string, conteo: number): string {
  * Layout de las rutas logueadas: arma el `AppShell` (sidebar o header + tab bar según el ancho)
  * con la navegación del rol, el tema y la sesión, y renderiza la pantalla activa con `<Outlet/>`.
  * Container: conoce auth, router y tema; `AppShell` solo dibuja. El badge de "Hoy en el centro"
- * se consulta acá una sola vez para el ADMIN.
+ * se consulta acá una sola vez para el ADMIN y se comparte con "Hoy en el centro" por
+ * `ShellContext`. Durante "Operar como" suma el banner con el botón para volver a Recepción.
  */
 export function ShellLayout() {
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, volverARecepcion } = useAuth();
+  const navigate = useNavigate();
+  const [volviendo, setVolviendo] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const mobile = useMediaQuery("(max-width: 759px)");
   const ahora = useAhora();
   const { pathname } = useLocation();
   const esAdmin = usuario?.rol === "ADMIN";
-  const fallidas = useConteoFallidas(!esAdmin);
+  const fallidas = useFallidas(!esAdmin);
 
   const contexto = useMemo(
-    () => ({ chipAhora: mobile ? null : etiquetaAhora(ahora) }),
-    [mobile, ahora],
+    () => ({
+      chipAhora: mobile ? null : etiquetaAhora(ahora),
+      fallidas: esAdmin ? fallidas : null,
+    }),
+    [mobile, ahora, esAdmin, fallidas],
   );
+
+  async function volver() {
+    setVolviendo(true);
+    const restaurada = await volverARecepcion();
+    setVolviendo(false);
+    navigate(restaurada ? "/admin/personas" : "/login", { replace: true });
+  }
 
   if (!usuario) return null;
 
   const items: NavItemVista[] = NAV_POR_ROL[usuario.rol].map((item) => {
-    const badge = item.conBadge && fallidas > 0 ? fallidas : undefined;
+    const conteo = fallidas.lista?.length ?? 0;
+    const badge = item.conBadge && conteo > 0 ? conteo : undefined;
     return {
       to: item.to,
       etiqueta: item.etiqueta,
@@ -77,6 +96,15 @@ export function ShellLayout() {
       onToggleTheme={toggleTheme}
       onLogout={logout}
       mobile={mobile}
+      banner={
+        usuario.operadoPor ? (
+          <OperarComoBanner
+            nombre={nombreCompleto(usuario) || usuario.email}
+            onVolver={() => void volver()}
+            ocupado={volviendo}
+          />
+        ) : undefined
+      }
     >
       <ShellContext.Provider value={contexto}>
         {/* `key` por ruta: cada pantalla entra con `vtIn`, como en el mockup. */}

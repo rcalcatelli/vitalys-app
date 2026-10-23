@@ -25,4 +25,14 @@ describe("Chip", () => {
     const { container } = render(<Chip dot>Con punto</Chip>);
     expect(container.querySelector("span span")).toHaveClass("bg-current");
   });
+
+  it.each([
+    ["md", "h-6"],
+    ["sm", "py-[3px]"],
+    ["lg", "text-caption"],
+    ["etiqueta", "rounded-sm"],
+  ] as const)("tamaño %s", (tamano, clase) => {
+    render(<Chip tamano={tamano}>Texto</Chip>);
+    expect(screen.getByText("Texto")).toHaveClass(clase);
+  });
 });

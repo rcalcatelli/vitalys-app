@@ -52,6 +52,7 @@ function montar(ruta = "/admin/hoy") {
                 }
               >
                 <Route path="/admin/hoy" element={<PageHeader titulo="Pantalla" />} />
+                <Route path="/admin/personas" element={<PageHeader titulo="Personas pantalla" />} />
                 <Route path="/socio/inicio" element={<PageHeader titulo="Pantalla socio" />} />
                 <Route path="/profesional/agenda" element={<PageHeader titulo="Pantalla pro" />} />
               </Route>
@@ -179,4 +180,84 @@ describe("ShellLayout", () => {
     await waitFor(() => expect(screen.getByText("login")).toBeInTheDocument());
     expect(localStorage.getItem("vitalys_token")).toBeNull();
   });
+
+  describe("Operar como (RF-39)", () => {
+    const SOCIO = {
+      id: 11,
+      email: "maria@mail.com",
+      rol: "SOCIO_PACIENTE",
+      nombre: "María",
+      apellido: "Pérez",
+      operadoPor: { usuarioId: 1, nombre: "Laura", apellido: "Benítez" },
+    };
+    const ADMIN = {
+      id: 1,
+      email: "admin@vitalys.com",
+      rol: "ADMIN",
+      nombre: "Laura",
+      apellido: "Benítez",
+    };
+
+    function responder(...cuerpos: (object | null)[]) {
+      const cola = [...cuerpos];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => {
+          const cuerpo = cola.shift();
+          return Promise.resolve({
+            ok: true,
+            status: cuerpo === null ? 204 : 200,
+            json: () => Promise.resolve(cuerpo),
+          } as Response);
+        }),
+      );
+    }
+
+    it("muestra el banner con el nombre del socio mientras Recepción opera", async () => {
+      setTokenOperarComoParaTest();
+      responder(SOCIO);
+      montar("/socio/inicio");
+
+      expect(await screen.findByText(/operando en nombre de/)).toHaveTextContent(
+        "Recepción operando en nombre de María Pérez. Todo lo que hagas queda registrado.",
+      );
+      expect(screen.getByRole("button", { name: "Volver a Recepción" })).toBeInTheDocument();
+    });
+
+    it("sin Operar como no hay banner", async () => {
+      sesion({ id: 1, email: "admin@vitalys.com", rol: "ADMIN" });
+      montar();
+
+      await screen.findByRole("heading", { name: "Pantalla" });
+      expect(screen.queryByText(/operando en nombre de/)).not.toBeInTheDocument();
+    });
+
+    it("'Volver a Recepción' termina la sesión y abre Personas con la sesión del ADMIN", async () => {
+      setToken("jwt-admin");
+      setTokenOperarComoParaTest();
+      responder(SOCIO, null, ADMIN);
+      montar("/socio/inicio");
+
+      await userEvent.click(await screen.findByRole("button", { name: "Volver a Recepción" }));
+
+      expect(await screen.findByRole("heading", { name: "Personas pantalla" })).toBeInTheDocument();
+      expect(screen.queryByText(/operando en nombre de/)).not.toBeInTheDocument();
+      expect(screen.getByText("Laura Benítez")).toBeInTheDocument();
+      expect(sessionStorage.getItem("vitalys_token_operar_como")).toBeNull();
+    });
+
+    it("si no queda sesión de ADMIN, vuelve al login", async () => {
+      setTokenOperarComoParaTest();
+      responder(SOCIO, null);
+      montar("/socio/inicio");
+
+      await userEvent.click(await screen.findByRole("button", { name: "Volver a Recepción" }));
+
+      expect(await screen.findByText("login")).toBeInTheDocument();
+    });
+  });
 });
+
+function setTokenOperarComoParaTest() {
+  sessionStorage.setItem("vitalys_token_operar_como", "jwt-operar-como");
+}

@@ -89,10 +89,10 @@ export function CancelarTurnoDialog({
       {error && <FieldError>{error}</FieldError>}
 
       <div className="flex gap-2">
-        <Button type="button" variant="outline" size="lg" onClick={onVolver}>
+        <Button type="button" variant="outline" size="modal" onClick={onVolver}>
           Volver
         </Button>
-        <Button type="button" variant="bad" size="lg" disabled={cargando} onClick={confirmar}>
+        <Button type="button" variant="bad" size="modal" disabled={cargando} onClick={confirmar}>
           Confirmar cancelación
         </Button>
       </div>

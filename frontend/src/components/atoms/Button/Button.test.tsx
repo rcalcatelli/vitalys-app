@@ -107,4 +107,38 @@ describe("Button", () => {
     );
     expect(screen.getByRole("button", { name: "Acción" })).toHaveClass(clase);
   });
+
+  it("tiene las alturas del mockup: 38, 42, 44, 46 y 48", () => {
+    render(
+      <>
+        <Button size="sm">A</Button>
+        <Button size="cta">B</Button>
+        <Button size="md">C</Button>
+        <Button size="modal">D</Button>
+        <Button size="lg">E</Button>
+      </>,
+    );
+    expect(screen.getByText("A")).toHaveClass("h-[38px]");
+    expect(screen.getByText("B")).toHaveClass("h-[42px]");
+    expect(screen.getByText("C")).toHaveClass("h-11");
+    expect(screen.getByText("D")).toHaveClass("h-[46px]");
+    expect(screen.getByText("E")).toHaveClass("h-12", "text-[15px]");
+  });
+
+  it("neutral y warn son las variantes de tarjetas y excepción", () => {
+    render(
+      <>
+        <Button variant="neutral">Neutra</Button>
+        <Button variant="warn">Autorizar</Button>
+      </>,
+    );
+    expect(screen.getByText("Neutra")).toHaveClass("border-border-2");
+    expect(screen.getByText("Autorizar")).toHaveClass("bg-warn");
+  });
+
+  it("esquinas lg redondea a 10px", () => {
+    render(<Button esquinas="lg">Nueva</Button>);
+    expect(screen.getByText("Nueva")).toHaveClass("rounded-[10px]");
+    expect(screen.getByText("Nueva")).not.toHaveClass("rounded-md");
+  });
 });

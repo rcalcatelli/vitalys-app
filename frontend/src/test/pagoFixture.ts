@@ -16,6 +16,8 @@ export function unaSesion(overrides: Partial<SesionDto> = {}): SesionDto {
     pagoId: 9,
     turnoId: 50,
     fechaTurno: "2026-10-20T10:00:00-03:00",
+    profesional: "Valentina Méndez",
+    especialidad: "NUTRICION",
     monto: 8000,
     medio: "TRANSFERENCIA",
     fechaPago: "2026-10-20T11:00:00-03:00",

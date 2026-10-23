@@ -60,12 +60,12 @@ describe("NotificacionFallidaCard", () => {
     expect(screen.queryByText("Lic. Valentina Méndez")).not.toBeInTheDocument();
   });
 
-  it("un tipo desconocido se muestra tal cual", () => {
+  it("un tipo que el front no conoce se muestra capitalizado y con tilde", () => {
     render(
       <NotificacionFallidaCard
-        notificacion={unaNotificacion({ tipoNotificacion: "AVISO_DEUDA" })}
+        notificacion={unaNotificacion({ tipoNotificacion: "CONFIRMACION" })}
       />,
     );
-    expect(screen.getByText("AVISO_DEUDA")).toBeInTheDocument();
+    expect(screen.getByText("Confirmación")).toBeInTheDocument();
   });
 });

@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/http";
 import * as personasApi from "../api/personasApi";
 import { Button } from "../components/atoms/Button";
+import { Buscador } from "../components/atoms/Buscador";
 import { FieldError } from "../components/atoms/FieldError";
-import { Input } from "../components/atoms/Input";
+import { FiltroPildoras } from "../components/molecules/FiltroPildoras";
+import { Modal } from "../components/molecules/Modal";
+import { PageHeader } from "../components/molecules/PageHeader";
 import { PersonaForm } from "../components/organisms/PersonaForm";
 import type { PersonaFormValues } from "../components/organisms/PersonaForm";
 import { PersonasTable } from "../components/organisms/PersonasTable";
-import { PageHeader } from "../components/molecules/PageHeader";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../hooks/useToast";
 import type { FiltroPersonas, Persona } from "../types/persona";
 
-const FILTROS: [FiltroPersonas, string][] = [
+const FILTROS = [
   ["TODOS", "Todos"],
-  ["ACTIVOS", "Activos"],
-  ["INACTIVOS", "Inactivos"],
-  ["GYM", "Solo gym"],
-];
+  ["GYM", "Gimnasio"],
+  ["CONSULTORIO", "Consultorio"],
+  ["CON_DEUDA", "Con deuda"],
+] as const;
 
 /** Espera antes de consultar mientras se escribe en el buscador. */
 const DEMORA_BUSQUEDA_MS = 300;
@@ -28,18 +33,28 @@ type Panel =
 
 function mensajeDeError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 409 || err.status === 400) return err.message;
+    if (err.status === 409 || err.status === 400 || err.status === 422) return err.message;
     if (err.status === 403) return "Tu usuario no tiene permiso para esta operación.";
   }
   return "No se pudo completar la operación. Intentá de nuevo.";
 }
 
+function tituloDe(panel: Panel): string {
+  if (panel.modo === "vinculo") return "Vincular usuario existente";
+  if (panel.modo === "edicion") return `Editar ${panel.persona.apellido}, ${panel.persona.nombre}`;
+  return "Nueva persona";
+}
+
 /**
- * W-05 — ABM de personas (ADMIN). Contenedor: consulta la API, decide qué
- * panel mostrar y refresca el listado después de cada cambio. La tabla y el
- * formulario son presentacionales.
+ * Personas (ADMIN): ABM con cuota, servicios y filtro de deuda, más "Operar como" (RF-39). Contenedor:
+ * consulta la API, decide qué modal mostrar y refresca el listado después de cada cambio. La tabla
+ * y el formulario son presentacionales. "Consultorio" se filtra acá (con las especialidades que
+ * ya trae cada persona); "Gimnasio" y "Con deuda" los resuelve el servidor.
  */
 export function PersonasPage() {
+  const navigate = useNavigate();
+  const { operarComo } = useAuth();
+  const { mostrar } = useToast();
   const [filtro, setFiltro] = useState<FiltroPersonas>("TODOS");
   const [texto, setTexto] = useState("");
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -50,7 +65,6 @@ export function PersonasPage() {
   /** El vínculo no encontró el email: se ofrece seguir con el alta presencial (W-07). */
   const [sinUsuario, setSinUsuario] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async (f: FiltroPersonas, t: string) => {
     setCargandoLista(true);
@@ -72,9 +86,10 @@ export function PersonasPage() {
   function abrir(nuevo: Panel) {
     setErrorPanel(null);
     setSinUsuario(false);
-    setAviso(null);
     setPanel(nuevo);
   }
+
+  const cerrar = useCallback(() => setPanel({ modo: "cerrado" }), []);
 
   async function guardar(values: PersonaFormValues) {
     setGuardando(true);
@@ -87,14 +102,14 @@ export function PersonasPage() {
           : panel.modo === "vinculo"
             ? await personasApi.vincularPersona({ email: values.email, datos: values.datos })
             : await personasApi.crearPersona(values);
-      setAviso(
+      mostrar(
         panel.modo === "edicion"
-          ? `Se guardaron los cambios de ${persona.apellido}, ${persona.nombre}.`
+          ? "Cambios guardados"
           : panel.modo === "vinculo"
-            ? `${persona.apellido}, ${persona.nombre} quedó vinculada a su cuenta.`
-            : `${persona.apellido}, ${persona.nombre} se agregó a Personas.`,
+            ? `${persona.nombre} ${persona.apellido} quedó vinculada a su cuenta`
+            : `${persona.nombre} ${persona.apellido} se agregó a Personas`,
       );
-      setPanel({ modo: "cerrado" });
+      cerrar();
       await cargar(filtro, texto);
     } catch (err) {
       if (panel.modo === "vinculo" && err instanceof ApiError && err.status === 404) {
@@ -110,16 +125,15 @@ export function PersonasPage() {
 
   async function cambiarEstado(persona: Persona, accion: "baja" | "reactivar") {
     setGuardando(true);
-    setAviso(null);
     try {
       const actualizada =
         accion === "baja"
           ? await personasApi.darDeBajaPersona(persona.id)
           : await personasApi.reactivarPersona(persona.id);
-      setAviso(
+      mostrar(
         accion === "baja"
-          ? `${actualizada.apellido}, ${actualizada.nombre} quedó dada de baja.`
-          : `${actualizada.apellido}, ${actualizada.nombre} volvió a estar activa.`,
+          ? `${actualizada.nombre} ${actualizada.apellido} quedó dada de baja`
+          : `${actualizada.nombre} ${actualizada.apellido} volvió a estar activa`,
       );
       await cargar(filtro, texto);
     } catch (err) {
@@ -129,6 +143,21 @@ export function PersonasPage() {
     }
   }
 
+  async function operar(persona: Persona) {
+    setGuardando(true);
+    setErrorLista(null);
+    try {
+      await operarComo(persona.id);
+      navigate("/socio/inicio");
+    } catch (err) {
+      setErrorLista(mensajeDeError(err));
+      setGuardando(false);
+    }
+  }
+
+  const visibles =
+    filtro === "CONSULTORIO" ? personas.filter((p) => p.especialidades.length > 0) : personas;
+
   return (
     <>
       <PageHeader
@@ -136,99 +165,79 @@ export function PersonasPage() {
         titulo="Personas"
         subtitulo="Socios y pacientes del centro."
       />
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3.5">
         <div className="flex flex-wrap gap-2.5">
-          <Input
+          <Buscador
             aria-label="Buscar por nombre, apellido o DNI"
-            placeholder="Buscar por nombre, apellido o DNI"
+            placeholder="Buscar por nombre o DNI"
             value={texto}
             onChange={setTexto}
             className="min-w-0 flex-[1_1_240px]"
           />
-          <Button type="button" onClick={() => abrir({ modo: "alta" })}>
+          <Button type="button" esquinas="lg" onClick={() => abrir({ modo: "alta" })}>
             + Nueva persona
           </Button>
           <Button
-            size="md"
             type="button"
-            variant="outline"
+            variant="neutral"
+            esquinas="lg"
             onClick={() => abrir({ modo: "vinculo" })}
           >
             Vincular usuario existente
           </Button>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Filtrar personas">
-          {FILTROS.map(([clave, etiqueta]) => {
-            const activo = filtro === clave;
-            return (
-              <button
-                key={clave}
-                type="button"
-                aria-pressed={activo}
-                onClick={() => setFiltro(clave)}
-                className={[
-                  "h-9 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap",
-                  activo ? "border-ink bg-ink text-bg" : "border-border bg-surface text-ink-2",
-                ].join(" ")}
-              >
-                {etiqueta}
-              </button>
-            );
-          })}
-        </div>
+        <FiltroPildoras
+          etiqueta="Filtrar personas"
+          opciones={FILTROS}
+          valor={filtro}
+          onChange={setFiltro}
+        />
 
-        {aviso && (
-          <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
-            {aviso}
-          </div>
-        )}
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
-          <section
-            aria-label="Listado de personas"
-            aria-busy={cargandoLista}
-            className="flex flex-col gap-3"
-          >
-            {errorLista && <FieldError>{errorLista}</FieldError>}
-            {cargandoLista && personas.length === 0 ? (
-              <p className="text-sm text-ink-3">Cargando personas…</p>
-            ) : (
-              <PersonasTable
-                personas={personas}
-                ocupado={guardando}
-                onEditar={(p) => abrir({ modo: "edicion", persona: p })}
-                onBaja={(p) => void cambiarEstado(p, "baja")}
-                onReactivar={(p) => void cambiarEstado(p, "reactivar")}
-              />
-            )}
-          </section>
-
-          {panel.modo !== "cerrado" && (
-            <div className="flex flex-col gap-3">
-              <PersonaForm
-                key={panel.modo === "edicion" ? panel.persona.id : panel.modo}
-                persona={panel.modo === "edicion" ? panel.persona : undefined}
-                modo={panel.modo === "vinculo" ? "vinculo" : "alta"}
-                onSubmit={(values) => void guardar(values)}
-                onCancel={() => setPanel({ modo: "cerrado" })}
-                error={errorPanel}
-                cargando={guardando}
-              />
-              {sinUsuario && (
-                <Button
-                  size="md"
-                  type="button"
-                  variant="outline"
-                  onClick={() => abrir({ modo: "alta" })}
-                >
-                  Crear con credenciales nuevas →
-                </Button>
-              )}
-            </div>
+        <section
+          aria-label="Listado de personas"
+          aria-busy={cargandoLista}
+          className="flex flex-col gap-3"
+        >
+          {errorLista && <FieldError>{errorLista}</FieldError>}
+          {cargandoLista && personas.length === 0 ? (
+            <p className="text-sm text-ink-3">Cargando personas…</p>
+          ) : (
+            <PersonasTable
+              personas={visibles}
+              ocupado={guardando}
+              onEditar={(p) => abrir({ modo: "edicion", persona: p })}
+              onBaja={(p) => void cambiarEstado(p, "baja")}
+              onReactivar={(p) => void cambiarEstado(p, "reactivar")}
+              onOperarComo={(p) => void operar(p)}
+            />
           )}
-        </div>
+        </section>
       </div>
+
+      {panel.modo !== "cerrado" && (
+        <Modal titulo={tituloDe(panel)} onClose={cerrar}>
+          <PersonaForm
+            key={panel.modo === "edicion" ? panel.persona.id : panel.modo}
+            persona={panel.modo === "edicion" ? panel.persona : undefined}
+            modo={panel.modo === "vinculo" ? "vinculo" : "alta"}
+            onSubmit={(values) => void guardar(values)}
+            onCancel={cerrar}
+            error={errorPanel}
+            cargando={guardando}
+          />
+          {sinUsuario && (
+            <Button
+              type="button"
+              variant="neutral"
+              size="modal"
+              onClick={() => abrir({ modo: "alta" })}
+            >
+              Crear con credenciales nuevas →
+            </Button>
+          )}
+        </Modal>
+      )}
     </>
   );
 }

@@ -9,7 +9,10 @@ export interface FranjaGym {
 
 export interface SocioConDeuda {
   personaId: number;
+  /** "Apellido, Nombre". */
   persona: string;
+  nombrePila: string;
+  apellido: string;
   dni: string;
   periodosImpagos: number;
   umbral: number;

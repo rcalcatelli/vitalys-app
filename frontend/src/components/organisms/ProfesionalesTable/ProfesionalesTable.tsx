@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../atoms/Button";
+import { Chip } from "../../atoms/Chip";
 import type { Profesional } from "../../../types/profesional";
 import { etiquetaEspecialidad, nombreProfesional } from "../../../utils/formato";
 
@@ -14,8 +15,6 @@ export interface ProfesionalesTableProps {
 }
 
 const COLUMNAS = "min-[1100px]:grid-cols-[minmax(160px,1.6fr)_130px_90px_100px_270px]";
-const chipBase =
-  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
 
 /**
  * Listado de Profesionales (ADMIN). Desde 1100px es una tabla de columnas; por debajo,
@@ -71,20 +70,17 @@ export function ProfesionalesTable({
                 <span className="truncate text-xs text-ink-3">{p.email}</span>
               </span>
               <span className="justify-self-end min-[1100px]:order-4 min-[1100px]:justify-self-start">
-                <span
-                  className={`${chipBase} ${p.activo ? "bg-ok-soft text-ok-ink" : "bg-surface-2 text-ink-3"}`}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                <Chip tone={p.activo ? "ok" : "neutral"} dot>
                   {p.activo ? "Activo" : "Inactivo"}
-                </span>
+                </Chip>
               </span>
               <span
                 className={`col-span-2 flex flex-wrap items-center gap-2 min-[1100px]:contents ${p.activo ? "" : "opacity-55"}`}
               >
                 <span className="min-[1100px]:order-2">
-                  <span className="rounded-md bg-clin-soft px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-clin-ink">
+                  <Chip tone="clin" tamano="etiqueta">
                     {etiquetaEspecialidad(p.especialidad)}
-                  </span>
+                  </Chip>
                 </span>
                 <span className="font-mono text-sm whitespace-nowrap text-ink-2 min-[1100px]:order-3">
                   {p.duracionTurnoMinutos} min
@@ -97,20 +93,22 @@ export function ProfesionalesTable({
               <span className="col-span-2 flex justify-end gap-2 border-t border-border pt-3 min-[1100px]:order-5 min-[1100px]:col-span-1 min-[1100px]:border-t-0 min-[1100px]:pt-0">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="neutral"
+                  size="sm"
                   disabled={ocupado || !p.activo}
                   aria-label={`Disponibilidad de ${nombre}`}
-                  className="flex-1 font-semibold text-clin-ink min-[1100px]:flex-none"
+                  className="flex-1 px-3 text-small font-semibold text-clin-ink min-[1100px]:flex-none"
                   onClick={() => onDisponibilidad(p)}
                 >
                   Disponibilidad
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="neutral"
+                  size="sm"
                   disabled={ocupado}
                   aria-label={`Editar ${nombre}`}
-                  className="flex-1 min-[1100px]:flex-none"
+                  className="flex-1 px-3 text-small min-[1100px]:flex-none"
                   onClick={() => onEditar(p)}
                 >
                   Editar
@@ -118,11 +116,12 @@ export function ProfesionalesTable({
                 <span className="relative flex">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="neutral"
+                    size="sm"
                     disabled={ocupado}
                     aria-label={`Más acciones de ${nombre}`}
                     aria-expanded={menuAbierto}
-                    className="w-11 font-bold min-[1100px]:w-9 min-[1100px]:px-0"
+                    className="w-11 px-0 text-small font-bold min-[1100px]:w-9"
                     onClick={() => setMenuAbiertoId(menuAbierto ? null : p.id)}
                   >
                     ⋯

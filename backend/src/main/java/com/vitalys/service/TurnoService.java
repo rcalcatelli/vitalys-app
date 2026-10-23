@@ -27,6 +27,7 @@ import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import com.vitalys.service.MorosidadService.VeredictoMorosidad;
+import com.vitalys.service.notificaciones.AvisosTurnoService;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -67,6 +68,7 @@ public class TurnoService {
     private final ProfesionalRepository profesionalRepository;
     private final DisponibilidadProfesionalRepository disponibilidadRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AvisosTurnoService avisos;
     private final Clock clock;
 
     public TurnoService(
@@ -78,6 +80,7 @@ public class TurnoService {
             ProfesionalRepository profesionalRepository,
             DisponibilidadProfesionalRepository disponibilidadRepository,
             JdbcTemplate jdbcTemplate,
+            AvisosTurnoService avisos,
             Clock clock) {
         this.turnoRepository = turnoRepository;
         this.personaRepository = personaRepository;
@@ -87,6 +90,7 @@ public class TurnoService {
         this.profesionalRepository = profesionalRepository;
         this.disponibilidadRepository = disponibilidadRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.avisos = avisos;
         this.clock = clock;
     }
 
@@ -171,6 +175,7 @@ public class TurnoService {
             e.consumirEn(turno.getId());
             excepcionRepository.save(e);
         });
+        avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
     }
 
@@ -256,7 +261,9 @@ public class TurnoService {
                 .findFirst()
                 .orElseThrow(() -> new ReglaDeNegocioException(
                         "Ese horario no está dentro de la disponibilidad del profesional"));
-        return TurnoResponse.de(guardar(Turno.deConsultorio(persona, profesional.getId(), actor.getId(), slot[0], slot[1])));
+        Turno turno = guardar(Turno.deConsultorio(persona, profesional.getId(), actor.getId(), slot[0], slot[1]));
+        avisos.confirmarReserva(turno);
+        return TurnoResponse.de(turno);
     }
 
     /** Agenda del profesional autenticado (W-03). Por defecto, de hoy a siete días. */
@@ -343,7 +350,9 @@ public class TurnoService {
             throw new ReglaDeNegocioException("Solo se puede cancelar un turno reservado; este está " + turno.getEstado());
         }
         turno.cancelar(ahora(), actor.getId(), motivo.trim());
-        return TurnoResponse.de(guardar(turno));
+        Turno cancelado = guardar(turno);
+        avisos.avisarCancelacion(cancelado);
+        return TurnoResponse.de(cancelado);
     }
 
     /** Gimnasio: check-in del ADMIN (RF-34). Consultorio: el profesional a cargo o un ADMIN (RF-22). */

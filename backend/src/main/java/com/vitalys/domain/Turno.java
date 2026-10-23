@@ -68,6 +68,9 @@ public class Turno {
     @Column(name = "motivo_cancelacion", columnDefinition = "text")
     private String motivoCancelacion;
 
+    @Column(name = "creado_en", insertable = false, updatable = false)
+    private OffsetDateTime creadoEn;
+
     protected Turno() {
         // Requerido por JPA
     }
@@ -174,5 +177,10 @@ public class Turno {
 
     public String getMotivoCancelacion() {
         return motivoCancelacion;
+    }
+
+    /** Momento en que se reservó (lo completa la base). */
+    public OffsetDateTime getCreadoEn() {
+        return creadoEn;
     }
 }

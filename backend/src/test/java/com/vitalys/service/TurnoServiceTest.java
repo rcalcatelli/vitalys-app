@@ -69,6 +69,7 @@ class TurnoServiceTest {
     private FeriadoRepository feriadoRepository;
     private MorosidadService morosidadService;
     private JdbcTemplate jdbcTemplate;
+    private com.vitalys.service.notificaciones.AvisosTurnoService avisos;
     private ProfesionalRepository profesionalRepository;
     private DisponibilidadProfesionalRepository disponibilidadRepository;
     private TurnoService service;
@@ -86,6 +87,7 @@ class TurnoServiceTest {
         excepcionRepository = mock(ExcepcionMorosidadRepository.class);
         feriadoRepository = mock(FeriadoRepository.class);
         jdbcTemplate = mock(JdbcTemplate.class);
+        avisos = mock(com.vitalys.service.notificaciones.AvisosTurnoService.class);
         // Real: el veredicto vive en MorosidadService; solo se reemplaza la deuda (JDBC)
         morosidadService = spy(new MorosidadService(jdbcTemplate, excepcionRepository, Clock.fixed(AHORA.toInstant(), ZONA)));
         profesionalRepository = mock(ProfesionalRepository.class);
@@ -99,6 +101,7 @@ class TurnoServiceTest {
                 profesionalRepository,
                 disponibilidadRepository,
                 jdbcTemplate,
+                avisos,
                 Clock.fixed(AHORA.toInstant(), ZONA));
 
         personaSocio = new Persona(socio, LocalDate.of(2024, 1, 1));
@@ -622,5 +625,24 @@ class TurnoServiceTest {
         assertThatThrownBy(() -> service.miAgenda(socio, null, null)).isInstanceOf(AccesoDenegadoException.class);
         when(profesionalRepository.findByUsuarioId(4L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.miAgenda(profesional, null, null)).isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    // ------------------------------------------------------------------ avisos (RF-26, RF-27)
+
+    @Test
+    void reservarYCancelar_disparanLosAvisosAlSocio() {
+        service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
+        verify(avisos).confirmarReserva(any(Turno.class));
+
+        turnoDelSocio(LUNES_10);
+        service.cancelar(socio, 100L, "viaje");
+        verify(avisos).avisarCancelacion(any(Turno.class));
+    }
+
+    @Test
+    void unaReservaRechazada_noConfirmaNada() {
+        doThrow(rechazoDelMotor("23505", "dup")).when(turnoRepository).saveAndFlush(any(Turno.class));
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)));
+        verify(avisos, never()).confirmarReserva(any());
     }
 }

@@ -42,8 +42,14 @@ export function ConfirmarImpactoDialog({
         <Button type="button" variant="outline" size="md" onClick={onVolver}>
           Volver
         </Button>
-        <Button type="button" variant="bad" disabled={cargando} onClick={onConfirmar}>
-          {cargando ? "Guardando…" : "Cancelar turnos y guardar"}
+        <Button
+          type="button"
+          variant="bad"
+          cargando={cargando}
+          textoCargando="Guardando…"
+          onClick={onConfirmar}
+        >
+          Cancelar turnos y guardar
         </Button>
       </div>
     </>

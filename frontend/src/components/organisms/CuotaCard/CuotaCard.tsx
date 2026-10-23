@@ -1,6 +1,7 @@
 import type { EstadoCuenta } from "../../../types/pago";
 import { resumenCuota } from "../../../utils/cuotaUi";
 import { Chip } from "../../atoms/Chip";
+import { Cargando } from "../../molecules/Cargando";
 
 export interface CuotaCardProps {
   /** `null` mientras carga o si la consulta falló (ver `error`). */
@@ -26,7 +27,7 @@ export function CuotaCard({ estado, error = null, onReintentar, onVerEstado }: C
         )}
       </div>
       {resumen && <span className="text-[13.5px] text-pretty text-ink-2">{resumen.linea}</span>}
-      {!resumen && !error && <span className="text-sm text-ink-3">Cargando cuota…</span>}
+      {!resumen && !error && <Cargando variante="linea" texto="Cargando cuota…" />}
       {error && (
         <div role="alert" className="flex flex-col items-start gap-2 text-[13.5px] text-bad-ink">
           <span>No pudimos cargar tu cuota.</span>

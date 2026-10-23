@@ -179,14 +179,8 @@ export function PersonaForm({
         <Button type="button" variant="neutral" size="modal" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" size="modal" disabled={cargando}>
-          {cargando
-            ? "Guardando…"
-            : esVinculo
-              ? "Vincular ficha"
-              : esAlta
-                ? "Dar de alta"
-                : "Guardar cambios"}
+        <Button type="submit" size="modal" cargando={cargando} textoCargando="Guardando…">
+          {esVinculo ? "Vincular ficha" : esAlta ? "Dar de alta" : "Guardar cambios"}
         </Button>
       </div>
     </form>

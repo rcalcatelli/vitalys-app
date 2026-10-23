@@ -84,7 +84,7 @@ describe("ExcepcionDialog", () => {
     montar({ error: "La persona no está suspendida", enviando: true });
     expect(screen.getByText("No se pudo autorizar la excepción")).toBeInTheDocument();
     expect(screen.getByText("La persona no está suspendida")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Guardando…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Autorizando…" })).toBeDisabled();
   });
 
   it("cancelar cierra sin enviar", async () => {
@@ -98,7 +98,7 @@ describe("ExcepcionDialog", () => {
     const { onConfirmar } = montar({ enviando: true });
     await userEvent.type(screen.getByLabelText("Motivo"), "x");
     fecha("2026-11-05");
-    await userEvent.click(screen.getByRole("button", { name: "Guardando…" }));
+    await userEvent.click(screen.getByRole("button", { name: "Autorizando…" }));
     expect(onConfirmar).not.toHaveBeenCalled();
   });
 });

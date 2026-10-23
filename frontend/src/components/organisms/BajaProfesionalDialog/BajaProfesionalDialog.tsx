@@ -75,10 +75,12 @@ export function BajaProfesionalDialog({
         <Button
           type="button"
           variant="bad"
-          disabled={impacto === null || cargando}
+          disabled={impacto === null}
+          cargando={cargando}
+          textoCargando="Dando de baja…"
           onClick={onConfirmar}
         >
-          {cargando ? "Dando de baja…" : textoConfirmar}
+          {textoConfirmar}
         </Button>
       </div>
     </>

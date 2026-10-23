@@ -15,6 +15,7 @@ import { PageHeader } from "../components/molecules/PageHeader";
 import { useToast } from "../hooks/useToast";
 import type { FiltroProfesionales, Impacto, Profesional } from "../types/profesional";
 import { nombreProfesional } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 const FILTROS = [
   ["TODOS", "Todos"],
@@ -199,7 +200,7 @@ export function ProfesionalesPage() {
         >
           {errorLista && <FieldError>{errorLista}</FieldError>}
           {cargandoLista && profesionales.length === 0 ? (
-            <p className="text-sm text-ink-3">Cargando profesionales…</p>
+            <Cargando texto="Cargando profesionales…" />
           ) : (
             <ProfesionalesTable
               profesionales={visibles}

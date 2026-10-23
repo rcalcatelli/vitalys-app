@@ -1,0 +1,1 @@
+export { PersonasTableSkeleton } from "./PersonasTableSkeleton";

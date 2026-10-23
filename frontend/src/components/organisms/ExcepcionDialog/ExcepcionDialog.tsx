@@ -150,10 +150,12 @@ export function ExcepcionDialog({
           type="button"
           variant="warn"
           size="modal"
-          disabled={invalido || enviando}
+          disabled={invalido}
+          cargando={enviando}
+          textoCargando="Autorizando…"
           onClick={confirmar}
         >
-          {enviando ? "Guardando…" : "Autorizar"}
+          Autorizar
         </Button>
       </div>
     </>

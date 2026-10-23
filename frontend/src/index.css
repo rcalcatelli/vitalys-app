@@ -169,6 +169,40 @@
   /* Entrada de pantallas del mockup: fade + 8px hacia arriba, 0.3s. */
   --animate-vt-in: vtIn 0.3s ease both;
 
+  /*
+   * Estados de carga (Estados de carga.dc.html): el spinner gira cada 0,75 s; con
+   * `prefers-reduced-motion` no gira y late cada 1,6 s (`motion-reduce:animate-vt-pulse`).
+   * El brillo de los skeletons recorre la barra cada 1,4 s y se apaga con reduce-motion.
+   */
+  --animate-vt-spin: vtSpin 0.75s linear infinite;
+  --animate-vt-pulse: vtPulse 1.6s ease-in-out infinite;
+  --animate-vt-shimmer: vtShimmer 1.4s ease-in-out infinite;
+
+  @keyframes vtSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes vtPulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  @keyframes vtShimmer {
+    0% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
+
   @keyframes vtIn {
     from {
       opacity: 0;

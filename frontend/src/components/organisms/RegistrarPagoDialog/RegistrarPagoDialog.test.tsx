@@ -186,7 +186,7 @@ describe("RegistrarPagoDialog", () => {
     const { onConfirmar } = montar({ error: "Ese período ya está pagado", enviando: true });
     expect(screen.getByText("No se pudo registrar el pago")).toBeInTheDocument();
     expect(screen.getByText("Ese período ya está pagado")).toBeInTheDocument();
-    const boton = screen.getByRole("button", { name: "Guardando…" });
+    const boton = screen.getByRole("button", { name: "Registrando pago…" });
     expect(boton).toBeDisabled();
     await userEvent.click(boton);
     expect(onConfirmar).not.toHaveBeenCalled();

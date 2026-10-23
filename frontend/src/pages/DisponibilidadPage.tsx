@@ -15,6 +15,7 @@ import type { FranjaEditable } from "../types/disponibilidad";
 import type { Impacto, Profesional } from "../types/profesional";
 import { aEditables, mismoConjunto, sinClaves, validarFranjas } from "../utils/disponibilidad";
 import { etiquetaEspecialidad, nombreProfesional } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 function mensajeDeError(err: unknown): string {
   if (err instanceof ApiError) {
@@ -212,7 +213,7 @@ export function DisponibilidadPage() {
           </div>
         )}
 
-        {cargando && <p className="text-sm text-ink-3">Cargando disponibilidad…</p>}
+        {cargando && <Cargando texto="Cargando disponibilidad…" />}
         {errorCarga && <FieldError>{errorCarga}</FieldError>}
 
         {profesional && !cargando && (

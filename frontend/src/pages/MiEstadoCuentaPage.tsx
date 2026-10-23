@@ -7,6 +7,7 @@ import { EstadoCuentaView } from "../components/organisms/EstadoCuentaView";
 import { PageHeader } from "../components/molecules/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import type { EstadoCuenta } from "../types/pago";
+import { Cargando } from "../components/molecules/Cargando";
 
 interface ErrorUi {
   mensaje: string;
@@ -74,7 +75,7 @@ export function MiEstadoCuentaPage() {
             )}
           </>
         )}
-        {!estado && !error && <p className="text-sm text-ink-3">Cargando estado de cuenta…</p>}
+        {!estado && !error && <Cargando texto="Cargando estado de cuenta…" />}
         {estado && !error && <EstadoCuentaView estado={estado} vista="socio" />}
       </div>
     </>

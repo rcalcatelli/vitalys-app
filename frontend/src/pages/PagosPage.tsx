@@ -25,6 +25,7 @@ import { hoyBA } from "../utils/fechaBA";
 import { nombreProfesional } from "../utils/formato";
 import { etiquetaPeriodoEnFrase, fechaDMA } from "../utils/pagoUi";
 import { chipCuota } from "../utils/personaUi";
+import { Cargando } from "../components/molecules/Cargando";
 
 /** Espera antes de consultar mientras se escribe en el buscador. */
 const DEMORA_BUSQUEDA_MS = 300;
@@ -265,11 +266,7 @@ export function PagosPage() {
               </Button>
             </div>
           )}
-          {!estado && !errorEstado && (
-            <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
-              Cargando estado de cuenta…
-            </div>
-          )}
+          {!estado && !errorEstado && <Cargando texto="Cargando estado de cuenta…" />}
           {estado && (
             <EstadoCuentaView
               estado={estado}

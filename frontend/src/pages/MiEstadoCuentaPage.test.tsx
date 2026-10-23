@@ -37,7 +37,7 @@ describe("MiEstadoCuentaPage", () => {
 
   it("muestra el estado de cuenta del socio", async () => {
     montar();
-    expect(screen.getByText("Cargando estado de cuenta…")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
     expect(await screen.findByText("Al día")).toBeInTheDocument();
   });
 

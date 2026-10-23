@@ -202,8 +202,14 @@ export function ProfesionalForm({
         <Button type="button" variant="neutral" size="modal" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" size="modal" disabled={invalido || cargando}>
-          {cargando ? "Guardando…" : esAlta ? "Crear profesional" : "Guardar cambios"}
+        <Button
+          type="submit"
+          size="modal"
+          disabled={invalido}
+          cargando={cargando}
+          textoCargando="Guardando…"
+        >
+          {esAlta ? "Crear profesional" : "Guardar cambios"}
         </Button>
       </div>
     </form>

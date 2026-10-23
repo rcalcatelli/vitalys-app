@@ -11,6 +11,7 @@ import { useFallidas } from "../hooks/useFallidas";
 import type { ResumenHoy } from "../types/resumen";
 import { horaBA } from "../utils/fechaBA";
 import { fechaLarga } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 /**
  * "Hoy en el centro" (ADMIN): pantalla de inicio del administrador. Arriba el resumen del día
@@ -50,9 +51,7 @@ export function HoyPage() {
       />
       <div className="flex flex-col gap-4">
         {errorResumen && <FieldError>{errorResumen}</FieldError>}
-        {resumen === null && !errorResumen && (
-          <p className="text-sm text-ink-3">Cargando el resumen…</p>
-        )}
+        {resumen === null && !errorResumen && <Cargando texto="Cargando el resumen…" />}
         {resumen && (
           <PanelHoy resumen={resumen} ahora={ahora} onIrAPagos={() => navigate("/admin/pagos")} />
         )}
@@ -60,7 +59,7 @@ export function HoyPage() {
         {errorFallidas && (
           <FieldError>No se pudieron cargar las notificaciones. Intentá de nuevo.</FieldError>
         )}
-        {fallidas === null && !errorFallidas && <p className="text-sm text-ink-3">Cargando…</p>}
+        {fallidas === null && !errorFallidas && <Cargando />}
         {fallidas && <NotificacionesFallidas notificaciones={fallidas} />}
       </div>
     </>

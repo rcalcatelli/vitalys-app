@@ -235,7 +235,7 @@ describe("PagosPage", () => {
       within(screen.getByRole("dialog")).getByRole("button", { name: "Registrar pago" }),
     );
 
-    const enCurso = await screen.findByRole("button", { name: "Guardando…" });
+    const enCurso = await screen.findByRole("button", { name: "Registrando pago…" });
     expect(enCurso).toBeDisabled();
     await userEvent.click(enCurso);
     expect(pagosApi.registrarPago).toHaveBeenCalledTimes(1);

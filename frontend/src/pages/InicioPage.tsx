@@ -16,6 +16,7 @@ import { useAhora } from "../hooks/useAhora";
 import { useCarga } from "../hooks/useCarga";
 import type { Turno } from "../types/turno";
 import { fechaLarga } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 interface MensajeUi {
   tono: TonoAviso;
@@ -66,9 +67,7 @@ export function InicioPage() {
             </div>
           )}
           {!turnos.error && lista === null && (
-            <div className="flex flex-[2_1_400px] items-center rounded-xl border border-border bg-surface p-5 text-ink-3">
-              Cargando tus turnos…
-            </div>
+            <Cargando texto="Cargando tus turnos…" className="flex-[2_1_400px]" />
           )}
           {lista && (
             <ProximoTurnoCard

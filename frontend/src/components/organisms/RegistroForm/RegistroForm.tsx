@@ -119,8 +119,14 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
           onChange={setConfirmarContrasena}
         />
 
-        <Button type="submit" size="lg" fullWidth disabled={cargando}>
-          {cargando ? "Creando cuenta…" : "Crear cuenta"}
+        <Button
+          type="submit"
+          size="lg"
+          fullWidth
+          cargando={cargando}
+          textoCargando="Creando cuenta…"
+        >
+          Crear cuenta
         </Button>
 
         {errorAMostrar !== null && <FieldError id={errorId}>{errorAMostrar}</FieldError>}

@@ -70,7 +70,7 @@ describe("CancelarTurnoDialog", () => {
 
   it("Volver cierra y cargando deshabilita la confirmación", async () => {
     const { onVolver } = montar(unTurno(), vi.fn(), vi.fn(), true);
-    expect(screen.getByRole("button", { name: "Confirmar cancelación" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancelando…" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Volver" }));
     expect(onVolver).toHaveBeenCalled();
   });

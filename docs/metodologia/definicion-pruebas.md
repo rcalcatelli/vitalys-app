@@ -250,6 +250,16 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 > a PU-05 y PU-08 a PU-12. `TurnoGymIT` ejercita PI-07, PI-10, PI-11, PI-14, PI-30, PI-34,
 > PI-45, PI-51, PI-52 y PI-85 a PI-87 contra Postgres real.
 
+### Notificaciones de turnos (`AvisosTurnoIT`)
+
+En tests el proveedor de email es el que solo loguea, así que se verifican las filas de `notificaciones`. Los textos y los casos de borde (socio sin email, cancelación tardía, gimnasio vs. consultorio) están en `AvisosTurnoServiceTest`.
+
+| ID     | Caso                                                         | Resultado esperado |
+|--------|--------------------------------------------------------------|--------------------|
+| PI-105 | Reservar un turno (RF-26)                                     | Una fila `CONFIRMACION_TURNO` asociada al turno, con el email del socio |
+| PI-106 | Cancelar el turno, por el socio o un ADMIN (RF-27)            | Se agrega una fila `AVISO_CANCELACION` |
+| PI-107 | Recordatorio 24 h antes (RF-28), con el job corrido dos veces | Un solo `RECORDATORIO` para el turno reservado con anticipación; ninguno para el reservado hace minutos (ya tuvo su confirmación) ni para el que empieza en más de 24 h |
+
 ### Pagos
 
 `PagoControllerIT` (Postgres real, Testcontainers) cubre PI-76 a PI-80 y PI-91 a PI-104. El nombre de cada método empieza con su ID (`pi76_…`, `pi91_…`) para que la trazabilidad doc ↔ test sea directa; un mismo PI puede tener más de una variante.

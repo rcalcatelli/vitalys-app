@@ -282,6 +282,11 @@ Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno
 | GET    | `/api/notificaciones/persona/{id}` | Historial de notificaciones de una persona | ADMIN |
 | GET    | `/api/admin/notificaciones?fallidas=true` | Alerta de avisos que no llegaron: los `DEFINITIVA` (2 intentos fallidos) y los `HUERFANA` (en curso sin resolver). Es el único listado del endpoint | ADMIN |
 
+**Reglas de los avisos de turnos (RF-26 a RF-28, `AvisosTurnoService`):**
+- La confirmación sale al reservar, tanto en gimnasio como en consultorio, y recuerda el plazo para cancelar en término (2 h o 24 h).
+- El aviso de cancelación sale cuando cancela el socio o un ADMIN; si fue fuera de término, lo aclara. La cancelación por cambio de disponibilidad (RN-24) tiene su propio aviso, uno por paciente.
+- El recordatorio lo arma un job que corre cada hora y toma los turnos reservados que empiezan en las próximas 24 h. Cada turno recibe uno solo: la fila de `notificaciones` hace de marca, aunque el job corra de nuevo o el servicio se reinicie (RG-14). Un turno reservado con menos de 24 h de anticipación no lo recibe: ya tuvo la confirmación.
+
 > **Nota:** El envío es asíncrono: un listener `AFTER_COMMIT` despacha el email recién cuando la transacción que creó la notificación se confirmó. Si falla, se reintenta **una vez a los 10 segundos**; si el segundo intento también falla, la notificación queda con `intentos = 2` y `exitoso = false` y aparece en la alerta del ADMIN. Un fallo de email **nunca** deshace la operación de negocio que lo originó (por ejemplo, la cascada de RN-24).
 
 **Proveedor de email (Brevo, por HTTP):** el envío usa la API HTTP de Brevo detrás del puerto `NotificadorEmail`; en local y en tests se usa una implementación que solo loguea. Se descartó SMTP porque el plan gratuito de Render bloquea los puertos de salida SMTP; SendGrid porque dejó de ofrecer plan gratuito el 2025-05-27; y Resend porque exige tener un dominio propio verificado.

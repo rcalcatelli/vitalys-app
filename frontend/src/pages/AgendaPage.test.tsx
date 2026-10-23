@@ -48,12 +48,12 @@ describe("AgendaPage", () => {
     vi.clearAllMocks();
   });
 
-  it("pide hoy a +7 días y muestra paciente y DNI con la navegación del profesional", async () => {
+  it("pide hoy a +7 días y muestra paciente y DNI con el título de la agenda", async () => {
     montar();
     expect(await screen.findByText("Juan García")).toBeInTheDocument();
     expect(turnosApi.miAgenda).toHaveBeenCalledWith("2026-10-26", "2026-11-02");
     expect(screen.getByText("DNI 30111222")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Profesional" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Agenda de hoy" })).toBeInTheDocument();
   });
 
   it("Atendido marca el turno y recarga la agenda", async () => {

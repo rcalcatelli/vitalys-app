@@ -96,11 +96,11 @@ describe("RegistroPage", () => {
 
     renderWithRouter(<RegistroPage />, {
       path: "/registro",
-      extraRoutes: <Route path="/socio/turnos" element={<div>Mis turnos</div>} />,
+      extraRoutes: <Route path="/socio/inicio" element={<div>Inicio socio</div>} />,
     });
     await completarFormulario(user);
 
-    await waitFor(() => expect(screen.getByText("Mis turnos")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Inicio socio")).toBeInTheDocument());
   });
 
   it('"Ingresá" navega a /login', async () => {

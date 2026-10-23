@@ -93,7 +93,6 @@ describe("PagosPage", () => {
     expect(
       screen.getByText("Buscá a una persona por nombre o DNI para ver su estado de cuenta."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Pagos" })).toHaveAttribute("href", "/admin/pagos");
 
     await userEvent.type(screen.getByLabelText("Buscar por nombre o DNI"), "garc");
     expect(await screen.findByRole("button", { name: /García, Juan/ })).toBeInTheDocument();

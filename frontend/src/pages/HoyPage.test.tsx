@@ -34,7 +34,7 @@ describe("HoyPage", () => {
     expect(await screen.findByText("No hay notificaciones fallidas.")).toBeInTheDocument();
   });
 
-  it("muestra 'Hoy en el centro' con las notificaciones fallidas y el badge del menú", async () => {
+  it("muestra 'Hoy en el centro' con las notificaciones fallidas", async () => {
     vi.mocked(notificacionesApi.listarFallidas).mockResolvedValue([
       unaNotificacion(),
       unaNotificacion({ id: 2, tipo: "HUERFANA", pacienteNombre: "Ana Paz" }),
@@ -46,18 +46,14 @@ describe("HoyPage", () => {
     expect(screen.getByText("Ana Paz")).toBeInTheDocument();
     expect(screen.getByText("Falló dos veces")).toBeInTheDocument();
     expect(screen.getByText("Sin confirmar")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Hoy, 2 notificaciones fallidas" }),
-    ).toBeInTheDocument();
     expect(notificacionesApi.listarFallidas).toHaveBeenCalledTimes(1);
   });
 
-  it("sin fallidas muestra el estado vacío y no hay badge", async () => {
+  it("sin fallidas muestra el estado vacío", async () => {
     vi.mocked(notificacionesApi.listarFallidas).mockResolvedValue([]);
     renderWithRouter(<HoyPage />);
 
     expect(await screen.findByText("No hay notificaciones fallidas.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Hoy" })).toBeInTheDocument();
   });
 
   it("si la consulta falla muestra el error", async () => {

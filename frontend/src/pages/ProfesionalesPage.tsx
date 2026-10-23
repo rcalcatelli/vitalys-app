@@ -5,13 +5,12 @@ import * as profesionalesApi from "../api/profesionalesApi";
 import { Button } from "../components/atoms/Button";
 import { FieldError } from "../components/atoms/FieldError";
 import { Input } from "../components/atoms/Input";
-import { AdminNav } from "../components/molecules/AdminNav";
 import { Modal } from "../components/molecules/Modal";
 import { BajaProfesionalDialog } from "../components/organisms/BajaProfesionalDialog";
 import { ProfesionalForm } from "../components/organisms/ProfesionalForm";
 import type { ProfesionalFormValues } from "../components/organisms/ProfesionalForm";
 import { ProfesionalesTable } from "../components/organisms/ProfesionalesTable";
-import { useAuth } from "../context/AuthContext";
+import { PageHeader } from "../components/molecules/PageHeader";
 import type { FiltroProfesionales, Impacto, Profesional } from "../types/profesional";
 import { nombreProfesional } from "../utils/formato";
 
@@ -56,7 +55,6 @@ function coincide(p: Profesional, filtro: FiltroProfesionales, texto: string): b
  * los filtros se resuelven en el cliente: el listado completo es chico y el ADMIN ya lo ve entero.
  */
 export function ProfesionalesPage() {
-  const { usuario, logout } = useAuth();
   const navigate = useNavigate();
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [cargandoLista, setCargandoLista] = useState(true);
@@ -167,114 +165,105 @@ export function ProfesionalesPage() {
   const visibles = profesionales.filter((p) => coincide(p, filtro, texto));
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 sm:py-8">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-ink-3 uppercase">
-            Administración
-          </span>
-          <h1 className="font-heading text-2xl font-semibold text-ink sm:text-3xl">
-            Profesionales
-          </h1>
-          <p className="text-sm text-ink-2">Equipo del consultorio y su disponibilidad.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-ink-3 sm:inline">{usuario?.email}</span>
-          <Button type="button" variant="outline" onClick={logout}>
-            Cerrar sesión
+    <>
+      <PageHeader
+        eyebrow="Recepción"
+        titulo="Profesionales"
+        subtitulo="Equipo de consultorios del centro."
+      />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2.5">
+          <Input
+            aria-label="Buscar por nombre o email"
+            placeholder="Buscar por nombre o email"
+            value={texto}
+            onChange={setTexto}
+            className="min-w-0 flex-[1_1_240px]"
+          />
+          <Button type="button" onClick={() => abrir({ modo: "alta" })}>
+            + Nuevo profesional
           </Button>
         </div>
-      </header>
 
-      <AdminNav />
-
-      <div className="flex flex-wrap gap-2.5">
-        <Input
-          aria-label="Buscar por nombre o email"
-          placeholder="Buscar por nombre o email"
-          value={texto}
-          onChange={setTexto}
-          className="min-w-0 flex-[1_1_240px]"
-        />
-        <Button type="button" onClick={() => abrir({ modo: "alta" })}>
-          + Nuevo profesional
-        </Button>
-      </div>
-
-      <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Filtrar profesionales">
-        {FILTROS.map(([clave, etiqueta]) => {
-          const activo = filtro === clave;
-          return (
-            <button
-              key={clave}
-              type="button"
-              aria-pressed={activo}
-              onClick={() => setFiltro(clave)}
-              className={[
-                "h-9 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap",
-                activo ? "border-ink bg-ink text-bg" : "border-border bg-surface text-ink-2",
-              ].join(" ")}
-            >
-              {etiqueta}
-            </button>
-          );
-        })}
-      </div>
-
-      {aviso && (
-        <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
-          {aviso}
-        </div>
-      )}
-
-      <section
-        aria-label="Listado de profesionales"
-        aria-busy={cargandoLista}
-        className="flex flex-col gap-3"
-      >
-        {errorLista && <FieldError>{errorLista}</FieldError>}
-        {cargandoLista && profesionales.length === 0 ? (
-          <p className="text-sm text-ink-3">Cargando profesionales…</p>
-        ) : (
-          <ProfesionalesTable
-            profesionales={visibles}
-            ocupado={guardando}
-            onDisponibilidad={(p) => navigate(`/admin/profesionales/${p.id}/disponibilidad`)}
-            onEditar={(p) => abrir({ modo: "edicion", profesional: p })}
-            onBaja={(p) => void abrirBaja(p)}
-            onReactivar={(p) => void reactivar(p)}
-          />
-        )}
-      </section>
-
-      {(modal.modo === "alta" || modal.modo === "edicion") && (
-        <Modal
-          titulo={modal.modo === "alta" ? "Nuevo profesional" : "Editar profesional"}
-          onClose={cerrar}
+        <div
+          className="flex gap-1.5 overflow-x-auto"
+          role="group"
+          aria-label="Filtrar profesionales"
         >
-          <ProfesionalForm
-            key={modal.modo === "edicion" ? modal.profesional.id : "alta"}
-            profesional={modal.modo === "edicion" ? modal.profesional : undefined}
-            onSubmit={(values) => void guardar(values)}
-            onCancel={cerrar}
-            error={errorModal}
-            cargando={guardando}
-          />
-        </Modal>
-      )}
+          {FILTROS.map(([clave, etiqueta]) => {
+            const activo = filtro === clave;
+            return (
+              <button
+                key={clave}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => setFiltro(clave)}
+                className={[
+                  "h-9 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap",
+                  activo ? "border-ink bg-ink text-bg" : "border-border bg-surface text-ink-2",
+                ].join(" ")}
+              >
+                {etiqueta}
+              </button>
+            );
+          })}
+        </div>
 
-      {modal.modo === "baja" && (
-        <Modal titulo="Dar de baja" onClose={cerrar}>
-          <BajaProfesionalDialog
-            profesional={modal.profesional}
-            impacto={modal.impacto}
-            error={errorModal}
-            cargando={guardando}
-            onConfirmar={() => void confirmarBaja()}
-            onVolver={cerrar}
-          />
-        </Modal>
-      )}
-    </main>
+        {aviso && (
+          <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
+            {aviso}
+          </div>
+        )}
+
+        <section
+          aria-label="Listado de profesionales"
+          aria-busy={cargandoLista}
+          className="flex flex-col gap-3"
+        >
+          {errorLista && <FieldError>{errorLista}</FieldError>}
+          {cargandoLista && profesionales.length === 0 ? (
+            <p className="text-sm text-ink-3">Cargando profesionales…</p>
+          ) : (
+            <ProfesionalesTable
+              profesionales={visibles}
+              ocupado={guardando}
+              onDisponibilidad={(p) => navigate(`/admin/profesionales/${p.id}/disponibilidad`)}
+              onEditar={(p) => abrir({ modo: "edicion", profesional: p })}
+              onBaja={(p) => void abrirBaja(p)}
+              onReactivar={(p) => void reactivar(p)}
+            />
+          )}
+        </section>
+
+        {(modal.modo === "alta" || modal.modo === "edicion") && (
+          <Modal
+            titulo={modal.modo === "alta" ? "Nuevo profesional" : "Editar profesional"}
+            onClose={cerrar}
+          >
+            <ProfesionalForm
+              key={modal.modo === "edicion" ? modal.profesional.id : "alta"}
+              profesional={modal.modo === "edicion" ? modal.profesional : undefined}
+              onSubmit={(values) => void guardar(values)}
+              onCancel={cerrar}
+              error={errorModal}
+              cargando={guardando}
+            />
+          </Modal>
+        )}
+
+        {modal.modo === "baja" && (
+          <Modal titulo="Dar de baja" onClose={cerrar}>
+            <BajaProfesionalDialog
+              profesional={modal.profesional}
+              impacto={modal.impacto}
+              error={errorModal}
+              cargando={guardando}
+              onConfirmar={() => void confirmarBaja()}
+              onVolver={cerrar}
+            />
+          </Modal>
+        )}
+      </div>
+    </>
   );
 }

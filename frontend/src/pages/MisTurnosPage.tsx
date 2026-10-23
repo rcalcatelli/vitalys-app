@@ -3,11 +3,9 @@ import { listarProfesionales } from "../api/profesionalesApi";
 import { cancelarTurno, misTurnos } from "../api/turnosApi";
 import { Aviso, type TonoAviso } from "../components/molecules/Aviso";
 import { Modal } from "../components/molecules/Modal";
-import { SocioNav } from "../components/molecules/SocioNav";
 import { CancelarTurnoDialog } from "../components/organisms/CancelarTurnoDialog";
 import { TurnosLista } from "../components/organisms/TurnosLista";
-import { PantallaLayout } from "../components/templates/PantallaLayout";
-import { useAuth } from "../context/AuthContext";
+import { PageHeader } from "../components/molecules/PageHeader";
 import { useAhora } from "../hooks/useAhora";
 import type { Profesional } from "../types/profesional";
 import type { Turno } from "../types/turno";
@@ -25,7 +23,6 @@ interface MensajeUi {
  * ya no figura, la lista usa "Profesional no disponible" y sigue funcionando.
  */
 export function MisTurnosPage() {
-  const { usuario, logout } = useAuth();
   const ahora = useAhora();
 
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
@@ -80,38 +77,34 @@ export function MisTurnosPage() {
   }
 
   return (
-    <PantallaLayout
-      eyebrow="Socio"
-      titulo="Mis turnos"
-      subtitulo={fechaLarga(ahora.toISOString())}
-      email={usuario?.email}
-      onLogout={logout}
-      nav={<SocioNav />}
-    >
-      {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
-      {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
-      {turnos === null && !errorCarga && <p className="text-sm text-ink-3">Cargando turnos…</p>}
-      {turnos && (
-        <TurnosLista
-          turnos={turnos}
-          profesionales={profesionales}
-          ahora={ahora}
-          onCancelar={setACancelar}
-        />
-      )}
-
-      {aCancelar && (
-        <Modal titulo="Cancelar turno" onClose={() => setACancelar(null)}>
-          <CancelarTurnoDialog
-            turno={aCancelar}
+    <>
+      <PageHeader eyebrow="Socio" titulo="Mis turnos" subtitulo={fechaLarga(ahora.toISOString())} />
+      <div className="flex flex-col gap-4">
+        {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
+        {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
+        {turnos === null && !errorCarga && <p className="text-sm text-ink-3">Cargando turnos…</p>}
+        {turnos && (
+          <TurnosLista
+            turnos={turnos}
             profesionales={profesionales}
             ahora={ahora}
-            cargando={cancelando}
-            onConfirmar={confirmarCancelacion}
-            onVolver={() => setACancelar(null)}
+            onCancelar={setACancelar}
           />
-        </Modal>
-      )}
-    </PantallaLayout>
+        )}
+
+        {aCancelar && (
+          <Modal titulo="Cancelar turno" onClose={() => setACancelar(null)}>
+            <CancelarTurnoDialog
+              turno={aCancelar}
+              profesionales={profesionales}
+              ahora={ahora}
+              cargando={cancelando}
+              onConfirmar={confirmarCancelacion}
+              onVolver={() => setACancelar(null)}
+            />
+          </Modal>
+        )}
+      </div>
+    </>
   );
 }

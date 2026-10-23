@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { etiquetaEspecialidad, fechaLarga, horaCorta, nombreProfesional } from "./formato";
+import {
+  etiquetaAhora,
+  etiquetaEspecialidad,
+  fechaLarga,
+  horaCorta,
+  nombreProfesional,
+} from "./formato";
 
 describe("formato", () => {
   it("etiqueta la especialidad con tildes", () => {
@@ -18,5 +24,9 @@ describe("formato", () => {
     const iso = "2026-10-21T16:30:00Z";
     expect(fechaLarga(iso)).toBe("Miércoles 21 de octubre");
     expect(horaCorta(iso)).toBe("13:30");
+  });
+
+  it("arma el chip de fecha y hora del encabezado", () => {
+    expect(etiquetaAhora(new Date("2026-09-29T13:40:00Z"))).toBe("Mar 29 sep · 10:40");
   });
 });

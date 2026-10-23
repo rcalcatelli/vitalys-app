@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { marcarAusente, marcarCompletado, miAgenda } from "../api/turnosApi";
 import { Aviso, type TonoAviso } from "../components/molecules/Aviso";
-import { ProfesionalNav } from "../components/molecules/ProfesionalNav";
 import { AgendaDia } from "../components/organisms/AgendaDia";
-import { PantallaLayout } from "../components/templates/PantallaLayout";
-import { useAuth } from "../context/AuthContext";
+import { PageHeader } from "../components/molecules/PageHeader";
 import { useAhora } from "../hooks/useAhora";
 import type { TurnoAgenda } from "../types/turno";
 import { mensajeDeError } from "../utils/errores";
@@ -24,7 +22,6 @@ interface MensajeUi {
  * su mensaje y recarga la agenda). No hay "Deshacer".
  */
 export function AgendaPage() {
-  const { usuario, logout } = useAuth();
   const ahora = useAhora();
   const hoy = hoyBA(ahora);
 
@@ -64,27 +61,23 @@ export function AgendaPage() {
   }
 
   return (
-    <PantallaLayout
-      eyebrow="Profesional"
-      titulo="Agenda"
-      subtitulo={fechaLarga(ahora.toISOString())}
-      email={usuario?.email}
-      onLogout={logout}
-      nav={<ProfesionalNav />}
-    >
-      {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
-      {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
-      {agenda === null && !errorCarga && <p className="text-sm text-ink-3">Cargando agenda…</p>}
-      {agenda && (
-        <AgendaDia
-          turnos={agenda}
-          ahora={ahora}
-          hoy={hoy}
-          ocupadoId={ocupadoId}
-          onAtendido={(t) => marcar(t, marcarCompletado)}
-          onAusente={(t) => marcar(t, marcarAusente)}
-        />
-      )}
-    </PantallaLayout>
+    <>
+      <PageHeader eyebrow={fechaLarga(ahora.toISOString())} titulo="Agenda de hoy" />
+      <div className="flex flex-col gap-4">
+        {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
+        {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
+        {agenda === null && !errorCarga && <p className="text-sm text-ink-3">Cargando agenda…</p>}
+        {agenda && (
+          <AgendaDia
+            turnos={agenda}
+            ahora={ahora}
+            hoy={hoy}
+            ocupadoId={ocupadoId}
+            onAtendido={(t) => marcar(t, marcarCompletado)}
+            onAusente={(t) => marcar(t, marcarAusente)}
+          />
+        )}
+      </div>
+    </>
   );
 }

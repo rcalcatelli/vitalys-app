@@ -8,22 +8,15 @@ import { Select } from "../components/atoms/Select";
 import { Aviso, type TonoAviso } from "../components/molecules/Aviso";
 import { Modal } from "../components/molecules/Modal";
 import { SelectorDias, type DiaSelector } from "../components/molecules/SelectorDias";
-import { SocioNav } from "../components/molecules/SocioNav";
 import { SlotsConsultorioGrid } from "../components/organisms/SlotsConsultorioGrid";
-import { PantallaLayout } from "../components/templates/PantallaLayout";
-import { useAuth } from "../context/AuthContext";
+import { PageHeader } from "../components/molecules/PageHeader";
 import { useAhora } from "../hooks/useAhora";
 import type { Especialidad, Profesional } from "../types/profesional";
 import type { SlotConsultorio } from "../types/turno";
 import { abreviaturaDia, fechaCorta, fechaLargaDe, numeroDia } from "../utils/diasUi";
 import { mensajeDeError } from "../utils/errores";
 import { fechaBA, horaBA, hoyBA, sumarDias } from "../utils/fechaBA";
-import {
-  ESPECIALIDADES,
-  etiquetaEspecialidad,
-  fechaLarga,
-  nombreProfesional,
-} from "../utils/formato";
+import { ESPECIALIDADES, etiquetaEspecialidad, nombreProfesional } from "../utils/formato";
 
 const DIAS_VISIBLES = 14;
 
@@ -38,7 +31,6 @@ interface MensajeUi {
  * recarga los horarios y avisa; un 422 muestra el mensaje del servidor. No se evalúa morosidad.
  */
 export function ReservarConsultorioPage() {
-  const { usuario, logout } = useAuth();
   const ahora = useAhora();
   const hoy = hoyBA(ahora);
 
@@ -154,130 +146,132 @@ export function ReservarConsultorioPage() {
   }
 
   return (
-    <PantallaLayout
-      eyebrow="Socio"
-      titulo="Turno de consultorio"
-      subtitulo={fechaLarga(ahora.toISOString())}
-      email={usuario?.email}
-      onLogout={logout}
-      nav={<SocioNav />}
-    >
-      {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
-      {profesionales === null && !errorCarga && <p className="text-sm text-ink-3">Cargando…</p>}
-      {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
+    <>
+      <PageHeader
+        eyebrow="Consultorios"
+        titulo="Turno de consultorio"
+        subtitulo="Elegí la especialidad y un horario libre."
+      />
+      <div className="flex flex-col gap-4">
+        {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
+        {profesionales === null && !errorCarga && <p className="text-sm text-ink-3">Cargando…</p>}
+        {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
 
-      {profesionales !== null && especialidades.length === 0 && (
-        <p className="text-sm text-ink-2">Por ahora no hay profesionales con agenda disponible.</p>
-      )}
+        {profesionales !== null && especialidades.length === 0 && (
+          <p className="text-sm text-ink-2">
+            Por ahora no hay profesionales con agenda disponible.
+          </p>
+        )}
 
-      {especialidades.length > 0 && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="especialidad">Especialidad</Label>
-            <Select
-              id="especialidad"
-              value={especialidad}
-              onChange={elegirEspecialidad}
-              className="sm:max-w-xs"
-            >
-              <option value="">Elegí una especialidad</option>
-              {especialidades.map((e) => (
-                <option key={e} value={e}>
-                  {etiquetaEspecialidad(e)}
-                </option>
-              ))}
-            </Select>
-          </div>
+        {especialidades.length > 0 && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="especialidad">Especialidad</Label>
+              <Select
+                id="especialidad"
+                value={especialidad}
+                onChange={elegirEspecialidad}
+                className="sm:max-w-xs"
+              >
+                <option value="">Elegí una especialidad</option>
+                {especialidades.map((e) => (
+                  <option key={e} value={e}>
+                    {etiquetaEspecialidad(e)}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          {especialidad !== "" && (
-            <ul
-              aria-label="Profesionales"
-              className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-2.5"
-            >
-              {delaEspecialidad.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    aria-pressed={p.id === profesionalId}
-                    onClick={() => elegirProfesional(p.id)}
-                    className={[
-                      "flex w-full flex-col gap-1.5 rounded-2xl border-[1.5px] p-4 text-left",
-                      p.id === profesionalId
-                        ? "border-clin bg-clin-soft"
-                        : "border-border bg-surface",
-                    ].join(" ")}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-heading text-lg font-semibold text-ink">
-                        {etiquetaEspecialidad(p.especialidad)}
+            {especialidad !== "" && (
+              <ul
+                aria-label="Profesionales"
+                className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-2.5"
+              >
+                {delaEspecialidad.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      aria-pressed={p.id === profesionalId}
+                      onClick={() => elegirProfesional(p.id)}
+                      className={[
+                        "flex w-full flex-col gap-1.5 rounded-2xl border-[1.5px] p-4 text-left",
+                        p.id === profesionalId
+                          ? "border-clin bg-clin-soft"
+                          : "border-border bg-surface",
+                      ].join(" ")}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-heading text-lg font-semibold text-ink">
+                          {etiquetaEspecialidad(p.especialidad)}
+                        </span>
+                        <span className="rounded-md bg-clin-soft px-2 py-0.5 font-mono text-xs font-medium text-clin-ink">
+                          {p.duracionTurnoMinutos} min
+                        </span>
                       </span>
-                      <span className="rounded-md bg-clin-soft px-2 py-0.5 font-mono text-xs font-medium text-clin-ink">
-                        {p.duracionTurnoMinutos} min
-                      </span>
-                    </span>
-                    <span className="text-ink-2">{nombreProfesional(p)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                      <span className="text-ink-2">{nombreProfesional(p)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-          {profesional && (
-            <section className="flex flex-col gap-3.5 rounded-2xl border border-border bg-surface p-4">
-              <SelectorDias dias={dias} activa={fecha} onElegir={elegirDia} tono="clin" />
-              <h2 className="font-heading text-lg font-semibold text-ink">
-                {fechaLargaDe(fecha)}
-                {fecha === hoy ? " · hoy" : ""}
-              </h2>
-              <p className="text-sm text-ink-2">
-                {`${nombreProfesional(profesional)} · ${etiquetaEspecialidad(profesional.especialidad)} · ${profesional.duracionTurnoMinutos} min`}
-              </p>
-              {errorSlots && <Aviso tono="bad">{errorSlots}</Aviso>}
-              {lista === null && !errorSlots && (
-                <p className="text-sm text-ink-3">Cargando horarios…</p>
-              )}
-              {lista !== null && lista.length === 0 && (
+            {profesional && (
+              <section className="flex flex-col gap-3.5 rounded-2xl border border-border bg-surface p-4">
+                <SelectorDias dias={dias} activa={fecha} onElegir={elegirDia} tono="clin" />
+                <h2 className="font-heading text-lg font-semibold text-ink">
+                  {fechaLargaDe(fecha)}
+                  {fecha === hoy ? " · hoy" : ""}
+                </h2>
                 <p className="text-sm text-ink-2">
-                  Este profesional no tiene horarios para este día.
+                  {`${nombreProfesional(profesional)} · ${etiquetaEspecialidad(profesional.especialidad)} · ${profesional.duracionTurnoMinutos} min`}
                 </p>
-              )}
-              {lista !== null && lista.length > 0 && (
-                <SlotsConsultorioGrid
-                  slots={lista}
-                  seleccionado={seleccion}
-                  onElegir={setSeleccion}
-                />
-              )}
-              <span className="text-xs text-ink-3">
-                Cancelación en término hasta 24 h antes. Después queda como “cancelado fuera de
-                término”.
-              </span>
-            </section>
-          )}
-        </>
-      )}
+                {errorSlots && <Aviso tono="bad">{errorSlots}</Aviso>}
+                {lista === null && !errorSlots && (
+                  <p className="text-sm text-ink-3">Cargando horarios…</p>
+                )}
+                {lista !== null && lista.length === 0 && (
+                  <p className="text-sm text-ink-2">
+                    Este profesional no tiene horarios para este día.
+                  </p>
+                )}
+                {lista !== null && lista.length > 0 && (
+                  <SlotsConsultorioGrid
+                    slots={lista}
+                    seleccionado={seleccion}
+                    onElegir={setSeleccion}
+                  />
+                )}
+                <span className="text-xs text-ink-3">
+                  Cancelación en término hasta 24 h antes. Después queda como “cancelado fuera de
+                  término”.
+                </span>
+              </section>
+            )}
+          </>
+        )}
 
-      {profesional && slotElegido && (
-        <Modal titulo="Confirmar turno" onClose={() => setSeleccion(null)}>
-          <div className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-semibold tracking-wider text-clin-ink uppercase">
-              {etiquetaEspecialidad(profesional.especialidad)}
-            </span>
-            <span className="font-semibold text-ink">{nombreProfesional(profesional)}</span>
-            <span className="text-ink-2">
-              {`${fechaLargaDe(fecha)} · ${horaBA(slotElegido.inicio)} – ${horaBA(slotElegido.fin)}`}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <Button size="md" type="button" variant="outline" onClick={() => setSeleccion(null)}>
-              Cancelar
-            </Button>
-            <Button type="button" disabled={enviando} onClick={confirmar}>
-              Confirmar turno
-            </Button>
-          </div>
-        </Modal>
-      )}
-    </PantallaLayout>
+        {profesional && slotElegido && (
+          <Modal titulo="Confirmar turno" onClose={() => setSeleccion(null)}>
+            <div className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-semibold tracking-wider text-clin-ink uppercase">
+                {etiquetaEspecialidad(profesional.especialidad)}
+              </span>
+              <span className="font-semibold text-ink">{nombreProfesional(profesional)}</span>
+              <span className="text-ink-2">
+                {`${fechaLargaDe(fecha)} · ${horaBA(slotElegido.inicio)} – ${horaBA(slotElegido.fin)}`}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button size="md" type="button" variant="outline" onClick={() => setSeleccion(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" disabled={enviando} onClick={confirmar}>
+                Confirmar turno
+              </Button>
+            </div>
+          </Modal>
+        )}
+      </div>
+    </>
   );
 }

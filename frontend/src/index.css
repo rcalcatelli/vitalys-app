@@ -186,26 +186,34 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button {
-  font: inherit;
-  cursor: pointer;
-}
+/*
+ * Reset del mockup en `@layer base`: DEBE ir en una capa. Fuera de capa, estas reglas le ganan a
+ * cualquier utilidad de Tailwind (`text-sm`, `text-ink-2`…) y los botones, inputs y links
+ * ignorarían sus clases. Tailwind ya hace `font: inherit` en sus preflight; acá solo se agrega el
+ * cursor y el color de los links del design system.
+ */
+@layer base {
+  button {
+    font: inherit;
+    cursor: pointer;
+  }
 
-button:disabled {
-  cursor: not-allowed;
-}
+  button:disabled {
+    cursor: not-allowed;
+  }
 
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
 
-a {
-  color: var(--color-clin-ink);
-}
+  a {
+    color: var(--color-clin-ink);
+  }
 
-a:hover {
-  color: var(--color-clin);
+  a:hover {
+    color: var(--color-clin);
+  }
 }

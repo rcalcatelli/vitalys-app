@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/http";
 import * as profesionalesApi from "../api/profesionalesApi";
-import { Button } from "../components/atoms/Button";
 import { FieldError } from "../components/atoms/FieldError";
 import { Label } from "../components/atoms/Label";
 import { Select } from "../components/atoms/Select";
 import { Modal } from "../components/molecules/Modal";
-import { ProfesionalNav } from "../components/molecules/ProfesionalNav";
 import { ConfirmarImpactoDialog } from "../components/organisms/ConfirmarImpactoDialog";
 import { FranjasEditor } from "../components/organisms/FranjasEditor";
 import { SemanaGrid } from "../components/organisms/SemanaGrid";
+import { PageHeader } from "../components/molecules/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import type { FranjaEditable } from "../types/disponibilidad";
 import type { Impacto, Profesional } from "../types/profesional";
@@ -40,7 +39,7 @@ const nuevaClave = () => `n${++contadorFilas}`;
  * contesta 409 con impacto (carrera entre la vista previa y el guardado) muestra el mismo modal.
  */
 export function DisponibilidadPage() {
-  const { rol, usuario, logout } = useAuth();
+  const { rol } = useAuth();
   const esAdmin = rol === "ADMIN";
   const { id } = useParams();
   const navigate = useNavigate();
@@ -162,134 +161,125 @@ export function DisponibilidadPage() {
     : "Las franjas de un mismo día no pueden superponerse. Si achicás una franja con turnos reservados, te vamos a pedir confirmación.";
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 sm:py-8">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-ink-3 uppercase">
-            {esAdmin ? "Administración" : "Profesional"}
-          </span>
-          <h1 className="font-heading text-2xl font-semibold text-ink sm:text-3xl">
-            Disponibilidad
-          </h1>
-          <p className="text-sm text-ink-2">
-            Franjas semanales en las que se pueden reservar turnos.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-ink-3 sm:inline">{usuario?.email}</span>
-          <Button type="button" variant="outline" onClick={logout}>
-            Cerrar sesión
-          </Button>
-        </div>
-      </header>
-
-      {!esAdmin && <ProfesionalNav />}
-
-      {esAdmin && (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/admin/profesionales")}
-            className="h-10 self-start font-semibold text-clin-ink"
-          >
-            ← Profesionales
-          </button>
-          {profesional && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface px-3.5 py-3">
-              <Label htmlFor="disponibilidad-profesional" className="font-semibold">
-                Profesional:
-              </Label>
-              <Select
-                id="disponibilidad-profesional"
-                className="flex-[1_1_240px]"
-                value={String(profesional.id)}
-                onChange={(v) => navigate(`/admin/profesionales/${v}/disponibilidad`)}
-              >
-                {todos
-                  .filter((p) => p.activo || p.id === profesional.id)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {nombreProfesional(p)} · {etiquetaEspecialidad(p.especialidad)}
-                      {p.activo ? "" : " (inactivo)"}
-                    </option>
-                  ))}
-              </Select>
-            </div>
-          )}
-        </div>
-      )}
-
-      {cargando && <p className="text-sm text-ink-3">Cargando disponibilidad…</p>}
-      {errorCarga && <FieldError>{errorCarga}</FieldError>}
-
-      {profesional && !cargando && (
-        <>
-          {aviso && (
-            <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
-              {aviso}
-            </div>
-          )}
-
-          <div
-            className={[
-              "rounded-xl px-4 py-3 text-sm",
-              hayErrores ? "bg-bad-soft text-bad-ink" : "bg-clin-soft text-clin-ink",
-            ].join(" ")}
-          >
-            {nota}
+    <>
+      <PageHeader
+        eyebrow={esAdmin ? "Recepción" : "Profesional"}
+        titulo="Disponibilidad"
+        subtitulo={
+          esAdmin
+            ? "Elegí el profesional y editá sus franjas semanales."
+            : "Tus franjas semanales de atención."
+        }
+      />
+      <div className="flex flex-col gap-4">
+        {esAdmin && (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/admin/profesionales")}
+              className="h-10 self-start font-semibold text-clin-ink"
+            >
+              ← Profesionales
+            </button>
+            {profesional && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface px-3.5 py-3">
+                <Label htmlFor="disponibilidad-profesional" className="font-semibold">
+                  Profesional:
+                </Label>
+                <Select
+                  id="disponibilidad-profesional"
+                  className="flex-[1_1_240px]"
+                  value={String(profesional.id)}
+                  onChange={(v) => navigate(`/admin/profesionales/${v}/disponibilidad`)}
+                >
+                  {todos
+                    .filter((p) => p.activo || p.id === profesional.id)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {nombreProfesional(p)} · {etiquetaEspecialidad(p.especialidad)}
+                        {p.activo ? "" : " (inactivo)"}
+                      </option>
+                    ))}
+                </Select>
+              </div>
+            )}
           </div>
+        )}
 
-          {error && !confirmacion && <FieldError>{error}</FieldError>}
+        {cargando && <p className="text-sm text-ink-3">Cargando disponibilidad…</p>}
+        {errorCarga && <FieldError>{errorCarga}</FieldError>}
 
-          <div className="flex flex-wrap items-start gap-4">
-            <FranjasEditor
-              filas={filas}
-              errores={errores}
-              hayCambios={hayCambios}
-              guardando={guardando}
-              onCambiar={(clave, cambio) =>
-                editar((actuales) =>
-                  actuales.map((f) => (f.clave === clave ? { ...f, ...cambio } : f)),
-                )
-              }
-              onAgregar={() =>
-                editar((actuales) => [
-                  ...actuales,
-                  { clave: nuevaClave(), diaSemana: 5, horaInicio: "09:00", horaFin: "12:00" },
-                ])
-              }
-              onQuitar={(clave) => editar((actuales) => actuales.filter((f) => f.clave !== clave))}
-              onDescartar={() => {
-                setBorrador(null);
+        {profesional && !cargando && (
+          <>
+            {aviso && (
+              <div role="status" className="rounded-md bg-ok-soft px-3 py-2.5 text-sm text-ok-ink">
+                {aviso}
+              </div>
+            )}
+
+            <div
+              className={[
+                "rounded-xl px-4 py-3 text-sm",
+                hayErrores ? "bg-bad-soft text-bad-ink" : "bg-clin-soft text-clin-ink",
+              ].join(" ")}
+            >
+              {nota}
+            </div>
+
+            {error && !confirmacion && <FieldError>{error}</FieldError>}
+
+            <div className="flex flex-wrap items-start gap-4">
+              <FranjasEditor
+                filas={filas}
+                errores={errores}
+                hayCambios={hayCambios}
+                guardando={guardando}
+                onCambiar={(clave, cambio) =>
+                  editar((actuales) =>
+                    actuales.map((f) => (f.clave === clave ? { ...f, ...cambio } : f)),
+                  )
+                }
+                onAgregar={() =>
+                  editar((actuales) => [
+                    ...actuales,
+                    { clave: nuevaClave(), diaSemana: 5, horaInicio: "09:00", horaFin: "12:00" },
+                  ])
+                }
+                onQuitar={(clave) =>
+                  editar((actuales) => actuales.filter((f) => f.clave !== clave))
+                }
+                onDescartar={() => {
+                  setBorrador(null);
+                  setError(null);
+                }}
+                onGuardar={() => void guardar()}
+              />
+              <SemanaGrid
+                filas={filas}
+                errores={errores}
+                duracionTurnoMinutos={profesional.duracionTurnoMinutos}
+              />
+            </div>
+          </>
+        )}
+
+        {profesional && confirmacion && borrador && (
+          <Modal titulo="Hay turnos afectados" onClose={() => setConfirmacion(null)}>
+            <ConfirmarImpactoDialog
+              impacto={confirmacion}
+              esPropia={!esAdmin}
+              profesional={nombreProfesional(profesional)}
+              error={error}
+              cargando={guardando}
+              onConfirmar={() => void aplicar(sinClaves(borrador), true, confirmacion.cantidad)}
+              onVolver={() => {
+                setConfirmacion(null);
                 setError(null);
               }}
-              onGuardar={() => void guardar()}
             />
-            <SemanaGrid
-              filas={filas}
-              errores={errores}
-              duracionTurnoMinutos={profesional.duracionTurnoMinutos}
-            />
-          </div>
-        </>
-      )}
-
-      {profesional && confirmacion && borrador && (
-        <Modal titulo="Hay turnos afectados" onClose={() => setConfirmacion(null)}>
-          <ConfirmarImpactoDialog
-            impacto={confirmacion}
-            esPropia={!esAdmin}
-            profesional={nombreProfesional(profesional)}
-            error={error}
-            cargando={guardando}
-            onConfirmar={() => void aplicar(sinClaves(borrador), true, confirmacion.cantidad)}
-            onVolver={() => {
-              setConfirmacion(null);
-              setError(null);
-            }}
-          />
-        </Modal>
-      )}
-    </main>
+          </Modal>
+        )}
+      </div>
+    </>
   );
 }

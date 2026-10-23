@@ -7,6 +7,12 @@ export interface Usuario {
   id: number;
   email: string;
   rol: RolUsuario;
+  /**
+   * Identidad para mostrar (tarjeta del shell). `/auth/me` la devuelve desde RF-40; hasta
+   * entonces (o para cuentas sin ficha) llega vacía y el shell cae en rol + email.
+   */
+  nombre?: string | null;
+  apellido?: string | null;
 }
 
 // `identificador` acepta DNI o email (W-01 / diseño Vitalys.dc.html: "DNI o

@@ -201,7 +201,7 @@ class FeriadoControllerIT extends IntegrationTestBase {
     @Test
     void sincronizar_admin_fuenteCaida_devuelve207ConLosErroresYDejaElCalendarioIntacto() {
         feriadoRepository.save(Feriado.manual(
-                LocalDate.of(ANIO_DE_PRUEBA, 5, 5), "Manual que debe sobrevivir", TipoFeriado.NO_LABORABLE, true));
+                LocalDate.of(ANIO_DE_PRUEBA + 2, 5, 5), "Manual que debe sobrevivir", TipoFeriado.NO_LABORABLE, true));
         long antes = feriadoRepository.count();
         FUENTE_CAIDA.set(true);
 

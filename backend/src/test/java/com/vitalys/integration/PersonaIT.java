@@ -8,6 +8,7 @@ import com.vitalys.domain.Usuario;
 import com.vitalys.dto.LoginResponse;
 import com.vitalys.dto.PersonaResponse;
 import com.vitalys.repository.UsuarioRepository;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -89,6 +90,115 @@ class PersonaIT extends IntegrationTestBase {
                 llamar(HttpMethod.POST, "/api/personas", alta(email, dni, true), tokenAdmin, PersonaResponse.class);
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return r.getBody();
+    }
+
+    // ------------------------------------------------------------------ RF-43: cuota, servicios y filtro de deuda
+
+    private PersonaResponse[] listar(String query) {
+        return llamar(HttpMethod.GET, "/api/personas" + query, null, tokenAdmin, PersonaResponse[].class).getBody();
+    }
+
+    private PersonaResponse crearSocioConInicio(String email, String dni, boolean gym, String inicio) {
+        Map<String, Object> body = alta(email, dni, gym);
+        ((Map<String, Object>) body.get("datos")).put("fechaInicioMembresia", gym ? inicio : null);
+        ResponseEntity<PersonaResponse> r = llamar(HttpMethod.POST, "/api/personas", body, tokenAdmin, PersonaResponse.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return r.getBody();
+    }
+
+    private static PersonaResponse buscar(PersonaResponse[] lista, Long id) {
+        return java.util.Arrays.stream(lista).filter(p -> p.id().equals(id)).findFirst().orElseThrow();
+    }
+
+    @Test
+    void pi132_pi133_listadoConCuotaServiciosYFiltroDeDeuda() {
+        String marca = UUID.randomUUID().toString().substring(0, 8);
+        LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Argentina/Buenos_Aires"));
+        PersonaResponse alDia = crearSocioConInicio("aldia-" + marca + "@mail.test", dniNuevo(), true, hoy.withDayOfMonth(1).toString());
+        PersonaResponse suspendida =
+                crearSocioConInicio("susp-" + marca + "@mail.test", dniNuevo(), true, hoy.withDayOfMonth(1).minusMonths(9).toString());
+        PersonaResponse soloConsultorio = crearSocioConInicio("cons-" + marca + "@mail.test", dniNuevo(), false, null);
+
+        PersonaResponse[] todas = listar("");
+        PersonaResponse a = buscar(todas, alDia.id());
+        PersonaResponse s = buscar(todas, suspendida.id());
+        PersonaResponse c = buscar(todas, soloConsultorio.id());
+
+        assertThat(a.cuota().periodosImpagos()).isZero();
+        assertThat(a.cuota().suspendido()).isFalse();
+        assertThat(s.cuota().periodosImpagos()).isGreaterThanOrEqualTo(s.cuota().umbral());
+        assertThat(s.cuota().suspendido()).isTrue();
+        assertThat(s.cuota().excepcionHasta()).isNull();
+        assertThat(c.cuota()).isNull();
+        assertThat(java.util.List.of(a, s, c)).allSatisfy(p -> {
+            assertThat(p.tieneUsuarioSocio()).isTrue();
+            assertThat(p.especialidades()).isEmpty();
+        });
+
+        // Con una excepcion vigente deja de estar suspendida y se informa hasta cuando
+        LocalDate hasta = hoy.plusDays(5);
+        jdbcTemplate.update(
+                "INSERT INTO excepciones_morosidad (persona_id, autorizado_por, motivo, valida_hasta, un_solo_uso) "
+                        + "VALUES (?, (SELECT id FROM usuarios WHERE rol = 'ADMIN' LIMIT 1), 'plan de pago', ?, false)",
+                suspendida.id(),
+                hasta);
+        PersonaResponse conExcepcion = buscar(listar(""), suspendida.id());
+        assertThat(conExcepcion.cuota().suspendido()).isFalse();
+        assertThat(conExcepcion.cuota().excepcionHasta()).isEqualTo(hasta);
+
+        // PI-133: "Con deuda" se resuelve en el servidor
+        assertThat(listar("?conDeuda=true"))
+                .extracting(PersonaResponse::id)
+                .contains(suspendida.id())
+                .doesNotContain(alDia.id(), soloConsultorio.id());
+    }
+
+    @Test
+    void pi134_listadoConDeudaEsSoloDelAdmin() {
+        String email = "socio-d-" + UUID.randomUUID() + "@mail.test";
+        crearPersona(email, dniNuevo());
+
+        assertThat(llamar(HttpMethod.GET, "/api/personas?conDeuda=true", null, login(email), String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void listado_noIncluyeLaFichaDelAdminPeroSiSePuedeObtenerPorId() {
+        String emailAdmin = "laura-" + UUID.randomUUID() + "@vitalys.test";
+        Usuario admin = usuarioRepository.save(new Usuario(emailAdmin, passwordEncoder.encode(CLAVE), RolUsuario.ADMIN));
+        Long personaId = jdbcTemplate.queryForObject(
+                "INSERT INTO personas (usuario_id, nombre, apellido, dni) VALUES (?, 'Laura', 'Benítez', ?) RETURNING id",
+                Long.class,
+                admin.getId(),
+                dniNuevo());
+
+        assertThat(listar("")).extracting(PersonaResponse::id).doesNotContain(personaId);
+        PersonaResponse ficha =
+                llamar(HttpMethod.GET, "/api/personas/" + personaId, null, login(emailAdmin), PersonaResponse.class).getBody();
+        assertThat(ficha.nombre()).isEqualTo("Laura");
+        assertThat(ficha.tieneUsuarioSocio()).isFalse();
+    }
+
+    @Test
+    void especialidades_derivanDeLosTurnosDeConsultorioNoCancelados() {
+        String marca = UUID.randomUUID().toString().substring(0, 8);
+        PersonaResponse persona = crearSocioConInicio("esp-" + marca + "@mail.test", dniNuevo(), false, null);
+        Long profesionalId = jdbcTemplate.queryForObject(
+                "WITH u AS (INSERT INTO usuarios (email, password_hash, rol) VALUES (?, 'x', 'PROFESIONAL') RETURNING id) "
+                        + "INSERT INTO profesionales (usuario_id, nombre, apellido, especialidad, duracion_turno_minutos) "
+                        + "SELECT id, 'Flor', 'Rueda', 'KINESIOLOGIA', 45 FROM u RETURNING id",
+                Long.class,
+                "kine-" + marca + "@vitalys.test");
+        jdbcTemplate.update(
+                "INSERT INTO turnos (persona_id, profesional_id, tipo_turno, reservado_por_usuario_id, inicio, fin, estado) "
+                        + "VALUES (?, ?, 'CONSULTORIO', ?, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days' + INTERVAL '45 minutes', 'COMPLETADO')",
+                persona.id(),
+                profesionalId,
+                persona.usuarioId());
+
+        PersonaResponse listada = buscar(listar(""), persona.id());
+
+        assertThat(listada.especialidades()).extracting(Enum::name).containsExactly("KINESIOLOGIA");
     }
 
     @Test

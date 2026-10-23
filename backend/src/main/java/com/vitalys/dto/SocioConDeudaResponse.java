@@ -6,6 +6,8 @@ import java.time.LocalDate;
 public record SocioConDeudaResponse(
         Long personaId,
         String persona,
+        String nombrePila,
+        String apellido,
         String dni,
         int periodosImpagos,
         int umbral,

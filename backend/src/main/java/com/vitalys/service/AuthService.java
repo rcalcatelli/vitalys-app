@@ -9,6 +9,8 @@ import com.vitalys.dto.RegistroRequest;
 import com.vitalys.exception.CredencialesInvalidasException;
 import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RolNoPermitidoException;
+import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.UsuarioRepository;
 import com.vitalys.security.JwtService;
 import java.util.Optional;
@@ -27,11 +29,20 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PersonaRepository personaRepository;
+    private final ProfesionalRepository profesionalRepository;
 
-    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+            UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            PersonaRepository personaRepository,
+            ProfesionalRepository profesionalRepository) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.personaRepository = personaRepository;
+        this.profesionalRepository = profesionalRepository;
     }
 
     @Transactional
@@ -87,11 +98,30 @@ public class AuthService {
         return new LoginResponse(token, usuario.getId(), usuario.getRol());
     }
 
+    /**
+     * RF-40: además de la identidad, el nombre de la ficha (persona para ADMIN y socios, profesional
+     * para PROFESIONAL). Sin ficha todavía, nombre y apellido van null y el cliente cae al email.
+     */
+    @Transactional(readOnly = true)
     public MeResponse me(String email) {
         Usuario usuario = usuarioRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new CredencialesInvalidasException("Usuario no encontrado"));
 
-        return new MeResponse(usuario.getId(), usuario.getEmail(), usuario.getRol());
+        String[] nombre = usuario.getRol() == RolUsuario.PROFESIONAL
+                ? profesionalRepository
+                        .findByUsuarioId(usuario.getId())
+                        .map(p -> new String[] {p.getNombre(), p.getApellido()})
+                        .orElse(null)
+                : personaRepository
+                        .findByUsuarioId(usuario.getId())
+                        .map(p -> new String[] {p.getNombre(), p.getApellido()})
+                        .orElse(null);
+        return new MeResponse(
+                usuario.getId(),
+                usuario.getEmail(),
+                usuario.getRol(),
+                nombre == null ? null : nombre[0],
+                nombre == null ? null : nombre[1]);
     }
 }

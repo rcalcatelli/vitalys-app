@@ -1,5 +1,6 @@
 package com.vitalys.service;
 
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoPersona;
 import com.vitalys.domain.Persona;
 import com.vitalys.domain.RolUsuario;
@@ -19,7 +20,11 @@ import com.vitalys.repository.PersonaSpecifications;
 import com.vitalys.repository.UsuarioRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import com.vitalys.service.MorosidadService.VeredictoMorosidad;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,26 +45,53 @@ public class PersonaService {
     private final PersonaRepository personaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MorosidadService morosidadService;
     private final Clock clock;
 
     public PersonaService(
             PersonaRepository personaRepository,
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder,
+            MorosidadService morosidadService,
             Clock clock) {
         this.personaRepository = personaRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.morosidadService = morosidadService;
         this.clock = clock;
     }
 
+    /**
+     * Listado del ADMIN (RF-06, RF-43): solo personas con usuario SOCIO_PACIENTE (la ficha del ADMIN,
+     * Laura Benítez en el seed, existe para firmar lo que opera pero no es una persona atendida).
+     * La deuda sale de {@link MorosidadService#veredictos} (RN-01) y {@code conDeuda} filtra con ella.
+     */
     @Transactional(readOnly = true)
-    public List<PersonaResponse> listar(Usuario actor, EstadoPersona estado, String texto, boolean soloGym) {
+    public List<PersonaResponse> listar(Usuario actor, EstadoPersona estado, String texto, boolean soloGym, boolean conDeuda) {
         exigirAdmin(actor);
         Specification<Persona> filtro = Specification.where(PersonaSpecifications.conEstado(estado))
                 .and(PersonaSpecifications.soloSociosGym(soloGym))
-                .and(PersonaSpecifications.coincideCon(texto));
-        return personaRepository.findAll(filtro, ORDEN).stream().map(PersonaResponse::de).toList();
+                .and(PersonaSpecifications.coincideCon(texto))
+                .and(PersonaSpecifications.conRolDeUsuario(RolUsuario.SOCIO_PACIENTE));
+        return enriquecer(personaRepository.findAll(filtro, ORDEN), conDeuda);
+    }
+
+    private List<PersonaResponse> enriquecer(List<Persona> personas, boolean soloConDeuda) {
+        if (personas.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, VeredictoMorosidad> veredictos = morosidadService.veredictos(personas);
+        List<Long> ids = personas.stream().map(Persona::getId).toList();
+        Map<Long, List<Especialidad>> especialidades = new HashMap<>();
+        for (Object[] fila : personaRepository.especialidadesAtendidas(ids)) {
+            especialidades
+                    .computeIfAbsent(((Number) fila[0]).longValue(), k -> new ArrayList<>())
+                    .add(Especialidad.valueOf((String) fila[1]));
+        }
+        return personas.stream()
+                .filter(p -> !soloConDeuda || veredictos.get(p.getId()).deuda().periodosImpagos() > 0)
+                .map(p -> PersonaResponse.de(p, veredictos.get(p.getId()), especialidades.getOrDefault(p.getId(), List.of())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +101,7 @@ public class PersonaService {
         if (!esAdmin(actor) && !esPropia) {
             throw new AccesoDenegadoException("Solo podés consultar tu propia ficha");
         }
-        return PersonaResponse.de(persona);
+        return enriquecer(List.of(persona), false).get(0);
     }
 
     /** Alta presencial (RF-05): usuario SOCIO_PACIENTE + persona en una sola transacción. */

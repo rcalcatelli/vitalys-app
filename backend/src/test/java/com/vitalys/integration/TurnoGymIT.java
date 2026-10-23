@@ -1,6 +1,7 @@
 package com.vitalys.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
@@ -272,6 +273,46 @@ class TurnoGymIT extends IntegrationTestBase {
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------ RN-28: completado_en y DNI del listado
+
+    @Test
+    void pi124_checkInGuardaCompletadoEnYElListadoDelAdminTraeElDni() {
+        Socio s = socioAlDia();
+        TurnoResponse t = reservarOk(s.token(), franja(diaHabil(2), 15, 0));
+        assertThat(t.completadoEn()).isNull();
+        // El turno ya empezó: se lo corre dos semanas al pasado, a la misma hora de la grilla
+        jdbcTemplate.update(
+                "UPDATE turnos SET inicio = inicio - INTERVAL '28 days', fin = fin - INTERVAL '28 days' WHERE id = ?", t.id());
+
+        ResponseEntity<TurnoResponse> r = llamar(HttpMethod.PATCH, "/api/turnos/" + t.id() + "/completado", null, tokenAdmin, TurnoResponse.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody().estado().name()).isEqualTo("COMPLETADO");
+        assertThat(r.getBody().completadoEn()).isNotNull().isAfter(OffsetDateTime.now().minusMinutes(2));
+        assertThat(jdbcTemplate.queryForObject("SELECT completado_en IS NOT NULL FROM turnos WHERE id = ?", Boolean.class, t.id())).isTrue();
+
+        TurnoResponse[] listado = llamar(HttpMethod.GET, "/api/turnos?tipo=GYM&personaId=" + s.persona().id(), null, tokenAdmin, TurnoResponse[].class).getBody();
+        assertThat(listado).singleElement().satisfies(x -> {
+            assertThat(x.personaDni()).isEqualTo(s.persona().dni());
+            assertThat(x.personaNombre()).isEqualTo("Socio");
+            assertThat(x.personaApellido()).isEqualTo("Prueba");
+            assertThat(x.completadoEn()).isNotNull();
+        });
+        // El socio ve sus turnos sin el DNI (solo el listado del ADMIN lo expone)
+        TurnoResponse[] mios = llamar(HttpMethod.GET, "/api/turnos/mis-turnos", null, s.token(), TurnoResponse[].class).getBody();
+        assertThat(mios).singleElement().satisfies(x -> assertThat(x.personaDni()).isNull());
+    }
+
+    @Test
+    void completadoEn_soloEnTurnosCompletadosLoGarantizaLaBase() {
+        Socio s = socioAlDia();
+        TurnoResponse t = reservarOk(s.token(), franja(diaHabil(2), 16, 0));
+
+        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE turnos SET completado_en = NOW() WHERE id = ?", t.id()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+                .hasMessageContaining("chk_turno_completado_en");
     }
 
     // ------------------------------------------------------------------ estado de gimnasio

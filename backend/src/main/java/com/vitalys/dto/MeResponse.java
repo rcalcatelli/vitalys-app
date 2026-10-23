@@ -15,10 +15,26 @@ public class MeResponse {
 
     private final RolUsuario rol;
 
-    public MeResponse(Long id, String email, RolUsuario rol) {
+    @Schema(description = "Nombre de pila de la ficha (persona o profesional); null si el usuario no tiene ficha.", example = "Laura")
+    private final String nombre;
+
+    @Schema(description = "Apellido de la ficha; null si el usuario no tiene ficha.", example = "Benítez")
+    private final String apellido;
+
+    public MeResponse(Long id, String email, RolUsuario rol, String nombre, String apellido) {
         this.id = id;
         this.email = email;
         this.rol = rol;
+        this.nombre = nombre;
+        this.apellido = apellido;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public String getApellido() {
+        return apellido;
     }
 
     public Long getId() {

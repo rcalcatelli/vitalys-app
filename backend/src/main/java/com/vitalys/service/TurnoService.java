@@ -1,6 +1,7 @@
 package com.vitalys.service;
 
 import com.vitalys.domain.DisponibilidadProfesional;
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Persona;
 import com.vitalys.domain.Profesional;
@@ -10,6 +11,7 @@ import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ProximaAgendaResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
@@ -59,6 +61,9 @@ public class TurnoService {
 
     /** El check-in se acepta desde un rato antes del inicio de la franja. */
     static final long MINUTOS_CHECKIN_ANTICIPADO = 15;
+
+    /** Hasta dónde mira la "próxima agenda" de un profesional (RF-41). */
+    static final int HORIZONTE_PROXIMA_AGENDA_DIAS = 21;
 
     private final TurnoRepository turnoRepository;
     private final PersonaRepository personaRepository;
@@ -290,11 +295,61 @@ public class TurnoService {
                 .toList();
     }
 
+    /**
+     * RF-41: para cada profesional activo (de la especialidad, si se indica), el primer día desde hoy
+     * con al menos un turno libre dentro de {@value #HORIZONTE_PROXIMA_AGENDA_DIAS} días y cuántos
+     * tiene ese día. Usa la misma generación de slots y la misma ocupación que {@link #slotsDisponibles}
+     * (RN-03: solo cuentan los turnos que ocupan lugar; los slots que ya pasaron no están libres).
+     * Dos consultas por profesional sin importar cuántos días recorra.
+     */
+    @Transactional(readOnly = true)
+    public List<ProximaAgendaResponse> proximasAgendas(Usuario actor, Especialidad especialidad) {
+        if (actor.getRol() == RolUsuario.PROFESIONAL) {
+            throw new AccesoDenegadoException("Un profesional no reserva turnos");
+        }
+        LocalDate hoy = LocalDate.now(clock);
+        OffsetDateTime desde = hoy.atStartOfDay(ZONA).toOffsetDateTime();
+        OffsetDateTime hasta = hoy.plusDays(HORIZONTE_PROXIMA_AGENDA_DIAS).atStartOfDay(ZONA).toOffsetDateTime();
+        java.time.Instant ahora = ahora().toInstant();
+        List<ProximaAgendaResponse> respuesta = new ArrayList<>();
+        for (Profesional p : profesionalRepository.findByActivo(true, Sort.by("apellido", "nombre"))) {
+            if (especialidad != null && p.getEspecialidad() != especialidad) {
+                continue;
+            }
+            List<DisponibilidadProfesional> franjas =
+                    disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(p.getId());
+            LocalDate fecha = null;
+            int libres = 0;
+            if (franjas.stream().anyMatch(DisponibilidadProfesional::isActivo)) {
+                List<java.time.Instant[]> ocupados = new ArrayList<>();
+                for (Object[] fila : turnoRepository.ocupadosDeProfesional(p.getId(), desde, hasta)) {
+                    ocupados.add(new java.time.Instant[] {instante(fila[0]), instante(fila[1])});
+                }
+                for (int i = 0; i < HORIZONTE_PROXIMA_AGENDA_DIAS && fecha == null; i++) {
+                    LocalDate dia = hoy.plusDays(i);
+                    int n = (int) generarSlots(franjasDelDia(franjas, dia), dia, p.getDuracionTurnoMinutos()).stream()
+                            .filter(s -> s[0].toInstant().isAfter(ahora)
+                                    && ocupados.stream().noneMatch(o -> o[0].isBefore(s[1].toInstant()) && o[1].isAfter(s[0].toInstant())))
+                            .count();
+                    if (n > 0) {
+                        fecha = dia;
+                        libres = n;
+                    }
+                }
+            }
+            respuesta.add(new ProximaAgendaResponse(
+                    p.getId(), p.getNombre(), p.getApellido(), p.getEspecialidad(), p.getDuracionTurnoMinutos(), fecha, libres));
+        }
+        return respuesta;
+    }
+
     private List<DisponibilidadProfesional> franjasDelDia(Long profesionalId, LocalDate fecha) {
+        return franjasDelDia(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(profesionalId), fecha);
+    }
+
+    private static List<DisponibilidadProfesional> franjasDelDia(List<DisponibilidadProfesional> franjas, LocalDate fecha) {
         int dia = fecha.getDayOfWeek().getValue();
-        return disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(profesionalId).stream()
-                .filter(f -> f.isActivo() && f.getDiaSemana() == dia)
-                .toList();
+        return franjas.stream().filter(f -> f.isActivo() && f.getDiaSemana() == dia).toList();
     }
 
     /**
@@ -362,7 +417,7 @@ public class TurnoService {
         if (ahora().isBefore(turno.getInicio().minusMinutes(MINUTOS_CHECKIN_ANTICIPADO))) {
             throw new ReglaDeNegocioException("Todavía no se puede registrar la asistencia: el turno no empezó");
         }
-        turno.marcar(EstadoTurno.COMPLETADO);
+        turno.completar(ahora());
         return TurnoResponse.de(guardar(turno));
     }
 
@@ -442,7 +497,7 @@ public class TurnoService {
                     cb.greaterThanOrEqualTo(root.<OffsetDateTime>get("inicio"), desde),
                     cb.lessThan(root.<OffsetDateTime>get("inicio"), hasta)));
         }
-        return turnoRepository.findAll(filtro, Sort.by("inicio")).stream().map(TurnoResponse::de).toList();
+        return turnoRepository.findAll(filtro, Sort.by("inicio")).stream().map(TurnoResponse::paraAdmin).toList();
     }
 
     // ---------------------------------------------------------------- auxiliares

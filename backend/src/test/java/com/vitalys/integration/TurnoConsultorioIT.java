@@ -136,6 +136,50 @@ class TurnoConsultorioIT extends IntegrationTestBase {
     }
 
     @Test
+    void pi127_pi129_proximaAgendaDelProfesionalYSusRoles() {
+        com.vitalys.dto.ProximaAgendaResponse[] todas = llamar(
+                        HttpMethod.GET, "/api/turnos/consultorio/proxima-agenda", null, tokenAdmin, com.vitalys.dto.ProximaAgendaResponse[].class)
+                .getBody();
+
+        assertThat(todas).filteredOn(x -> x.profesionalId().equals(profesional.id())).singleElement().satisfies(x -> {
+            assertThat(x.nombre()).isEqualTo("Valentina");
+            assertThat(x.apellido()).isEqualTo("Méndez");
+            assertThat(x.duracionTurnoMinutos()).isEqualTo(30);
+            // Solo atiende los miércoles: la próxima agenda es un miércoles dentro de las 3 semanas
+            assertThat(x.fecha().getDayOfWeek()).isEqualTo(DayOfWeek.WEDNESDAY);
+            assertThat(x.fecha()).isBetween(LocalDate.now(ZONA), LocalDate.now(ZONA).plusDays(20));
+            assertThat(x.libres()).isBetween(1, 4);
+        });
+        // Un socio la consulta igual, filtrada por especialidad
+        Socio socio = socio(false);
+        assertThat(llamar(HttpMethod.GET, "/api/turnos/consultorio/proxima-agenda?especialidad=NUTRICION", null, socio.token(),
+                        com.vitalys.dto.ProximaAgendaResponse[].class).getBody())
+                .extracting(com.vitalys.dto.ProximaAgendaResponse::profesionalId)
+                .contains(profesional.id());
+        assertThat(llamar(HttpMethod.GET, "/api/turnos/consultorio/proxima-agenda?especialidad=PSICOLOGIA", null, socio.token(),
+                        com.vitalys.dto.ProximaAgendaResponse[].class).getBody())
+                .extracting(com.vitalys.dto.ProximaAgendaResponse::profesionalId)
+                .doesNotContain(profesional.id());
+        // PI-129: un profesional no
+        assertThat(llamar(HttpMethod.GET, "/api/turnos/consultorio/proxima-agenda", null, tokenProfesional, String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void pi128_proximaAgenda_sinFranjasActivasNoTieneFecha() {
+        jdbcTemplate.update("UPDATE disponibilidad_profesional SET activo = FALSE WHERE profesional_id = ?", profesional.id());
+
+        com.vitalys.dto.ProximaAgendaResponse[] todas = llamar(
+                        HttpMethod.GET, "/api/turnos/consultorio/proxima-agenda", null, tokenAdmin, com.vitalys.dto.ProximaAgendaResponse[].class)
+                .getBody();
+
+        assertThat(todas).filteredOn(x -> x.profesionalId().equals(profesional.id())).singleElement().satisfies(x -> {
+            assertThat(x.fecha()).isNull();
+            assertThat(x.libres()).isZero();
+        });
+    }
+
+    @Test
     void pi07_reservaEnUnSlotLibre_yElSlotQuedaTomado() {
         assertThat(slots()).hasSize(4).allMatch(SlotConsultorioResponse::libre);
         Socio s = socio(false);

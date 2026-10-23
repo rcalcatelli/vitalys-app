@@ -5,16 +5,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.vitalys.domain.ConceptoPago;
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.MedioPago;
 import com.vitalys.domain.Pago;
 import com.vitalys.domain.Persona;
+import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
@@ -27,6 +30,7 @@ import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.exception.ReglaDeNegocioException;
 import com.vitalys.repository.PagoRepository;
 import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import com.vitalys.service.MorosidadService.EstadoPeriodo;
@@ -52,6 +56,7 @@ class PagoServiceTest {
     private PagoRepository pagoRepository;
     private PersonaRepository personaRepository;
     private TurnoRepository turnoRepository;
+    private ProfesionalRepository profesionalRepository;
     private MorosidadService morosidadService;
     private PagoService service;
 
@@ -63,9 +68,10 @@ class PagoServiceTest {
         pagoRepository = mock(PagoRepository.class);
         personaRepository = mock(PersonaRepository.class);
         turnoRepository = mock(TurnoRepository.class);
+        profesionalRepository = mock(ProfesionalRepository.class);
         morosidadService = mock(MorosidadService.class);
         Clock clock = Clock.fixed(Instant.parse("2026-10-20T15:00:00Z"), ZoneId.of("America/Argentina/Buenos_Aires"));
-        service = new PagoService(pagoRepository, personaRepository, turnoRepository, morosidadService, clock);
+        service = new PagoService(pagoRepository, personaRepository, turnoRepository, profesionalRepository, morosidadService, clock);
         when(pagoRepository.saveAndFlush(any(Pago.class))).thenAnswer(inv -> inv.getArgument(0));
         when(personaRepository.findById(10L)).thenReturn(Optional.of(socia));
     }
@@ -297,6 +303,70 @@ class PagoServiceTest {
         assertThat(r.sesiones().get(0).turnoId()).isEqualTo(7L);
         assertThat(r.sesiones().get(0).fechaTurno()).isEqualTo(t.getInicio());
         assertThat(r.totales().cantidadPagos()).isEqualTo(1);
+    }
+
+    @Test
+    void estadoCuenta_sesionesTraenProfesionalYEspecialidadEnUnaSolaConsulta() {
+        deuda(0, 6, false, null);
+        Pago uno = new Pago(10L, ConceptoPago.SESION_CONSULTORIO, MONTO, MedioPago.EFECTIVO, null, 7L, 1L,
+                OffsetDateTime.parse("2026-10-02T10:00:00-03:00"));
+        Pago dos = new Pago(10L, ConceptoPago.SESION_CONSULTORIO, MONTO, MedioPago.EFECTIVO, null, 8L, 1L,
+                OffsetDateTime.parse("2026-10-03T10:00:00-03:00"));
+        Turno t7 = turno(EstadoTurno.COMPLETADO);
+        Turno t8 = TurnosDePrueba.consultorio(8L, socia, 3L, "2026-10-02T12:00:00Z", "2026-10-02T12:30:00Z");
+        t7.setId(7L);
+        Profesional pro = new Profesional(usuario(50L, RolUsuario.PROFESIONAL));
+        pro.setId(3L);
+        pro.setNombre("Valentina");
+        pro.setApellido("Méndez");
+        pro.setEspecialidad(Especialidad.NUTRICION);
+        when(pagoRepository.findByPersonaIdOrderByFechaPagoDesc(10L)).thenReturn(List.of(uno, dos));
+        when(turnoRepository.findAllById(List.of(7L, 8L))).thenReturn(List.of(t7, t8));
+        when(profesionalRepository.findAllById(List.of(3L))).thenReturn(List.of(pro));
+
+        EstadoCuentaResponse r = service.estadoCuenta(admin, 10L);
+
+        assertThat(r.sesiones()).allSatisfy(s -> {
+            assertThat(s.profesional()).isEqualTo("Valentina Méndez");
+            assertThat(s.especialidad()).isEqualTo(Especialidad.NUTRICION);
+        });
+        verify(profesionalRepository, times(1)).findAllById(any());
+    }
+
+    @Test
+    void estadoCuenta_sesionSinTurnoConocido_sinProfesional() {
+        deuda(0, 6, false, null);
+        Pago huerfano = new Pago(10L, ConceptoPago.SESION_CONSULTORIO, MONTO, MedioPago.EFECTIVO, null, null, 1L,
+                OffsetDateTime.parse("2026-10-02T10:00:00-03:00"));
+        when(pagoRepository.findByPersonaIdOrderByFechaPagoDesc(10L)).thenReturn(List.of(huerfano));
+
+        EstadoCuentaResponse r = service.estadoCuenta(admin, 10L);
+
+        assertThat(r.sesiones().get(0).profesional()).isNull();
+        assertThat(r.sesiones().get(0).especialidad()).isNull();
+    }
+
+    @Test
+    void estadoCuenta_excepcionTraeQuienLaAutorizo() {
+        ExcepcionMorosidad vigente = new ExcepcionMorosidad(10L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), false);
+        deuda(6, 6, true, vigente);
+        Persona laura = persona(99L, false, null);
+        laura.setNombre("Laura");
+        laura.setApellido("Benítez");
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.of(laura));
+        when(pagoRepository.findByPersonaIdOrderByFechaPagoDesc(10L)).thenReturn(List.of());
+
+        assertThat(service.estadoCuenta(admin, 10L).excepcion().autorizadaPor()).isEqualTo("Laura Benítez");
+    }
+
+    @Test
+    void estadoCuenta_excepcionDeAutorSinFicha_diceRecepcion() {
+        ExcepcionMorosidad vigente = new ExcepcionMorosidad(10L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), false);
+        deuda(6, 6, true, vigente);
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.empty());
+        when(pagoRepository.findByPersonaIdOrderByFechaPagoDesc(10L)).thenReturn(List.of());
+
+        assertThat(service.estadoCuenta(admin, 10L).excepcion().autorizadaPor()).isEqualTo("Recepción");
     }
 
     @Test

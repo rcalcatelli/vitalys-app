@@ -140,4 +140,27 @@ class SeedIT {
         assertThat(jdbc.queryForObject("SELECT estado::text FROM personas WHERE dni = '38100006'", String.class))
                 .isEqualTo("INACTIVO");
     }
+
+    @Test
+    void lauraBenitezEsLaPersonaDelAdminYNoEntraEnElListadoDeSocios() {
+        assertThat(jdbc.queryForObject(
+                        "SELECT p.nombre || ' ' || p.apellido FROM personas p JOIN usuarios u ON u.id = p.usuario_id "
+                                + "WHERE u.email = 'admin@vitalys.com' AND u.rol = 'ADMIN'",
+                        String.class))
+                .isEqualTo("Laura Benítez");
+        // El listado de Personas filtra por usuario SOCIO_PACIENTE: los 6 socios del seed, sin Laura
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM personas p JOIN usuarios u ON u.id = p.usuario_id WHERE u.rol = 'SOCIO_PACIENTE'",
+                        Integer.class))
+                .isEqualTo(6);
+    }
+
+    @Test
+    void completadoEnSoloPuedeEstarEnTurnosCompletadosYElSeedNoLoInventa() {
+        // chk_turno_completado_en: completado_en NULL salvo estado COMPLETADO; el seed no hace backfill
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM turnos WHERE completado_en IS NOT NULL", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM turnos WHERE completado_en IS NOT NULL AND estado <> 'COMPLETADO'", Integer.class))
+                .isZero();
+    }
 }

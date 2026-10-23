@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ErrorBoundary } from "../components/organisms/ErrorBoundary";
 import { OperarComoBanner } from "../components/molecules/OperarComoBanner";
 import { AppShell } from "../components/templates/AppShell";
 import type { NavItemVista, UsuarioVista } from "../components/templates/AppShell";
@@ -125,7 +126,9 @@ export function ShellLayout() {
       <ShellContext.Provider value={contexto}>
         {/* `key` por ruta: cada pantalla entra con `vtIn`, como en el mockup. */}
         <div key={pathname} className="animate-vt-in">
-          <Outlet />
+          <ErrorBoundary onVolverAlInicio={() => navigate("/", { replace: true })}>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </ShellContext.Provider>
     </AppShell>

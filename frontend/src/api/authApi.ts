@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { normalizarUsuario } from "./normalizar";
 import type { LoginRequest, LoginResponse, RegistroRequest, Usuario } from "../types/auth";
 
 /** POST /api/auth/login — público, sin token. `identificador` acepta DNI o email. */
@@ -16,5 +17,5 @@ export function registro(data: RegistroRequest): Promise<LoginResponse> {
 
 /** GET /api/auth/me — protegido por JWT. */
 export function me(): Promise<Usuario> {
-  return http.get<Usuario>("/api/auth/me", true);
+  return http.get<Usuario>("/api/auth/me", true).then(normalizarUsuario);
 }

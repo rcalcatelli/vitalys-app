@@ -14,7 +14,7 @@ export function NotificacionesFallidas({ notificaciones }: Props) {
           Notificaciones fallidas
         </h2>
         <span className="text-[0.8125rem] text-ink-3">
-          Los turnos ya están cancelados; lo que falló es el aviso al paciente.
+          La reserva o la cancelación ya quedó registrada; lo que falló es el aviso al socio.
         </span>
       </div>
 

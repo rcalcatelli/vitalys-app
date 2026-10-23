@@ -9,6 +9,7 @@ describe("NotificacionFallidaCard", () => {
 
     expect(screen.getByText("Juan García")).toBeInTheDocument();
     expect(screen.getByText("juan@mail.com")).toBeInTheDocument();
+    expect(screen.getByText("Aviso de cancelación")).toBeInTheDocument();
     expect(screen.getByText("Lic. Valentina Méndez")).toBeInTheDocument();
     expect(screen.getByText(/Miércoles 21 de octubre/)).toBeInTheDocument();
     expect(screen.getByText("10:30")).toBeInTheDocument();
@@ -44,5 +45,27 @@ describe("NotificacionFallidaCard", () => {
 
     expect(screen.getByText("2 intentos")).toBeInTheDocument();
     expect(screen.queryByText(/octubre/)).not.toBeInTheDocument();
+  });
+
+  it("nombra el tipo de aviso y no inventa profesional en un turno de gimnasio", () => {
+    render(
+      <NotificacionFallidaCard
+        notificacion={unaNotificacion({
+          tipoNotificacion: "RECORDATORIO",
+          profesionalNombre: null,
+        })}
+      />,
+    );
+    expect(screen.getByText("Recordatorio")).toBeInTheDocument();
+    expect(screen.queryByText("Lic. Valentina Méndez")).not.toBeInTheDocument();
+  });
+
+  it("un tipo desconocido se muestra tal cual", () => {
+    render(
+      <NotificacionFallidaCard
+        notificacion={unaNotificacion({ tipoNotificacion: "AVISO_DEUDA" })}
+      />,
+    );
+    expect(screen.getByText("AVISO_DEUDA")).toBeInTheDocument();
   });
 });

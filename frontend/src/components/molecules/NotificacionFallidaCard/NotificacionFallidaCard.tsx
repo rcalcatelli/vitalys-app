@@ -4,13 +4,19 @@ import { fechaLarga, horaCorta } from "../../../utils/formato";
 const chipBase =
   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
 
+const TIPOS: Record<string, string> = {
+  CONFIRMACION_TURNO: "Confirmación de turno",
+  AVISO_CANCELACION: "Aviso de cancelación",
+  RECORDATORIO: "Recordatorio",
+};
+
 interface Props {
   notificacion: NotificacionFallida;
 }
 
 /**
  * Molécula: una notificación fallida (DEFINITIVA → "Falló dos veces", HUERFANA → "Sin confirmar").
- * Los turnos ya están cancelados; lo que falló es el aviso al paciente.
+ * La reserva o la cancelación ya quedó registrada; lo que falló es el aviso al socio.
  */
 export function NotificacionFallidaCard({ notificacion: n }: Props) {
   const definitiva = n.tipo === "DEFINITIVA";
@@ -25,6 +31,9 @@ export function NotificacionFallidaCard({ notificacion: n }: Props) {
       </div>
 
       <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-[3px]">
+        <span className="text-xs font-semibold text-ink-3">
+          {TIPOS[n.tipoNotificacion] ?? n.tipoNotificacion}
+        </span>
         {n.profesionalNombre && <span className="text-sm text-ink">{n.profesionalNombre}</span>}
         {momento && (
           <span className="text-[0.8125rem] text-ink-2">

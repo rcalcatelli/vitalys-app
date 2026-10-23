@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setToken } from "../api/http";
 import { AuthProvider } from "../context/AuthContext";
+import { unEstadoCuenta } from "../test/pagoFixture";
 import { unEstadoGym } from "../test/turnoFixture";
 import { AppRoutes } from "./routes";
 
@@ -55,8 +56,10 @@ describe("AppRoutes", () => {
     "/admin/hoy",
     "/admin/personas",
     "/admin/profesionales",
+    "/admin/pagos",
     "/profesional/agenda",
     "/socio/turnos",
+    "/socio/estado-cuenta",
     "/socio/reservar-gimnasio",
     "/socio/reservar-consultorio",
     "/profesional/disponibilidad",
@@ -74,6 +77,7 @@ describe("AppRoutes", () => {
       let cuerpo: unknown = [];
       if (url.includes("/api/auth/me")) cuerpo = { id: 1, email: "u@vitalys.test", rol };
       else if (url.includes("/gym/estado")) cuerpo = unEstadoGym();
+      else if (url.includes("/api/pagos/mi-estado-cuenta")) cuerpo = unEstadoCuenta();
       return Promise.resolve({
         ok: true,
         status: 200,
@@ -86,6 +90,7 @@ describe("AppRoutes", () => {
     ["/socio/reservar-gimnasio", "Reservar gimnasio"],
     ["/socio/reservar-consultorio", "Turno de consultorio"],
     ["/socio/turnos", "Mis turnos"],
+    ["/socio/estado-cuenta", "Estado de cuenta"],
   ])("%s muestra su pantalla al socio", async (path, titulo) => {
     sesionComo("SOCIO_PACIENTE");
     renderAt(path);

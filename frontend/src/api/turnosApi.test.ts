@@ -51,6 +51,13 @@ describe("turnosApi", () => {
     ],
     ["marcarCompletado", () => api.marcarCompletado(9), "PATCH", "/api/turnos/9/completado"],
     ["marcarAusente", () => api.marcarAusente(9), "PATCH", "/api/turnos/9/ausente"],
+    [
+      "listarTurnos con persona y tipo",
+      () => api.listarTurnos({ personaId: 3, tipo: "CONSULTORIO" }),
+      "GET",
+      "/api/turnos?personaId=3&tipo=CONSULTORIO",
+    ],
+    ["listarTurnos sin filtro", () => api.listarTurnos({}), "GET", "/api/turnos"],
   ])("%s", async (_nombre, ejecutar, method, url, body) => {
     stub();
     await ejecutar();

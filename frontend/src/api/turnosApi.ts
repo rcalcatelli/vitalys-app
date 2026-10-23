@@ -1,5 +1,12 @@
 import { http } from "./http";
-import type { EstadoGym, FranjaGym, SlotConsultorio, Turno, TurnoAgenda } from "../types/turno";
+import type {
+  EstadoGym,
+  FranjaGym,
+  SlotConsultorio,
+  TipoTurno,
+  Turno,
+  TurnoAgenda,
+} from "../types/turno";
 
 /** GET /api/turnos/gym/cupo?fecha: grilla del día. Vacía si es domingo o feriado. */
 export function cupoGym(fecha: string): Promise<FranjaGym[]> {
@@ -55,4 +62,13 @@ export function marcarCompletado(id: number): Promise<Turno> {
 /** PATCH /api/turnos/{id}/ausente: solo con el turno ya iniciado. */
 export function marcarAusente(id: number): Promise<Turno> {
   return http.patch<Turno>(`/api/turnos/${id}/ausente`);
+}
+
+/** GET /api/turnos?tipo&personaId: listado filtrado (ADMIN). */
+export function listarTurnos(filtro: { personaId?: number; tipo?: TipoTurno }): Promise<Turno[]> {
+  const params = new URLSearchParams();
+  if (filtro.personaId !== undefined) params.set("personaId", String(filtro.personaId));
+  if (filtro.tipo) params.set("tipo", filtro.tipo);
+  const query = params.toString();
+  return http.get<Turno[]>(`/api/turnos${query ? `?${query}` : ""}`);
 }

@@ -4,6 +4,7 @@ const ITEMS = [
   { to: "/socio/reservar-gimnasio", etiqueta: "Reservar gimnasio", gym: true },
   { to: "/socio/reservar-consultorio", etiqueta: "Turno de consultorio", gym: false },
   { to: "/socio/turnos", etiqueta: "Mis turnos", gym: false },
+  { to: "/socio/estado-cuenta", etiqueta: "Estado de cuenta", gym: false },
 ];
 
 /** Molécula: navegación del socio (gimnasio en naranja, consultorio y turnos en teal). */

@@ -35,6 +35,31 @@ El servicio devuelve **la cantidad de períodos mensuales impagos acumulados** d
 | PU-11 | Borde exacto: la cantidad de impagos iguala el umbral                         | impagos = 6, umbral = 6                              | bloqueado = true — la condición es "alcanza o supera", no "supera" |
 | PU-12 | El umbral se lee de la configuración, no está fijo en el código               | impagos = 2, `meses_tolerancia_morosidad` = 2        | bloqueado = true con el mismo historial que en PU-03 daría false con umbral 6 |
 
+### Estado de cuenta (frontend, Vitest + Testing Library)
+
+Los PU-13 a PU-30 son pruebas de la interfaz de pagos (Sprint 5); el cálculo de la regla vive en el backend y lo cubren PU-01 a PU-12 y PI-98 a PI-104.
+
+| ID    | Caso de prueba | Resultado esperado | Archivo |
+|-------|----------------|--------------------|---------|
+| PU-13 | Estado de cuenta de un socio suspendido | Avisa el límite de períodos impagos | `EstadoCuentaView.test.tsx` |
+| PU-14 | Excepción de morosidad vigente | Muestra hasta cuándo rige y el motivo | `EstadoCuentaView.test.tsx` |
+| PU-15 | Socio al día | Períodos pagados con monto, medio y fecha; sin excepción | `EstadoCuentaView.test.tsx` |
+| PU-16 | Persona que no es socia del gimnasio | Sin períodos; lista sus sesiones pagadas | `EstadoCuentaView.test.tsx` |
+| PU-17 | `GET /api/pagos/mi-estado-cuenta` responde 422 (usuario sin ficha) | Explica que falta la ficha y no ofrece reintentar | `MiEstadoCuentaPage.test.tsx` |
+| PU-18 | Error de red al cargar | Ofrece reintentar y se recupera | `MiEstadoCuentaPage.test.tsx` |
+| PU-19 | Registrar cuota: selección de período | Sugiere el primer período impago, bloquea los pagados y ofrece adelantos | `RegistrarPagoDialog.test.tsx` |
+| PU-20 | Enviar con monto o medio sin completar | Valida antes de enviar | `RegistrarPagoDialog.test.tsx` |
+| PU-21 | Enviar una cuota | Payload con período, monto y medio | `RegistrarPagoDialog.test.tsx` |
+| PU-22 | Registrar una sesión | Excluye turnos cancelados y de gimnasio, marca los ya pagados y envía el turno | `RegistrarPagoDialog.test.tsx` |
+| PU-23 | Persona que no es socia del gimnasio | No ofrece cuota; arranca en "sesión" | `RegistrarPagoDialog.test.tsx` |
+| PU-24 | Error del servidor al registrar | Muestra el error y bloquea el doble envío | `RegistrarPagoDialog.test.tsx` |
+| PU-25 | Buscar persona por nombre o DNI | Lista resultados con la etiqueta de socio | `PagosPage.test.tsx` |
+| PU-26 | Elegir a la persona | Muestra su estado de cuenta y permite cambiarla | `PagosPage.test.tsx` |
+| PU-27 | Registro exitoso | Cierra el modal, avisa y refresca el estado | `PagosPage.test.tsx` |
+| PU-28 | 409 del servidor (cuota duplicada) | Se muestra en el modal y no lo cierra | `PagosPage.test.tsx` |
+| PU-29 | Doble clic en "Registrar" | Bloquea el envío mientras el pago está en curso | `PagosPage.test.tsx` |
+| PU-30 | Sesión de consultorio de una persona | Carga los turnos de la persona y no ofrece cuota si no es socia | `PagosPage.test.tsx` |
+
 ### TurnoServiceTest
 
 | ID    | Caso de prueba                                                                 | Entrada                                              | Resultado esperado                          |
@@ -227,13 +252,35 @@ Casos contra las reglas de `db/migration/V2__reglas_gimnasio.sql` (grilla horari
 
 ### Pagos
 
+`PagoControllerIT` (Postgres real, Testcontainers) cubre PI-76 a PI-80 y PI-91 a PI-104. El nombre de cada método empieza con su ID (`pi76_…`, `pi91_…`) para que la trazabilidad doc ↔ test sea directa; un mismo PI puede tener más de una variante.
+
 | ID    | Caso                                                      | Resultado esperado                              |
 |-------|-----------------------------------------------------------|-------------------------------------------------|
-| PI-76 | Registrar cuota mensual                                   | 201, pago creado                                |
-| PI-77 | Registrar segunda cuota del mismo mes                     | 409 (uq_cuota_mensual)                         |
-| PI-78 | Registrar pago de sesión para turno sin turno_id         | 422 (chk_concepto_datos)                       |
-| PI-79 | Registrar segundo pago al mismo turno                     | 409 (uq_pago_por_turno)                        |
-| PI-80 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte) |
+| PI-76 | Registrar cuota mensual (período actual o futuro) y sesión de consultorio | 201; el pago devuelve `medio` y `fechaPago` y el medio queda guardado en la base |
+| PI-77 | Registrar segunda cuota del mismo mes                     | 409 (`uq_cuota_mensual`)                        |
+| PI-78 | Registrar pago de sesión sin `turnoId`                    | 422 (`chk_concepto_datos`)                      |
+| PI-79 | Registrar segundo pago al mismo turno                     | 409 (`uq_pago_por_turno`)                       |
+| PI-80 | Periodo con día distinto de 1 → rechazado                 | 422 (`chk_concepto_datos`: la regla del día 1 está dentro de esa restricción, no en una aparte; la base rechaza, no normaliza) |
+| PI-91 | `medio` ausente o fuera del enum                          | 400                                             |
+| PI-92 | Monto cero o negativo                                     | 400                                             |
+| PI-93 | Pago de sesión de un turno de gimnasio, o de un turno de otra persona | 422 (`trg_pago_sesion`, RN-20)      |
+| PI-94 | Cuota de una persona con `es_socio_gym = false`           | 422                                             |
+| PI-95 | Cuota de un período anterior a `fecha_inicio_membresia`   | 422                                             |
+| PI-96 | Pago de sesión de un turno cancelado                      | 422: la cancelación tardía se registra para la sanción, no genera cobro (RN-02) |
+| PI-97 | SOCIO_PACIENTE o PROFESIONAL intenta registrar un pago    | 403: solo el ADMIN registra                     |
+| PI-98 | Estado de cuenta: el socio ve el propio pero no el ajeno; el profesional y la persona inexistente | 200 propio; 403 ajeno y profesional; 404 inexistente (`/mi-estado-cuenta` incluido) |
+| PI-99 | `GET /api/pagos/mi-estado-cuenta` de un usuario sin ficha | 422 ("ficha")                                  |
+| PI-100 | Mezcla de períodos pagado / impago / pendiente           | `PAGADO` con su pago y medio; el último período `PENDIENTE`; `periodosImpagos` coincide con los `IMPAGO`; sin suspensión ni excepción |
+| PI-101 | Sesión pagada de una persona que no es socia             | Aparece en `sesiones` (con medio y fecha del turno), suma en `totales` y no hay períodos |
+| PI-102 | Pago de sesión con un `turnoId` inexistente              | 422 por la clave foránea ("el turno indicado no existe") |
+| PI-103 | Estado de cuenta y `GET /api/turnos/gym/estado`          | Coinciden en `suspendido`, `periodosImpagos` y `umbral`, con y sin excepción vigente: es la misma regla (`MorosidadService`) |
+| PI-104 | Registrar la cuota de una persona dada de baja (`INACTIVO`) | 201: sigue siendo cobrable                   |
+
+Además, `personaInexistente_da404` verifica que registrar un pago para una persona que no existe responde 404.
+
+> **Gracia de 10 días.** El límite de cada período es `periodo + 1 mes + 10 días`: hasta ese día inclusive figura `PENDIENTE`; desde el día siguiente, `IMPAGO` (RN-01 prevalece sobre el viejo CA-06-2). Los bordes los cubre `MorosidadServiceTest` (PU-02, PU-03, PU-09).
+
+> **Mercado Pago** queda fuera del alcance (RFC-001): los pagos se cargan a mano. `medio_pago` está diseñado para sumar `MERCADO_PAGO` más adelante con su propia migración.
 
 ---
 

@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -83,8 +85,9 @@ class TurnoServiceTest {
         personaRepository = mock(PersonaRepository.class);
         excepcionRepository = mock(ExcepcionMorosidadRepository.class);
         feriadoRepository = mock(FeriadoRepository.class);
-        morosidadService = mock(MorosidadService.class);
         jdbcTemplate = mock(JdbcTemplate.class);
+        // Real: el veredicto vive en MorosidadService; solo se reemplaza la deuda (JDBC)
+        morosidadService = spy(new MorosidadService(jdbcTemplate, excepcionRepository, Clock.fixed(AHORA.toInstant(), ZONA)));
         profesionalRepository = mock(ProfesionalRepository.class);
         disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
         service = new TurnoService(
@@ -105,7 +108,7 @@ class TurnoServiceTest {
         personaSocio.definirMembresiaGym(true, LocalDate.of(2026, 1, 1));
         when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personaSocio));
         when(personaRepository.findById(20L)).thenReturn(Optional.of(personaSocio));
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(0, 6, false));
+        doReturn(new EstadoDeuda(0, 6, false)).when(morosidadService).evaluar(any());
         when(turnoRepository.saveAndFlush(any(Turno.class))).thenAnswer(inv -> {
             Turno t = inv.getArgument(0);
             if (t != null && t.getId() == null) {
@@ -143,7 +146,7 @@ class TurnoServiceTest {
 
     @Test
     void tu08_deudaPorDebajoDelUmbral_reservaSinConsultarExcepciones() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(2, 6, false));
+        doReturn(new EstadoDeuda(2, 6, false)).when(morosidadService).evaluar(any());
 
         service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
 
@@ -152,7 +155,7 @@ class TurnoServiceTest {
 
     @Test
     void tu05_suspendidoSinExcepcion_lanza422() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(6, 6, true));
+        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)))
@@ -163,7 +166,7 @@ class TurnoServiceTest {
 
     @Test
     void tu06_suspendidoConExcepcionDeUnSoloUso_reservaYLaConsume() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(7, 6, true));
+        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
         ExcepcionMorosidad vigente = new ExcepcionMorosidad(20L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), true);
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida, vigente));
@@ -256,7 +259,7 @@ class TurnoServiceTest {
         doThrow(sinSql).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null))).isSameAs(sinSql);
 
-        DataIntegrityViolationException fk = rechazoDelMotor("23503", "fk");
+        DataIntegrityViolationException fk = rechazoDelMotor("23502", "not null");
         doThrow(fk).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null))).isSameAs(fk);
     }
@@ -265,7 +268,7 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_alDia_noSuspendidoYSinConsultarExcepciones() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(2, 6, false));
+        doReturn(new EstadoDeuda(2, 6, false)).when(morosidadService).evaluar(any());
 
         EstadoGymResponse e = service.estadoGym(socio, null);
 
@@ -275,7 +278,7 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_suspendidoSinExcepcion_igualQueLaReserva() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(6, 6, true));
+        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
 
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, true, 6, 6, false));
@@ -285,7 +288,7 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_conExcepcionVigente_noSuspendidoYLaReservaPasa() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(7, 6, true));
+        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
         ExcepcionMorosidad vigente = new ExcepcionMorosidad(20L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), false);
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida, vigente));
@@ -296,7 +299,7 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_excepcionVencida_siguesSuspendido() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(7, 6, true));
+        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida));
 
@@ -305,10 +308,10 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_enElUmbral_unPeriodoAntesNoSuspendeYEnElUmbralSi() {
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(5, 6, false));
+        doReturn(new EstadoDeuda(5, 6, false)).when(morosidadService).evaluar(any());
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, false, 5, 6, false));
 
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(6, 6, true));
+        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
         when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, true, 6, 6, false));
     }
@@ -316,7 +319,7 @@ class TurnoServiceTest {
     @Test
     void estadoGym_sinMembresia_devuelveCeros() {
         personaSocio.definirMembresiaGym(false, null);
-        when(morosidadService.evaluar(any())).thenReturn(EstadoDeuda.SIN_MEMBRESIA);
+        doReturn(EstadoDeuda.SIN_MEMBRESIA).when(morosidadService).evaluar(any());
 
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(false, false, 0, 0, false));
     }
@@ -562,7 +565,7 @@ class TurnoServiceTest {
     @Test
     void tu09_socioSuspendidoReservaConsultorioSinQueSeEvalueLaMorosidad() {
         nutricionista();
-        when(morosidadService.evaluar(any())).thenReturn(new EstadoDeuda(9, 6, true));
+        doReturn(new EstadoDeuda(9, 6, true)).when(morosidadService).evaluar(any());
 
         service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null));
 

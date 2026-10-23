@@ -280,7 +280,7 @@ a:hover{color:var(--clin)}
               </div>
             </sc-if>
             <sc-if value="{{ gym.exc }}" hint-placeholder-val="{{ false }}">
-              <div style="padding:12px 16px;border-radius:12px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px"><strong style="font-weight:600">Excepción autorizada por Recepción.</strong> Podés reservar aunque tu cuota esté vencida. {{ gym.excText }}</div>
+              <div style="padding:12px 16px;border-radius:12px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px"><strong style="font-weight:600">Excepción autorizada por Recepción.</strong> Podés reservar aunque tengas períodos impagos. {{ gym.excText }}</div>
             </sc-if>
             <div style="display:flex;flex-wrap:wrap;gap:6px">
               <sc-for list="{{ gymRules }}" as="r" hint-placeholder-count="4">
@@ -335,7 +335,7 @@ a:hover{color:var(--clin)}
         <sc-if value="{{ is.consulta }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
             <sc-if value="{{ cons.moraNote }}" hint-placeholder-val="{{ false }}">
-              <div style="padding:12px 16px;border-radius:12px;background:var(--clin-soft);color:var(--clin-ink);font-size:13.5px">Tu cuota de gimnasio está vencida, pero las consultas siguen habilitadas.</div>
+              <div style="padding:12px 16px;border-radius:12px;background:var(--clin-soft);color:var(--clin-ink);font-size:13.5px">Tenés períodos impagos de gimnasio, pero las consultas siguen habilitadas.</div>
             </sc-if>
             <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-3)">
               <span style="display:flex;align-items:center;gap:6px;color:var(--clin-ink);font-weight:600"><span style="width:20px;height:20px;border-radius:50%;background:var(--clin);color:var(--on-clin);display:flex;align-items:center;justify-content:center;font-size:11px">1</span>Especialidad</span>
@@ -419,59 +419,168 @@ a:hover{color:var(--clin)}
           </div>
         </sc-if>
 
-        <!-- ============ SOCIO: ESTADO DE CUENTA ============ -->
-        <sc-if value="{{ is.cuenta }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
-            <sc-if value="{{ acc.blocked }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;background:var(--bad-soft);color:var(--bad-ink);border:1px solid var(--bad)">
-                <strong style="font-weight:600">Reserva de gimnasio bloqueada · {{ acc.dias }} días de mora</strong>
-                <span style="font-size:13.5px">Registrá el pago en recepción para volver a reservar. Las consultas siguen habilitadas.</span>
+        <!-- ============ RECEPCIÓN: PAGOS (por persona) ============ -->
+        <sc-if value="{{ is.cobros }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:16px;animation:vtIn .3s ease">
+            <input value="{{ f.cobQ }}" onChange="{{ on.cobQ }}" placeholder="Buscar por nombre o DNI" style="height:44px;padding:0 14px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface);color:var(--text);font-size:15px;outline:none" style-focus="border-color:var(--clin)">
+            <sc-if value="{{ cob.showResults }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+                <sc-for list="{{ cob.results }}" as="r" hint-placeholder-count="3">
+                  <button onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 16px;border:0;border-top:1px solid var(--border);background:transparent;color:var(--text);text-align:left" style-hover="background:var(--surface-2)">
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:500">{{ r.name }}</span><span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ r.dni }}</span></span></span>
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ cob.noResults }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3)">No encontramos a nadie con ese nombre o DNI.</div></sc-if>
               </div>
             </sc-if>
-            <div style="display:flex;flex-wrap:wrap;gap:16px">
-              <div style="flex:3 1 360px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)">
-                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px">
-                  <div style="display:flex;flex-direction:column;gap:4px">
-                    <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--gym)"></span>Cuota mensual de gimnasio</span>
-                    <span style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500">{{ fee.amount }}</span>
-                  </div>
-                  <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;background:{{ fee.chip.bg }};color:{{ fee.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ fee.chip.label }}</span>
+            <sc-if value="{{ cob.idle }}" hint-placeholder-val="{{ true }}"><div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">Buscá a una persona por nombre o DNI para ver su estado de cuenta y registrar pagos.</div></sc-if>
+            <sc-if value="{{ cob.sinFicha }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:12px;padding:18px;border:1px dashed var(--border-2);border-radius:14px;background:var(--surface)">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ cob.u.name }} no tiene ficha cargada</span>
+                  <span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ cob.u.dni }}</span> · {{ cob.u.email }}</span>
                 </div>
-                <sc-if value="{{ acc.hasSteps }}" hint-placeholder-val="{{ true }}">
-                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
-                    <sc-for list="{{ acc.steps }}" as="st" hint-placeholder-count="3">
-                      <div style="display:flex;flex-direction:column;gap:6px">
-                        <span style="height:4px;border-radius:2px;background:{{ st.bar }}"></span>
-                        <span style="font-size:12px;color:var(--text-3)">{{ st.label }}</span>
-                        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:{{ st.fg }}">{{ st.date }}</span>
+                <span style="color:var(--text-2);font-size:13.5px;text-wrap:pretty">Tiene usuario en Vitalys, pero todavía no se cargó su ficha de socio o paciente. Sin ficha no hay estado de cuenta ni se pueden registrar pagos.</span>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <button onClick="{{ cob.clear }}" style="height:44px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-weight:500">Buscar otra persona</button>
+                  <button onClick="{{ cob.goPersonas }}" style="height:44px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Cargar ficha en Personas</button>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cob.hasPerson }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+                <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:var(--clin-soft);color:var(--clin-ink)">{{ cob.p.ini }}</span>
+                <div style="flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:18px">{{ cob.p.name }}</span>
+                  <span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ cob.p.dni }}</span>
+                    <sc-for list="{{ cob.p.sv }}" as="c" hint-placeholder-count="2"><span style="font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span></sc-for>
+                  </span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-left:auto">
+                  <button onClick="{{ cob.clear }}" style="height:44px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text);font-weight:500">Cambiar persona</button>
+                  <button onClick="{{ cob.pay }}" style="height:44px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Registrar pago</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ ESTADO DE CUENTA (socio y recepción) ============ -->
+        <sc-if value="{{ showAcc }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;animation:vtIn .3s ease">
+            <sc-if value="{{ acc.loading }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;border:1px dashed var(--border-2);border-radius:14px;color:var(--text-2);text-align:center">Cargando estado de cuenta…</div></sc-if>
+            <sc-if value="{{ acc.error }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:12px;background:var(--bad-soft);color:var(--bad-ink);border:1px solid var(--bad)">
+                <div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <strong style="font-weight:600">No pudimos cargar el estado de cuenta</strong>
+                  <span style="font-size:13.5px">Puede ser un problema de conexión. Probá de nuevo en unos segundos.</span>
+                </div>
+                <button onClick="{{ acc.retry }}" style="height:44px;padding:0 16px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font-weight:600">Reintentar</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ acc.ok }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-wrap:wrap;gap:16px">
+                <div style="flex:3 1 360px;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px">
+                    <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                      <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--gym)"></span>Cuota mensual de gimnasio</span>
+                      <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:24px;line-height:1.15;color:{{ acc.st.fg }};text-wrap:balance">{{ acc.st.title }}</span>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;background:{{ acc.st.chip.bg }};color:{{ acc.st.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ acc.st.chip.label }}</span>
+                  </div>
+                  <sc-if value="{{ acc.hasMeter }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px">
+                        <sc-for list="{{ acc.meter }}" as="sg" hint-placeholder-count="6"><span style="height:6px;border-radius:3px;background:{{ sg.bg }}"></span></sc-for>
                       </div>
-                    </sc-for>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-3)">{{ acc.meterLabel }}</span>
+                    </div>
+                  </sc-if>
+                  <span style="color:var(--text-2);font-size:13.5px;text-wrap:pretty">{{ acc.st.line }}</span>
+                  <sc-if value="{{ acc.hasExc }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px">
+                      <strong style="font-weight:600">Excepción vigente hasta <span style="font-family:'IBM Plex Mono',monospace">{{ acc.excHasta }}</span></strong>
+                      <span style="text-wrap:pretty">{{ acc.excBy }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ acc.showMora }}" hint-placeholder-val="{{ true }}">
+                  <div style="flex:2 1 280px;padding:18px;border-radius:14px;background:var(--warn-soft);color:var(--warn-ink);display:flex;flex-direction:column;gap:8px">
+                    <strong style="font-weight:600;font-size:15px">Cómo funciona la mora</strong>
+                    <span style="font-size:13.5px;text-wrap:pretty">Las cuotas impagas se acumulan: un pago nuevo no cancela un mes salteado. Con deuda podés seguir reservando el gimnasio; al llegar al límite de períodos impagos queda suspendido hasta regularizar.</span>
+                    <span style="font-size:13.5px;text-wrap:pretty">Las consultas de Nutrición, Psicología y Kinesiología siguen habilitadas.</span>
                   </div>
                 </sc-if>
-                <span style="color:var(--text-2);font-size:13.5px">{{ fee.line }}</span>
               </div>
-              <div style="flex:2 1 280px;padding:18px;border-radius:14px;background:var(--warn-soft);color:var(--warn-ink);display:flex;flex-direction:column;gap:8px">
-                <strong style="font-weight:600;font-size:15px">Cómo funciona la mora</strong>
-                <span style="font-size:13.5px;text-wrap:pretty">Las cuotas impagas se acumulan: un pago nuevo no cancela un mes salteado. Con deuda podés seguir reservando el gimnasio; al llegar al límite de períodos impagos queda suspendido hasta regularizar.</span>
-                <span style="font-size:13.5px;text-wrap:pretty">Las consultas de Nutrición, Psicología y Kinesiología siguen habilitadas.</span>
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Pagos registrados</span>
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
-                <sc-for list="{{ acc.pays }}" as="p" hint-placeholder-count="3">
-                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
-                    <span style="font-weight:500">{{ p.concept }}</span>
-                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right">{{ p.amount }}</span>
-                    <span style="font-size:12.5px;color:var(--text-3)"><span style="font-family:'IBM Plex Mono',monospace">{{ p.date }}</span> · {{ p.method }}</span>
-                    <span style="font-size:12px;color:var(--ok-ink);text-align:right">Registrado</span>
+
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
+                <sc-for list="{{ acc.tiles }}" as="k" hint-placeholder-count="4">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0">
+                    <span style="font-size:12.5px;color:var(--text-2)">{{ k.label }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:500;line-height:1.1;color:{{ k.fg }}">{{ k.v }}</span>
+                    <span style="font-size:12px;color:var(--text-3)">{{ k.sub }}</span>
                   </div>
                 </sc-for>
-                <sc-if value="{{ acc.noPays }}" hint-placeholder-val="{{ false }}">
-                  <div style="padding:20px 16px;color:var(--text-3)">Todavía no hay pagos registrados.</div>
-                </sc-if>
               </div>
-            </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Períodos de cuota</span><span style="font-size:12.5px;color:var(--text-3)">{{ acc.perNote }}</span></div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+                  <sc-if value="{{ acc.wide }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1fr);gap:12px;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2)"><span>Período</span><span>Estado</span><span>Fecha de pago</span><span>Monto</span><span>Medio</span></div>
+                  </sc-if>
+                  <sc-for list="{{ acc.periods }}" as="r" hint-placeholder-count="4">
+                    <sc-if value="{{ acc.wide }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1fr);gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                        <span style="font-weight:500">{{ r.label }}</span>
+                        <span><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span></span>
+                        <span style="font-size:13px;color:{{ r.dateFg }}">{{ r.pre }}<span style="font-family:'IBM Plex Mono',monospace">{{ r.dd }}</span></span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-weight:500">{{ r.amount }}</span>
+                        <span style="color:var(--text-2)">{{ r.method }}</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ acc.narrow }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                        <span style="font-weight:500">{{ r.label }}</span>
+                        <span style="justify-self:end"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:{{ r.chip.bg }};color:{{ r.chip.fg }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ r.chip.label }}</span></span>
+                        <span style="font-size:12.5px;color:{{ r.dateFg }}">{{ r.mpre }}<span style="font-family:'IBM Plex Mono',monospace">{{ r.dd }}</span>{{ r.post }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right">{{ r.amount }}</span>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                  <sc-if value="{{ acc.noPeriods }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3)">{{ acc.noPeriodsText }}</div></sc-if>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Sesiones de consultorio pagadas</span>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+                  <sc-if value="{{ acc.wide }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.1fr);gap:12px;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2)"><span>Fecha del turno</span><span>Profesional</span><span>Monto</span><span>Medio</span></div>
+                  </sc-if>
+                  <sc-for list="{{ acc.sessions }}" as="r" hint-placeholder-count="2">
+                    <sc-if value="{{ acc.wide }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.1fr);gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                        <span style="font-weight:500">{{ r.dow }} <span style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ r.date }} · {{ r.time }}</span></span>
+                        <span style="display:flex;flex-direction:column;min-width:0"><span>{{ r.pro }}</span><span style="font-size:12px;color:var(--text-3)">{{ r.esp }}</span></span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-weight:500">{{ r.amount }}</span>
+                        <span style="display:flex;flex-direction:column"><span style="color:var(--text-2)">{{ r.method }}</span><span style="font-size:12px;color:var(--text-3)">Pagado el <span style="font-family:'IBM Plex Mono',monospace">{{ r.paid }}</span></span></span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ acc.narrow }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)">
+                        <span style="font-weight:500">{{ r.dow }} <span style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ r.date }} · {{ r.time }}</span></span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right">{{ r.amount }}</span>
+                        <span style="font-size:12.5px;color:var(--text-3)">{{ r.pro }} · {{ r.esp }}</span>
+                        <span style="font-size:12.5px;color:var(--text-2);text-align:right">{{ r.method }}</span>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                  <sc-if value="{{ acc.noSessions }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 16px;color:var(--text-3)">{{ acc.noSessText }}</div></sc-if>
+                </div>
+              </div>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -801,13 +910,13 @@ a:hover{color:var(--clin)}
         <sc-if value="{{ is.pagos }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:20px;animation:vtIn .3s ease">
             <div style="display:flex;flex-direction:column;gap:10px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Cuotas vencidas</span><span style="font-size:12.5px;color:var(--text-3)">Con el límite de períodos impagos se suspende la reserva de gimnasio.</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:17px">Períodos impagos</span><span style="font-size:12.5px;color:var(--text-3)">Con el límite de períodos impagos se suspende la reserva de gimnasio.</span></div>
               <div style="display:flex;flex-direction:column;gap:8px">
                 <sc-for list="{{ pag.overdue }}" as="o" hint-placeholder-count="3">
                   <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border)">
                     <div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px">
                       <span style="font-weight:600">{{ o.name }}</span>
-                      <span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ o.dni }}</span> · venció <span style="font-family:'IBM Plex Mono',monospace">{{ o.vencio }}</span></span>
+                      <span style="font-size:12.5px;color:var(--text-3)">DNI <span style="font-family:'IBM Plex Mono',monospace">{{ o.dni }}</span> · primer impago: {{ o.vencio }}</span>
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:0 1 190px">
                       <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:{{ o.diasFg }}">{{ o.dias }}</span>
@@ -897,36 +1006,68 @@ a:hover{color:var(--clin)}
       <sc-if value="{{ m.pago }}" hint-placeholder-val="{{ false }}">
         <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Registrar pago</h3>
         <span style="color:var(--text-2)">{{ m.name }} · DNI <span style="font-family:'IBM Plex Mono',monospace">{{ m.dni }}</span></span>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Concepto
-          <input value="{{ m.concept }}" readOnly="{{ true }}" style="height:44px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-size:14px">
-        </label>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
-          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Monto
-            <input inputMode="numeric" value="{{ f.monto }}" onChange="{{ on.monto }}" style="height:44px;width:100%;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;font-family:'IBM Plex Mono',monospace;outline:none" style-focus="border-color:var(--clin)">
-          </label>
-          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Medio
-            <select value="{{ f.medio }}" onChange="{{ on.medio }}" style="height:44px;width:100%;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
-              <option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option>
+        <sc-if value="{{ m.genErr }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:10px;background:var(--bad-soft);color:var(--bad-ink);font-size:13.5px"><strong style="font-weight:600">No se pudo registrar el pago</strong><span style="text-wrap:pretty">{{ m.genErr }}</span></div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;font-weight:500;color:var(--text-2)">Concepto</span>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+            <sc-for list="{{ m.concepts }}" as="c" hint-placeholder-count="2">
+              <button onClick="{{ c.pick }}" disabled="{{ c.disabled }}" style="min-height:44px;padding:6px 10px;border-radius:8px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-weight:500;font-size:13.5px;opacity:{{ c.op }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ m.noGymHelp }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--text-3);text-wrap:pretty">{{ m.noGymHelp }}</span></sc-if>
+        </div>
+        <sc-if value="{{ m.isCuota }}" hint-placeholder-val="{{ true }}">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Período
+            <select value="{{ m.v.period }}" onChange="{{ m.onPeriod }}" style="height:44px;width:100%;padding:0 8px;border:1px solid {{ m.bd.period }};border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+              <sc-for list="{{ m.periodOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
             </select>
+            <span style="font-size:12.5px;font-weight:400;color:var(--text-3);text-wrap:pretty">{{ m.periodHint }}</span>
+            <sc-if value="{{ m.e.period }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.period }}</span></sc-if>
+          </label>
+        </sc-if>
+        <sc-if value="{{ m.isSesion }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ m.hasCons }}" hint-placeholder-val="{{ true }}">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Turno de consultorio
+              <select value="{{ m.v.consId }}" onChange="{{ m.onCons }}" style="height:44px;width:100%;padding:0 8px;border:1px solid {{ m.bd.cons }};border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+                <sc-for list="{{ m.consOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+              </select>
+              <span style="font-size:12.5px;font-weight:400;color:var(--text-3)">No se muestran los turnos cancelados.</span>
+              <sc-if value="{{ m.e.cons }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.cons }}</span></sc-if>
+            </label>
+          </sc-if>
+          <sc-if value="{{ m.noCons }}" hint-placeholder-val="{{ false }}"><div style="padding:14px;border:1px dashed var(--border-2);border-radius:10px;color:var(--text-2);font-size:13.5px;text-align:center;text-wrap:pretty">No tiene turnos de consultorio para cobrar. Los turnos cancelados no se pueden cobrar.</div></sc-if>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Monto
+            <span style="position:relative;display:block">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-3)">$</span>
+              <input inputMode="numeric" value="{{ m.v.monto }}" onChange="{{ m.onMonto }}" onBlur="{{ m.blurMonto }}" placeholder="0" style="height:44px;width:100%;padding:0 12px 0 28px;border:1px solid {{ m.bd.monto }};border-radius:8px;background:var(--surface);color:var(--text);font-size:15px;font-family:'IBM Plex Mono',monospace;outline:none" style-focus="box-shadow:0 0 0 3px var(--clin-soft)">
+            </span>
+            <sc-if value="{{ m.e.monto }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.monto }}</span></sc-if>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Medio de pago
+            <select value="{{ m.v.medio }}" onChange="{{ m.onMedio }}" onBlur="{{ m.blurMedio }}" style="height:44px;width:100%;padding:0 8px;border:1px solid {{ m.bd.medio }};border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+              <option value="">Elegí un medio</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option>
+            </select>
+            <sc-if value="{{ m.e.medio }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:400;color:var(--bad-ink)">{{ m.e.medio }}</span></sc-if>
           </label>
         </div>
-        <span style="font-size:12.5px;color:var(--text-3)">Al registrar el pago, la cuota pasa a “Al día” y se desbloquea la reserva de gimnasio.</span>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
-          <button onClick="{{ doPago }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600">Registrar pago</button>
+          <button onClick="{{ doPago }}" disabled="{{ m.payDisabled }}" style="height:46px;padding:0 18px;border:0;border-radius:8px;background:var(--clin);color:var(--on-clin);font-weight:600;opacity:{{ m.payOp }}">{{ m.payBtn }}</button>
         </div>
       </sc-if>
 
       <sc-if value="{{ m.exc }}" hint-placeholder-val="{{ false }}">
         <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:600;font-size:21px">Autorizar excepción</h3>
-        <div style="padding:12px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px;text-wrap:pretty">Habilita a <strong style="font-weight:600">{{ m.name }}</strong> a reservar el gimnasio aunque tenga {{ m.dias }} días de mora. Queda registrada con tu usuario, fecha y motivo.</div>
+        <div style="padding:12px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:13.5px;text-wrap:pretty">Habilita a <strong style="font-weight:600">{{ m.name }}</strong> a reservar el gimnasio aunque tenga {{ m.dias }} períodos impagos. Queda registrada con tu usuario, fecha y motivo.</div>
         <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Motivo
           <textarea value="{{ f.motivo }}" onChange="{{ on.motivo }}" rows="3" placeholder="Ej.: pagará el viernes, acordado con administración" style="padding:10px 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;resize:vertical;outline:none" style-focus="border-color:var(--warn)"></textarea>
         </label>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Vigencia
-          <select value="{{ f.vig }}" onChange="{{ on.vig }}" style="height:44px;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
-            <option value="Hasta 48 h">Hasta 48 h</option><option value="Una sola reserva">Una sola reserva</option><option value="Hasta fin de mes">Hasta fin de mes</option>
-          </select>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)">Válida hasta
+          <input type="date" value="{{ f.excHasta }}" onChange="{{ on.excHasta }}" min="{{ m.excMin }}" style="height:44px;padding:0 12px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;font-family:'IBM Plex Mono',monospace;outline:none" style-focus="border-color:var(--warn)">
         </label>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button onClick="{{ closeModal }}" style="height:46px;padding:0 16px;border:1px solid var(--border-2);border-radius:8px;background:transparent;color:var(--text)">Cancelar</button>
@@ -1063,7 +1204,7 @@ a:hover{color:var(--clin)}
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;fechaDemo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;2026-09-29&quot;,&quot;2026-11-20&quot;],&quot;default&quot;:&quot;2026-09-29&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;socio&quot;,&quot;profesional&quot;,&quot;recepcion&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;simularError&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ninguno&quot;,&quot;estado de cuenta&quot;,&quot;registrar pago&quot;],&quot;default&quot;:&quot;ninguno&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;fechaDemo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;2026-09-29&quot;,&quot;2026-11-20&quot;],&quot;default&quot;:&quot;2026-09-29&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;socio&quot;,&quot;profesional&quot;,&quot;recepcion&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
   get TODAY() { return (this.props && this.props.fechaDemo) || '2026-09-29'; }
   get NOW() { const d = this.dOf(this.TODAY); d.setHours(10, 40); return d; }
@@ -1076,14 +1217,22 @@ class Component extends DCLogic {
   ESPS = ['Nutrición', 'Psicología', 'Kinesiología'];
   get PROS() { return (this.state && this.state.pros) || []; }
   SV = { gym: 'Gimnasio', nut: 'Nutrición', psi: 'Psicología', kin: 'Kinesiología' };
-  CUOTA = 38000;
+  LIMITE = 6;
   state = this.seed();
 
   seed() {
     const start = (this.props && this.props.startAs) || 'login';
     const role = start === 'login' ? 'socio' : start;
     const mail = n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(' ', '.') + '@mail.com';
-    const P = (id, name, dni, sv, fee) => ({ id, name, dni, sv, fee, email: mail(name) });
+    const P = (id, name, dni, sv, alta, baja) => ({ id, name, dni, sv, alta, baja: !!baja, email: mail(name) });
+    const rng = (a, b) => { const o = []; let [y, m] = a.split('-').map(Number); while (true) { const k = y + '-' + String(m).padStart(2, '0'); o.push(k); if (k === b) break; m++; if (m > 12) { m = 1; y++; } } return o; };
+    const paid = { p1: rng('2026-03', '2026-08'), p2: rng('2025-11', '2026-01'), p3: rng('2026-01', '2026-08').filter(k => k !== '2026-06'), p4: ['2025-12', '2026-01', '2026-02', '2026-04', '2026-06'], p8: rng('2026-02', '2026-09'), p9: rng('2026-05', '2026-08'), p10: ['2026-01', '2026-02'], p11: ['2026-04', '2026-05', '2026-08'], p12: ['2026-01', '2026-02', '2026-03'] };
+    const MED = ['Transferencia', 'Efectivo', 'Débito', 'Transferencia', 'Crédito'];
+    const pays = []; let pn = 0;
+    Object.keys(paid).forEach(pid => paid[pid].forEach(k => { pn++; pays.push({ id: 'y' + pn, pid, kind: 'cuota', period: k, date: k + '-0' + (3 + pn % 7), method: MED[pn % 5], amount: k >= '2026-07' ? 38000 : k >= '2026-01' ? 35000 : 32000 }); }));
+    pays.push({ id: 'ys1', pid: 'p1', kind: 'sesion', consId: 'c2', date: '2026-09-15', method: 'Débito', amount: 25000 });
+    pays.push({ id: 'ys2', pid: 'p5', kind: 'sesion', consId: 'c23', date: '2026-09-25', method: 'Efectivo', amount: 28000 });
+    pays.push({ id: 'ys3', pid: 'p3', kind: 'sesion', consId: 'c10', date: '2026-09-29', method: 'Transferencia', amount: 25000 });
     const ing = [['Lucía Rojas','40311852'],['Martín Díaz','36450221'],['Julieta Ibarra','39877610'],['Diego Paz','34512987'],['Camila Ortiz','38765002'],['Nicolás Herrera','37120554'],['Valeria Castro','41900213'],['Federico Molina','33876410'],['Paula Suárez','39011277'],['Agustín Ríos','42567001'],['Micaela Acosta','40782236'],['Gonzalo Benítez','35998120'],['Rocío Medina','38440915'],['Lautaro Silva','43120078']].map((x, i) => ({ id: 'i' + i, name: x[0], dni: x[1] }));
     const checkins = {};
     ['10:01','10:02','10:04','10:05','10:08','10:11','10:15','10:22','10:31'].forEach((t, i) => checkins['i' + i] = t);
@@ -1094,18 +1243,18 @@ class Component extends DCLogic {
       theme: (this.props && this.props.theme) || 'light',
       width: typeof window !== 'undefined' ? window.innerWidth : 1200,
       persons: [
-        P('p1','María Pérez','38100001',['gym','nut'],{ st: 'al_dia', vence: '2026-10-10' }),
-        P('p2','Juan García','35220417',['gym','psi'],{ st: 'bloqueado', vencio: '2026-09-11', dias: 18 }),
-        P('p3','Lucía Rojas','40311852',['gym','nut'],{ st: 'por_vencer', vence: '2026-10-01' }),
-        P('p4','Ana Fernández','37654120',['gym','kin'],{ st: 'vencida', vencio: '2026-09-22', dias: 7 }),
-        P('p5','Carlos Soto','29877345',['kin'],{ st: 'na' }),
-        P('p6','Pedro Gómez','33012988',['gym'],{ st: 'baja' }),
-        P('p7','Sofía Luna','41208776',['nut'],{ st: 'na' }),
-        P('p8','Martín Díaz','36450221',['gym','nut'],{ st: 'al_dia', vence: '2026-10-15' }),
-        P('p9','Julieta Ibarra','39877610',['gym','psi'],{ st: 'al_dia', vence: '2026-10-12' }),
-        P('p10','Tomás Vera','42100345',['gym'],{ st: 'bloqueado', vencio: '2026-09-17', dias: 12 }),
-        P('p11','Camila Ortiz','38765002',['gym','kin'],{ st: 'vencida', vencio: '2026-09-26', dias: 3 }),
-        P('p12','Diego Paz','34512987',['gym'],{ st: 'por_vencer', vence: '2026-10-03' }),
+        P('p1','María Pérez','38100001',['gym','nut'],'2026-03'),
+        P('p2','Juan García','35220417',['gym','psi'],'2025-11'),
+        P('p3','Lucía Rojas','40311852',['gym','nut'],'2026-01'),
+        P('p4','Ana Fernández','37654120',['gym','kin'],'2025-12'),
+        P('p5','Carlos Soto','29877345',['kin'],null),
+        P('p6','Pedro Gómez','33012988',['gym'],'2025-10',true),
+        P('p7','Sofía Luna','41208776',['nut'],null),
+        P('p8','Martín Díaz','36450221',['gym','nut'],'2026-02'),
+        P('p9','Julieta Ibarra','39877610',['gym','psi'],'2026-05'),
+        P('p10','Tomás Vera','42100345',['gym'],'2026-01'),
+        P('p11','Camila Ortiz','38765002',['gym','kin'],'2026-04'),
+        P('p12','Diego Paz','34512987',['gym'],'2026-01'),
       ],
       gym: [
         { id: 'g1', pid: 'p1', date: '2026-09-30', hour: 8, status: 'Reservado' },
@@ -1140,16 +1289,10 @@ class Component extends DCLogic {
       },
       draft: null,
       ingreso: ing, checkins,
-      payments: [
-        { id: 'y1', pid: 'p1', date: '2026-09-08', concept: 'Cuota septiembre', method: 'Transferencia', amount: 38000 },
-        { id: 'y2', pid: 'p1', date: '2026-09-15', concept: 'Consulta Nutrición', method: 'Débito', amount: 25000 },
-        { id: 'y3', pid: 'p1', date: '2026-08-09', concept: 'Cuota agosto', method: 'Transferencia', amount: 38000 },
-        { id: 'y4', pid: 'p1', date: '2026-07-10', concept: 'Cuota julio', method: 'Efectivo', amount: 35000 },
-        { id: 'y5', pid: 'p2', date: '2026-08-11', concept: 'Cuota agosto', method: 'Efectivo', amount: 38000 },
-        { id: 'y6', pid: 'p8', date: '2026-09-15', concept: 'Cuota septiembre', method: 'Débito', amount: 38000 },
-        { id: 'y7', pid: 'p9', date: '2026-09-12', concept: 'Cuota septiembre', method: 'Transferencia', amount: 38000 },
-      ],
-      exceptions: [],
+      payments: pays,
+      exceptions: [{ pid: 'p10', motivo: 'Acordó regularizar dos períodos el 05/10', hasta: '2026-10-15', by: 'Laura Benítez', when: '2026-09-25' }],
+      sinFicha: [{ id: 'u1', name: 'Gabriela Núñez', dni: '44120933', email: 'gabriela.nunez@mail.com' }],
+      cobPid: null, accRetried: false, accLoading: false,
       notifFails: [
         { id: 'nf1', name: 'Lucía Paredes', email: 'lucia.paredes@mail.com', pro: 'vm', date: '2026-09-30', time: '11:00', reason: 'El proveedor de email no respondió', tries: 2, last: '14:32', kind: 'fail' },
         { id: 'nf2', name: 'Martín Sosa', email: 'martin.sosa@mail.com', pro: 'fr', date: '2026-10-02', time: '09:00', reason: 'El envío no llegó a confirmarse', tries: 1, last: '08:15', kind: 'pending' },
@@ -1194,18 +1337,90 @@ class Component extends DCLogic {
     const t = { 'Reservado': 'clin', 'Completado': 'ok', 'Ausente': 'bad', 'Cancelado en término': 'neu', 'Cancelado fuera de término': 'warn', 'Cancelado por el centro': 'neu' }[s];
     return this.chip(pro && s === 'Completado' ? 'Atendido' : s, t);
   }
-  hasExc(pid) { return this.state.exceptions.some(e => e.pid === pid); }
+  ym(s) { return s.slice(0, 7); }
+  addM(k, n) { let [y, m] = k.split('-').map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + '-' + this.p2(m); }
+  pLabel(k) { const [y, m] = k.split('-').map(Number); return this.ML[m - 1] + ' ' + y; }
+  pLabelCap(k) { const l = this.pLabel(k); return l[0].toUpperCase() + l.slice(1); }
+  deadline(k) { return this.addM(k, 1) + '-10'; }
+  gymMember(p) { return p.sv.includes('gym') && !p.baja && !!p.alta; }
+  excOf(pid) { return this.state.exceptions.find(e => e.pid === pid && e.hasta >= this.TODAY); }
+  acct(p) {
+    const pays = this.state.payments.filter(y => y.pid === p.id), gm = this.gymMember(p), periods = [];
+    if (gm) {
+      let last = this.ym(this.TODAY);
+      pays.forEach(y => { if (y.kind === 'cuota' && y.period > last) last = y.period; });
+      for (let k = p.alta; k <= last; k = this.addM(k, 1)) {
+        const pay = pays.find(y => y.kind === 'cuota' && y.period === k), dl = this.deadline(k);
+        periods.push({ k, pay, dl, st: pay ? 'Pagado' : this.TODAY > dl ? 'Impago' : 'Pendiente' });
+      }
+    }
+    const impagos = periods.filter(x => x.st === 'Impago').length, exc = this.excOf(p.id), suspended = gm && impagos >= this.LIMITE;
+    return { gm, periods, impagos, exc, suspended, blocked: suspended && !exc, pays, firstImpago: periods.find(x => x.st === 'Impago'), pend: periods.find(x => x.st === 'Pendiente') };
+  }
   feeInfo(p) {
-    const f = p.fee;
-    const map = {
-      al_dia: [this.chip('Al día', 'ok'), 'Próximo vencimiento: ' + (f.vence ? this.dmy(f.vence) : '')],
-      por_vencer: [this.chip('Vence el ' + (f.vence ? this.dm(f.vence) : ''), 'warn'), 'Vence ' + (f.vence ? this.rel(f.vence) : '') + '. Pagala para seguir reservando sin interrupciones.'],
-      vencida: [this.chip('Vencida · ' + f.dias + ' d', 'warn'), 'Venció el ' + (f.vencio ? this.dmy(f.vencio) : '') + '. En ' + (10 - (f.dias || 0)) + ' días se bloquea la reserva de gimnasio.'],
-      bloqueado: [this.chip('Bloqueado · ' + f.dias + ' d de mora', 'bad'), 'Venció el ' + (f.vencio ? this.dmy(f.vencio) : '') + '. La reserva de gimnasio está bloqueada.'],
-      baja: [this.chip('Dado de baja', 'neu'), 'El servicio de gimnasio está dado de baja.'],
-      na: [this.chip('Sin cuota de gym', 'neu'), 'Solo usás consultorios; se abonan por consulta.'],
-    }[f.st];
-    return { chip: map[0], line: map[1], amount: this.money(this.CUOTA), hasAmount: f.st !== 'na' && f.st !== 'baja' };
+    const a = this.acct(p), n = a.impagos;
+    let chip, line;
+    if (p.baja) { chip = this.chip('Dado de baja', 'neu'); line = 'El servicio de gimnasio está dado de baja.'; }
+    else if (!a.gm) { chip = this.chip('Sin cuota de gym', 'neu'); line = 'Solo usás consultorios; se abonan por sesión.'; }
+    else if (a.suspended) { chip = a.exc ? this.chip('Excepción hasta ' + this.dm(a.exc.hasta), 'warn') : this.chip('Suspendido', 'bad'); line = n + ' períodos impagos. ' + (a.exc ? 'Excepción vigente hasta ' + this.dmy(a.exc.hasta) + '.' : 'La reserva de gimnasio está suspendida.'); }
+    else if (n) { chip = this.chip(n + ' de 6 impagos', 'warn'); line = 'Tenés ' + n + (n === 1 ? ' período impago' : ' períodos impagos') + '. Con 6 se suspende la reserva de gimnasio.'; }
+    else { chip = this.chip('Al día', 'ok'); line = a.pend ? 'La cuota de ' + this.pLabel(a.pend.k) + ' vence el ' + this.dmy(a.pend.dl) + '.' : 'No tenés períodos pendientes.'; }
+    return { chip, line, amount: '', hasAmount: false, a };
+  }
+  cobrables(pid) {
+    return this.state.cons.filter(c => c.pid === pid && this.active(c)).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
+      .map(c => Object.assign({}, c, { paid: this.state.payments.some(y => y.kind === 'sesion' && y.consId === c.id) }));
+  }
+  openPago(pid, concept) {
+    const p = this.state.persons.find(x => x.id === pid), a = this.acct(p), cs = this.cobrables(pid), fc = cs.find(c => !c.paid);
+    const sug = a.firstImpago ? a.firstImpago.k : a.pend ? a.pend.k : this.addM(this.ym(this.TODAY), 1);
+    this.setState({ modal: { type: 'pago', pid, concept: a.gm ? (concept || 'cuota') : 'sesion', period: sug, sug, consId: (fc || cs[0] || {}).id || '', monto: '', medio: '', t: {}, saving: false, err: null } });
+  }
+  pagoErrs(md) {
+    const e = {}, n = parseInt(md.monto, 10);
+    if (String(md.monto).trim() === '') e.monto = 'Ingresá el monto.'; else if (!(n > 0)) e.monto = 'El monto tiene que ser mayor a 0.';
+    if (!md.medio) e.medio = 'Elegí un medio de pago.';
+    if (md.concept === 'sesion' && !md.consId) e.cons = 'Elegí un turno de consultorio.';
+    return e;
+  }
+  buildAcc(p, admin) {
+    const s = this.state, a = this.acct(p), wide = s.width >= 1000, n = a.impagos, v = (x, y) => admin ? y : x;
+    const errSim = this.props.simularError === 'estado de cuenta' && !s.accRetried;
+    const cuotas = a.pays.filter(y => y.kind === 'cuota'), sess = a.pays.filter(y => y.kind === 'sesion');
+    const sumC = cuotas.reduce((t, y) => t + y.amount, 0), sumS = sess.reduce((t, y) => t + y.amount, 0);
+    let st;
+    if (p.baja) st = ['Gimnasio dado de baja', this.chip('Dado de baja', 'neu'), 'var(--text)', v('Tu servicio de gimnasio está dado de baja. Las consultas siguen habilitadas.', 'El servicio de gimnasio está dado de baja. Las consultas siguen habilitadas.')];
+    else if (!a.gm) st = ['Sin cuota de gimnasio', this.chip('Solo consultorio', 'neu'), 'var(--text)', v('No sos socio/a del gimnasio: solo pagás las sesiones de consultorio.', 'No es socio/a del gimnasio: solo paga las sesiones de consultorio.')];
+    else if (a.suspended) st = ['Reserva de gimnasio suspendida', a.exc ? this.chip('Excepción vigente', 'warn') : this.chip('Reserva suspendida', 'bad'), 'var(--bad-ink)', a.exc ? v('Tenés ' + n + ' períodos impagos. Mientras la excepción esté vigente podés reservar; regularizá en recepción.', 'Tiene ' + n + ' períodos impagos. Mientras la excepción esté vigente puede reservar el gimnasio.') : v('Llegaste a ' + n + ' períodos impagos. Regularizá en recepción para volver a reservar. Las consultas siguen habilitadas.', 'Tiene ' + n + ' períodos impagos. Las consultas siguen habilitadas.')];
+    else if (n) st = ['Con períodos impagos (' + n + ' de 6)', this.chip('Reserva habilitada', 'warn'), 'var(--warn-ink)', v('Podés seguir reservando el gimnasio. Con 6 períodos impagos la reserva se suspende.', 'Puede seguir reservando. Con 6 períodos impagos la reserva se suspende.') + ' El más antiguo es ' + this.pLabel(a.firstImpago.k) + '.'];
+    else st = ['Al día', this.chip('Reserva habilitada', 'ok'), 'var(--ok-ink)', a.pend ? 'La cuota de ' + this.pLabel(a.pend.k) + ' vence el ' + this.dmy(a.pend.dl) + '.' : 'No hay períodos pendientes.'];
+    const tone = { Pagado: 'ok', Impago: 'bad', Pendiente: 'warn' };
+    const periods = a.periods.slice().reverse().map(x => {
+      const y = x.pay, pre = y ? '' : x.st === 'Impago' ? 'Venció el ' : 'Vence el ';
+      return { label: this.pLabelCap(x.k), chip: this.chip(x.st, tone[x.st]), pre, mpre: y ? 'Pagado el ' : pre, dd: this.dmy(y ? y.date : x.dl), post: y ? ' · ' + y.method : '',
+        dateFg: y ? 'var(--text-2)' : x.st === 'Impago' ? 'var(--bad-ink)' : 'var(--text-3)', amount: y ? this.money(y.amount) : '—', method: y ? y.method : '—' };
+    });
+    const sessions = sess.map(y => { const c = s.cons.find(z => z.id === y.consId) || {}, pr = this.PROS.find(z => z.id === c.pro) || {};
+      return { k: (c.date || '') + (c.time || ''), dow: c.date ? this.DS[this.dOf(c.date).getDay()] : '', date: c.date ? this.dmy(c.date) : '—', time: c.time || '', pro: pr.name || '—', esp: pr.esp || '', amount: this.money(y.amount), method: y.method, paid: this.dmy(y.date) };
+    }).sort((x, y) => y.k.localeCompare(x.k));
+    const tiles = [{ label: 'Total pagado', v: this.money(sumC + sumS), sub: a.pays.length + (a.pays.length === 1 ? ' pago registrado' : ' pagos registrados'), fg: 'var(--text)' }];
+    if (a.gm) tiles.push({ label: 'Cuotas', v: this.money(sumC), sub: cuotas.length + (cuotas.length === 1 ? ' período pagado' : ' períodos pagados'), fg: 'var(--text)' });
+    tiles.push({ label: 'Sesiones de consultorio', v: this.money(sumS), sub: sess.length + (sess.length === 1 ? ' sesión pagada' : ' sesiones pagadas'), fg: 'var(--text)' });
+    if (a.gm) tiles.push({ label: 'Períodos impagos', v: String(n), sub: 'Con 6 se suspende la reserva', fg: a.suspended ? 'var(--bad-ink)' : n ? 'var(--warn-ink)' : 'var(--text)' });
+    return {
+      loading: !!s.accLoading, error: errSim && !s.accLoading, ok: !errSim && !s.accLoading,
+      retry: () => { this.setState({ accLoading: true }); setTimeout(() => this.setState({ accLoading: false, accRetried: true }), 800); },
+      st: { title: st[0], chip: st[1], fg: st[2], line: st[3] },
+      hasExc: a.suspended && !!a.exc, excHasta: a.exc ? this.dmy(a.exc.hasta) : '',
+      excBy: a.exc ? (admin ? 'Autorizada por ' + a.exc.by + ' el ' + this.dmy(a.exc.when) + ' · “' + a.exc.motivo + '”' : 'Recepción autorizó que reserves el gimnasio hasta esa fecha.') : '',
+      hasMeter: a.gm, meter: [0, 1, 2, 3, 4, 5].map(i => ({ bg: i < n ? (a.suspended ? 'var(--bad)' : 'var(--warn)') : 'var(--border)' })),
+      meterLabel: n > 6 ? n + ' períodos impagos · el límite es 6' : n + ' de 6 períodos impagos',
+      showMora: !admin, tiles, wide, narrow: !wide,
+      periods, noPeriods: !periods.length,
+      noPeriodsText: p.baja ? 'El servicio de gimnasio está dado de baja.' : a.gm ? 'Todavía no hay períodos.' : v('No sos socio/a del gimnasio, así que no tenés cuotas mensuales.', 'No es socio/a del gimnasio, así que no tiene cuotas mensuales.'),
+      perNote: a.gm ? 'Un período queda impago si pasan 10 días del mes siguiente sin pago.' : '',
+      sessions, noSessions: !sessions.length, noSessText: v('Todavía no tenés sesiones de consultorio pagadas.', 'Todavía no tiene sesiones de consultorio pagadas.'),
+    };
   }
 
   gymHours(s) { if (this.FERIADOS[s]) return []; const w = this.dOf(s).getDay(); if (w === 0) return []; if (w === 6) return [9, 10, 11, 12]; const a = []; for (let h = 7; h <= 21; h++) a.push(h); return a; }
@@ -1278,20 +1493,20 @@ class Component extends DCLogic {
     const role = s.acting ? 'socio' : s.role, uid = s.acting || s.userId;
     const me = s.persons.find(p => p.id === uid) || s.persons[0];
     const on = {};
-    ['loginId','loginPw','rNombre','rApellido','rDni','rEmail','rPw','q','ingQ','monto','medio','motivo','vig','nName','nDni','nEmail','prQ'].forEach(k => on[k] = e => this.setF(k, e.target.value));
+    ['loginId','loginPw','rNombre','rApellido','rDni','rEmail','rPw','q','ingQ','monto','medio','motivo','vig','nName','nDni','nEmail','prQ','cobQ','excHasta'].forEach(k => on[k] = e => this.setF(k, e.target.value));
     const toggleTheme = () => this.setState(x => ({ theme: x.theme === 'dark' ? 'light' : 'dark' }));
 
     const navDefs = {
       socio: [['inicio','Inicio','Inicio','neu'],['gym','Reservar gimnasio','Gimnasio','gym'],['consulta','Turno de consultorio','Consulta','clin'],['turnos','Mis turnos','Turnos','neu'],['cuenta','Estado de cuenta','Cuenta','neu']],
       profesional: [['agenda','Agenda de hoy','Agenda','clin'],['disp','Disponibilidad','Disponibilidad','clin']],
-      recepcion: [['hoy','Hoy en el centro','Hoy','neu'],['ingreso','Ingreso al gimnasio','Ingreso','gym'],['personas','Personas','Personas','neu'],['profes','Profesionales','Profes.','clin'],['pagos','Pagos y cuotas','Pagos','neu']],
+      recepcion: [['hoy','Hoy en el centro','Hoy','neu'],['ingreso','Ingreso al gimnasio','Ingreso','gym'],['personas','Personas','Personas','neu'],['profes','Profesionales','Profes.','clin'],['cobros','Pagos','Pagos','clin'],['pagos','Pagos y cuotas','Cuotas','neu']],
     }[role];
     const nav = navDefs.map(([id, label, sh, k]) => {
       const act = s.screen === id || (id === 'profes' && s.screen === 'disp'), g = k === 'gym';
       const nb = id === 'hoy' ? this.state.notifFails.length : 0;
       return { id, label, short: sh, hasBadge: nb > 0, badge: nb, go: () => this.go(id), bg: act ? (g ? 'var(--gym-soft)' : 'var(--clin-soft)') : 'transparent', fg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-2)', fw: act ? 600 : 500, dot: g ? 'var(--gym)' : k === 'clin' ? 'var(--clin)' : 'var(--text-3)', mfg: act ? (g ? 'var(--gym-ink)' : 'var(--clin-ink)') : 'var(--text-3)', mbar: act ? (g ? 'var(--gym)' : 'var(--clin)') : 'transparent' };
     });
-    const is = {}; ['inicio','gym','consulta','turnos','cuenta','agenda','disp','hoy','ingreso','personas','profes','pagos'].forEach(k => is[k] = s.screen === k);
+    const is = {}; ['inicio','gym','consulta','turnos','cuenta','agenda','disp','hoy','ingreso','personas','profes','cobros','pagos'].forEach(k => is[k] = s.screen === k);
 
     let userCard;
     if (role === 'socio') userCard = { name: me.name, ini: this.ini(me.name), sub: me.sv.map(x => this.SV[x]).join(' + ') };
@@ -1303,7 +1518,8 @@ class Component extends DCLogic {
       gym: ['Reservar gimnasio', 'Gimnasio', 'Elegí un día y una franja de 60 minutos.'],
       consulta: ['Turno de consultorio', 'Consultorios', 'Elegí la especialidad y un horario libre.'],
       turnos: ['Mis turnos', me.name, ''],
-      cuenta: ['Estado de cuenta', me.name, ''],
+      cuenta: ['Mi estado de cuenta', me.name, ''],
+      cobros: ['Pagos', 'Recepción', 'Estado de cuenta y pagos de cada persona.'],
       agenda: ['Agenda de hoy', this.long(this.TODAY) + ' · Nutrición', ''],
       disp: ['Disponibilidad', 'Lic. Valentina Méndez · Nutrición', 'Tus franjas semanales de atención.'],
       hoy: ['Hoy en el centro', this.long(this.TODAY) + ' · 10:40', ''],
@@ -1315,8 +1531,7 @@ class Component extends DCLogic {
     const page = { title: pages[0], eyebrow: pages[1], sub: pages[2] };
     if (s.screen === 'disp' && role === 'recepcion') { page.eyebrow = 'Recepción'; page.sub = 'Elegí el profesional y editá sus franjas semanales.'; }
     const fee = this.feeInfo(me);
-    const blocked = me.fee.st === 'bloqueado' && !this.hasExc(me.id);
-    const noGym = !me.sv.includes('gym') || me.fee.st === 'baja';
+    const meA = fee.a, blocked = meA.blocked, noGym = !meA.gm;
 
     const out = {
       theme: s.theme, themeLabel: s.theme === 'dark' ? 'Modo claro' : 'Modo oscuro', themeShort: s.theme === 'dark' ? 'Claro' : 'Oscuro', toggleTheme,
@@ -1336,7 +1551,7 @@ class Component extends DCLogic {
     // auth
     out.demo = [
       ['María Pérez','Socia y paciente · al día','socio','p1','clin'],
-      ['Juan García','Socio · bloqueado por mora','socio','p2','bad'],
+      ['Juan García','Socio · reserva de gym suspendida','socio','p2','bad'],
       ['Carlos Soto','Solo paciente de Kinesiología','socio','p5','clin'],
       ['Lic. Valentina Méndez','Profesional · Nutrición','profesional',null,'clin'],
       ['Laura Benítez','Recepción · administración','recepcion',null,'gym'],
@@ -1351,7 +1566,7 @@ class Component extends DCLogic {
       if (s.persons.some(p => p.dni === dni)) return this.setState({ regErr: 'Ya existe una cuenta con ese DNI.' });
       const sv = []; if (f.rGym) sv.push('gym'); if (f.rCons) sv.push('nut');
       const id = 'p' + Date.now(), name = f.rNombre.trim() + ' ' + f.rApellido.trim();
-      this.setState(x => ({ regErr: '', persons: x.persons.concat([{ id, name, dni, sv, email: f.rEmail || '', fee: f.rGym ? { st: 'al_dia', vence: '2026-10-29' } : { st: 'na' } }]) }), () => { this.login('socio', id); this.flash('¡Bienvenido/a a Vitalys, ' + f.rNombre.trim() + '!'); });
+      this.setState(x => ({ regErr: '', persons: x.persons.concat([{ id, name, dni, sv, email: f.rEmail || '', alta: f.rGym ? this.ym(this.TODAY) : null, baja: false }]) }), () => { this.login('socio', id); this.flash('¡Bienvenido/a a Vitalys, ' + f.rNombre.trim() + '!'); });
     };
 
     // INICIO
@@ -1373,7 +1588,7 @@ class Component extends DCLogic {
         weekSummary: pend + (pend === 1 ? ' turno por delante' : ' turnos por delante') + ' · ' + done + (done === 1 ? ' completado' : ' completados'),
         nt: n0 ? { rel: this.rel(n0.date), dow: this.D[this.dOf(n0.date).getDay()], day: this.dOf(n0.date).getDate(), mon: this.ML[this.dOf(n0.date).getMonth()], svc: g ? 'Gimnasio' : 'Consulta de ' + n0.svc, start: n0.start, end: n0.end, who: n0.who, kindLabel: g ? 'Gimnasio' : 'Consultorio', soft: g ? 'var(--gym-soft)' : 'var(--clin-soft)', ink: g ? 'var(--gym-ink)' : 'var(--clin-ink)', dot: g ? 'var(--gym)' : 'var(--clin)', cancel: () => this.askCancel(n0) } : {},
         gymDisabled: noGym, gymOp: noGym ? 0.5 : 1,
-        gymSub: noGym ? 'No tenés el servicio de gimnasio activo.' : blocked ? 'Bloqueado por mora: regularizá tu cuota para reservar.' : 'Franjas de 60 min · hasta 7 días antes.',
+        gymSub: noGym ? 'No tenés el servicio de gimnasio activo.' : blocked ? 'Reserva suspendida por períodos impagos: regularizá en recepción.' : 'Franjas de 60 min · hasta 7 días antes.',
       };
     }
 
@@ -1409,7 +1624,7 @@ class Component extends DCLogic {
       out.gym = {
         days, slots, closed: !hours.length && !this.FERIADOS[date], feriado: !!this.FERIADOS[date], feriadoText: this.FERIADOS[date] ? 'Feriado: ' + this.FERIADOS[date] + '. El gimnasio está cerrado.' : '', dayTitle: this.long(date) + (s.gymDay === 0 ? ' · hoy' : ''),
         dayHours: !hours.length ? 'Cerrado' : this.dOf(date).getDay() === 6 ? '09:00 – 13:00' : '07:00 – 22:00',
-        lock, exc: me.fee.st === 'bloqueado' && !blocked, excText: '',
+        lock, exc: meA.suspended && !!meA.exc, excText: meA.exc ? 'Vigente hasta ' + this.dmy(meA.exc.hasta) + '.' : '',
         lockTitle: noGym ? 'No tenés el servicio de gimnasio activo' : 'Reserva de gimnasio suspendida',
         lockText: noGym ? 'Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.' : 'Alcanzaste el límite de períodos impagos y la reserva de gimnasio está suspendida. Las consultas siguen habilitadas.',
         hasSel: !!sel, selLabel: sel ? this.long(sel.date) + ' · ' + this.p2(sel.hour) + ':00 – ' + this.p2(sel.hour + 1) + ':00' : '',
@@ -1434,7 +1649,7 @@ class Component extends DCLogic {
       }) : [];
       const hasPro = !!pro;
       out.cons = {
-        pros, hasPro, slots, moraNote: me.fee.st === 'bloqueado' || me.fee.st === 'vencida',
+        pros, hasPro, slots, moraNote: meA.impagos > 0,
         step2Fg: hasPro ? 'var(--clin-ink)' : 'var(--text-3)', step2Bg: hasPro ? 'var(--clin)' : 'var(--surface-2)', step2Num: hasPro ? 'var(--on-clin)' : 'var(--text-3)',
         dayTitle: na ? this.long(na.date) + ' · ' + this.rel(na.date) : '', proLine: pro ? pro.name + ' · ' + pro.esp + ' · ' + pro.dur + ' min' : '',
         hasSel: !!(pro && s.consSel), selEsp: pro ? pro.esp : '', selPro: pro ? pro.name + ' · ' + pro.dur + ' min' : '',
@@ -1457,22 +1672,23 @@ class Component extends DCLogic {
       };
     }
 
-    // CUENTA
-    if (is.cuenta) {
-      const pays = s.payments.filter(p => p.pid === uid).sort((a, b) => b.date.localeCompare(a.date));
-      const lastCuota = pays.find(p => p.concept.startsWith('Cuota'));
-      const fs = me.fee, due = fs.vence || fs.vencio, stepsOk = !!due && fs.st !== 'na' && fs.st !== 'baja';
-      const pastDue = fs.st === 'vencida' || fs.st === 'bloqueado';
-      out.acc = {
-        blocked, dias: fs.dias, hasSteps: stepsOk,
-        steps: stepsOk ? [
-          { label: 'Último pago', date: lastCuota ? this.dm(lastCuota.date) : '—', bar: 'var(--ok)', fg: 'var(--text)' },
-          { label: pastDue ? 'Venció' : 'Vence', date: this.dm(due), bar: pastDue ? 'var(--warn)' : 'var(--border-2)', fg: pastDue ? 'var(--warn-ink)' : 'var(--text)' },
-          { label: 'Bloqueo de gimnasio', date: this.dm(this.add(due, 10)), bar: fs.st === 'bloqueado' ? 'var(--bad)' : 'var(--border-2)', fg: fs.st === 'bloqueado' ? 'var(--bad-ink)' : 'var(--text-2)' },
-        ] : [],
-        pays: pays.map(p => ({ concept: p.concept, amount: this.money(p.amount), date: this.dmy(p.date), method: p.method })), noPays: !pays.length,
-      };
+    // CUENTA (socio) y PAGOS (recepción)
+    let accP = null, accAdmin = false;
+    if (is.cuenta) accP = me;
+    if (is.cobros) {
+      const q = (f.cobQ || '').toLowerCase().trim(), qd = q.replace(/\D/g, '');
+      const pool = s.persons.map(p => ({ id: p.id, name: p.name, dni: p.dni, p })).concat(s.sinFicha.map(u => ({ id: u.id, name: u.name, dni: u.dni, u })));
+      const results = q ? pool.filter(x => x.name.toLowerCase().includes(q) || (qd && x.dni.includes(qd))).slice(0, 6).map(x => ({ name: x.name, dni: x.dni,
+        chip: x.p ? this.feeInfo(x.p).chip : this.chip('Sin ficha', 'neu'), pick: () => this.setState(y => ({ cobPid: x.id, form: Object.assign({}, y.form, { cobQ: '' }) })) })) : [];
+      const selP = s.persons.find(p => p.id === s.cobPid), selU = s.sinFicha.find(u => u.id === s.cobPid);
+      out.cob = { showResults: !!q, results, noResults: !!q && !results.length, idle: !q && !selP && !selU, sinFicha: !q && !!selU, hasPerson: !q && !!selP,
+        u: selU || {}, clear: () => this.setState({ cobPid: null }), goPersonas: () => this.go('personas'),
+        p: selP ? { name: selP.name, dni: selP.dni, ini: this.ini(selP.name), sv: selP.sv.map(x => { const [fg, bg] = this.tc(x === 'gym' ? 'gym' : 'clin'); return { label: this.SV[x], fg, bg }; }) } : {},
+        pay: () => selP && this.openPago(selP.id) };
+      if (!q && selP) { accP = selP; accAdmin = true; }
     }
+    out.showAcc = !!accP;
+    if (accP) out.acc = this.buildAcc(accP, accAdmin);
 
     // AGENDA
     if (is.agenda) {
@@ -1535,19 +1751,19 @@ class Component extends DCLogic {
     }
 
     // HOY
-    const overdue = s.persons.filter(p => (p.fee.st === 'vencida' || p.fee.st === 'bloqueado')).sort((a, b) => b.fee.dias - a.fee.dias);
+    const overdue = s.persons.filter(p => this.acct(p).impagos > 0).sort((a, b) => this.acct(b).impagos - this.acct(a).impagos);
     if (is.hoy) {
       const hrs = this.gymHours(this.TODAY);
       const tot = hrs.reduce((a, h) => a + this.occ(this.TODAY, h), 0);
       const inNow = Object.keys(s.checkins).length;
       const consHoy = s.cons.filter(c => c.date === this.TODAY && this.active(c)).length;
-      const bl = overdue.filter(p => p.fee.st === 'bloqueado').length;
+      const bl = overdue.filter(p => this.acct(p).suspended).length;
       out.hoy = {
         kpis: [
           { label: 'En el gimnasio ahora', value: inNow, sub: 'franja 10:00 · de 20 lugares', dot: 'var(--gym)', fg: 'var(--text)' },
           { label: 'Turnos de gym hoy', value: tot, sub: hrs.length + ' franjas · ' + Math.round(tot / (hrs.length * 20) * 100) + '% ocupado', dot: 'var(--gym)', fg: 'var(--text)' },
           { label: 'Consultas hoy', value: consHoy, sub: 'Nutrición y Psicología', dot: 'var(--clin)', fg: 'var(--text)' },
-          { label: 'Cuotas vencidas', value: overdue.length, sub: bl + ' bloqueadas por mora', dot: 'var(--bad)', fg: overdue.length ? 'var(--bad-ink)' : 'var(--text)' },
+          { label: 'Períodos impagos', value: overdue.length, sub: bl + ' con reserva suspendida', dot: 'var(--bad)', fg: overdue.length ? 'var(--bad-ink)' : 'var(--text)' },
         ],
         barGap: mob ? '3px' : '6px',
         bars: hrs.map(h => {
@@ -1556,8 +1772,7 @@ class Component extends DCLogic {
         }),
       };
       const att = [];
-      overdue.forEach(p => att.push({ name: p.name, detail: p.fee.st === 'bloqueado' ? (this.hasExc(p.id) ? 'Excepción autorizada · ' + p.fee.dias + ' días de mora' : p.fee.dias + ' días de mora · no puede reservar gimnasio') : 'Vencida hace ' + p.fee.dias + ' días · se bloquea en ' + (10 - p.fee.dias) + ' días', chip: p.fee.st === 'bloqueado' ? this.chip('Bloqueado', 'bad') : this.chip('Vencida', 'warn') }));
-      s.persons.filter(p => p.fee.st === 'por_vencer').forEach(p => att.push({ name: p.name, detail: 'Vence el ' + this.dm(p.fee.vence) + ' (' + this.rel(p.fee.vence) + ')', chip: this.chip('Por vencer', 'warn') }));
+      overdue.forEach(p => { const a = this.acct(p); att.push({ name: p.name, detail: a.suspended ? (a.exc ? 'Excepción vigente hasta ' + this.dmy(a.exc.hasta) + ' · ' + a.impagos + ' períodos impagos' : a.impagos + ' períodos impagos · reserva de gimnasio suspendida') : a.impagos + ' de 6 períodos impagos', chip: a.suspended ? (a.exc ? this.chip('Excepción', 'warn') : this.chip('Suspendido', 'bad')) : this.chip('Impagos', 'warn') }); });
       out.hoy.att = att; out.hoy.attCount = att.length + ' personas';
       out.hoy.fails = s.notifFails.map(n => { const p = this.PROS.find(x => x.id === n.pro) || {}, bad = n.kind === 'fail';
         return { name: n.name, email: n.email, pro: p.name, date: this.long(n.date), time: n.time, reason: n.reason, tries: n.tries + (n.tries === 1 ? ' intento' : ' intentos') + ' · último ' + n.last,
@@ -1571,7 +1786,8 @@ class Component extends DCLogic {
       const rows = s.ingreso.filter(r => !q || r.name.toLowerCase().includes(q) || r.dni.includes(q))
         .sort((a, b) => (s.checkins[a.id] ? 1 : 0) - (s.checkins[b.id] ? 1 : 0))
         .map(r => ({ name: r.name, dni: r.dni, in: !!s.checkins[r.id], out: !s.checkins[r.id], time: s.checkins[r.id] || '',
-          mark: () => { this.setState(y => ({ checkins: Object.assign({}, y.checkins, { [r.id]: '10:40' }) })); this.flash(r.name + ' ingresó al gimnasio'); } }));
+          mark: () => { this.setState(y => ({ checkins: Object.assign({}, y.checkins, { [r.id]: '10:40' }) })); this.flash(r.name + ' ingresó al gimnasio'); },
+          }));
       const n = Object.keys(s.checkins).length, t = s.ingreso.length;
       out.ing = { rows, empty: !rows.length, progress: n + ' de ' + t + ' ingresaron', pct: (n / t * 100) + '%' };
     }
@@ -1579,9 +1795,9 @@ class Component extends DCLogic {
     // PERSONAS
     if (is.personas) {
       const q = (f.q || '').toLowerCase().trim();
-      const flt = { todos: () => true, gym: p => p.sv.includes('gym'), cons: p => p.sv.some(x => x !== 'gym'), deuda: p => ['vencida','bloqueado'].includes(p.fee.st) };
+      const flt = { todos: () => true, gym: p => p.sv.includes('gym'), cons: p => p.sv.some(x => x !== 'gym'), deuda: p => this.acct(p).impagos > 0 };
       const rows = s.persons.filter(p => (!q || p.name.toLowerCase().includes(q) || p.dni.includes(q)) && flt[s.pFilter](p)).map(p => ({
-        name: p.name, dni: p.dni, email: p.email, op: p.fee.st === 'baja' ? 0.6 : 1,
+        name: p.name, dni: p.dni, email: p.email, op: p.baja ? 0.6 : 1,
         sv: p.sv.map(x => { const [fg, bg] = this.tc(x === 'gym' ? 'gym' : 'clin'); return { label: this.SV[x], fg, bg }; }),
         chip: this.feeInfo(p).chip,
         act: () => { this.setState({ acting: p.id, screen: 'inicio', gymDay: 0, gymSel: null, consPro: null, consSel: null }); window.scrollTo(0, 0); },
@@ -1613,21 +1829,20 @@ class Component extends DCLogic {
     out.closeMenu = () => this.setState({ proMenu: null });
     out.openNuevoPro = () => this.openPro(null);
 
-    // PAGOS
-    const openPago = p => this.setState(y => ({ modal: { type: 'pago', pid: p.id }, form: Object.assign({}, y.form, { monto: String(this.CUOTA), medio: 'Efectivo' }) }));
-    const openExc = p => this.setState(y => ({ modal: { type: 'exc', pid: p.id }, form: Object.assign({}, y.form, { motivo: '', vig: 'Hasta 48 h' }) }));
+    // PAGOS Y CUOTAS
+    const openExc = p => this.setState(y => ({ modal: { type: 'exc', pid: p.id }, form: Object.assign({}, y.form, { motivo: '', excHasta: this.add(this.TODAY, 7) }) }));
     if (is.pagos) {
       out.pag = {
         overdue: overdue.map(p => {
-          const ex = this.hasExc(p.id), b = p.fee.st === 'bloqueado';
-          return { name: p.name, dni: p.dni, vencio: this.dm(p.fee.vencio), dias: p.fee.dias + ' días de atraso', diasFg: b ? 'var(--bad-ink)' : 'var(--warn-ink)',
-            chip: b ? (ex ? this.chip('Excepción activa', 'warn') : this.chip('Reserva de gym bloqueada', 'bad')) : this.chip('Se bloquea en ' + (10 - p.fee.dias) + ' días', 'warn'),
-            canExc: b && !ex, pay: () => openPago(p), exc: () => openExc(p) };
+          const a = this.acct(p), b = a.suspended, ex = !!a.exc;
+          return { name: p.name, dni: p.dni, vencio: this.pLabel(a.firstImpago.k), dias: a.impagos + (a.impagos === 1 ? ' período impago' : ' períodos impagos'), diasFg: b ? 'var(--bad-ink)' : 'var(--warn-ink)',
+            chip: b ? (ex ? this.chip('Excepción hasta ' + this.dm(a.exc.hasta), 'warn') : this.chip('Reserva de gym suspendida', 'bad')) : this.chip('Se suspende con ' + (6 - a.impagos) + ' más', 'warn'),
+            canExc: b && !ex, pay: () => this.openPago(p.id, 'cuota'), exc: () => openExc(p) };
         }),
         noOverdue: !overdue.length,
-        soon: s.persons.filter(p => p.fee.st === 'por_vencer').map(p => ({ name: p.name, label: 'Vence ' + this.dm(p.fee.vence) })),
-        recent: s.payments.slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5).map(p => ({ name: (s.persons.find(x => x.id === p.pid) || {}).name, amount: this.money(p.amount), date: this.dm(p.date), concept: p.concept, method: p.method })),
-        excs: s.exceptions.map(e => ({ name: (s.persons.find(x => x.id === e.pid) || {}).name, motivo: e.motivo, vig: e.vig, by: 'Laura Benítez', when: this.dm(this.TODAY) + ' 10:40' })),
+        soon: s.persons.map(p => [p, this.acct(p)]).filter(([p, a]) => a.gm && !a.impagos && a.pend).map(([p, a]) => ({ name: p.name, label: 'Vence ' + this.dm(a.pend.dl) })),
+        recent: s.payments.slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5).map(p => ({ name: (s.persons.find(x => x.id === p.pid) || {}).name, amount: this.money(p.amount), date: this.dm(p.date), concept: p.kind === 'cuota' ? 'Cuota ' + this.pLabel(p.period) : 'Sesión de consultorio', method: p.method })),
+        excs: s.exceptions.map(e => ({ name: (s.persons.find(x => x.id === e.pid) || {}).name, motivo: e.motivo, vig: 'Hasta ' + this.dmy(e.hasta), by: e.by, when: this.dmy(e.when) })),
         noExcs: !s.exceptions.length,
       };
     }
@@ -1685,26 +1900,60 @@ class Component extends DCLogic {
       this.setState(y => ({ cons: y.cons.map(c => md.ids.includes(c.id) ? Object.assign({}, c, { status: 'Cancelado por el centro' }) : c), avail: Object.assign({}, y.avail, { [md.pid]: y.draft }), draft: null, modal: null }));
       this.flash('Disponibilidad guardada · ' + n + (n === 1 ? ' turno cancelado' : ' turnos cancelados'));
     };
-    if (md && (md.type === 'pago' || md.type === 'exc')) {
-      const p = s.persons.find(x => x.id === md.pid);
-      const venc = p.fee.vencio || p.fee.vence;
-      out.m = Object.assign(out.m, { pago: md.type === 'pago', exc: md.type === 'exc', name: p.name, dni: p.dni, dias: p.fee.dias, concept: 'Cuota ' + this.ML[this.dOf(venc || this.TODAY).getMonth()] + ' · gimnasio',
-        excDisabled: !(f.motivo || '').trim(), excOp: (f.motivo || '').trim() ? 1 : 0.5 });
+    if (md && md.type === 'exc') {
+      const p = s.persons.find(x => x.id === md.pid), ok = (f.motivo || '').trim() && f.excHasta && f.excHasta >= this.TODAY;
+      out.m = Object.assign(out.m, { exc: true, name: p.name, dni: p.dni, dias: this.acct(p).impagos, excMin: this.TODAY, excDisabled: !ok, excOp: ok ? 1 : 0.5 });
     }
-    out.doPago = () => {
-      const p = s.persons.find(x => x.id === md.pid), venc = p.fee.vencio || p.fee.vence || this.TODAY;
-      const amt = parseInt(String(f.monto).replace(/\D/g, ''), 10) || this.CUOTA;
-      this.setState(y => ({
-        persons: y.persons.map(x => x.id === p.id ? Object.assign({}, x, { fee: { st: 'al_dia', vence: '2026-10-29' } }) : x),
-        payments: y.payments.concat([{ id: 'y' + Date.now(), pid: p.id, date: this.TODAY, concept: 'Cuota ' + this.ML[this.dOf(venc).getMonth()], method: f.medio || 'Efectivo', amount: amt }]),
-        exceptions: y.exceptions.filter(e => e.pid !== p.id), modal: null,
-      }));
-      this.flash('Pago registrado · ' + p.name + ' queda al día');
-    };
     out.doExc = () => {
       const p = s.persons.find(x => x.id === md.pid);
-      this.setState(y => ({ exceptions: y.exceptions.concat([{ pid: p.id, motivo: f.motivo.trim(), vig: f.vig || 'Hasta 48 h' }]), modal: null }));
-      this.flash('Excepción registrada para ' + p.name);
+      this.setState(y => ({ exceptions: y.exceptions.concat([{ pid: p.id, motivo: f.motivo.trim(), hasta: f.excHasta, by: 'Laura Benítez', when: this.TODAY }]), modal: null }));
+      this.flash('Excepción registrada para ' + p.name + ' hasta ' + this.dmy(f.excHasta));
+    };
+    if (md && md.type === 'pago') {
+      const p = s.persons.find(x => x.id === md.pid), a = this.acct(p), errs = this.pagoErrs(md), sh = {}, bd = {};
+      ['monto', 'medio', 'cons'].forEach(k => { sh[k] = md.t[k] ? (errs[k] || '') : ''; });
+      if (md.err && md.err.field !== 'gen') sh[md.err.field] = md.err.msg;
+      ['monto', 'medio', 'cons', 'period'].forEach(k => bd[k] = sh[k] ? 'var(--bad)' : 'var(--border-2)');
+      const set = (patch, touch, keep) => this.setState(y => ({ modal: Object.assign({}, y.modal, patch, keep ? {} : { err: null }, { t: Object.assign({}, y.modal.t, touch || {}) }) }));
+      const opts = [];
+      if (a.gm) for (let k = p.alta; k <= this.addM(this.ym(this.TODAY), 2); k = this.addM(k, 1)) {
+        const pd = s.payments.some(y => y.kind === 'cuota' && y.pid === p.id && y.period === k), stt = pd ? 'pagado' : this.TODAY > this.deadline(k) ? 'impago' : 'pendiente';
+        opts.push({ v: k, l: this.pLabelCap(k) + ' · ' + stt + (k === md.sug ? ' · sugerido' : '') });
+      }
+      const cs = this.cobrables(p.id);
+      const cOpt = (k, label, dis) => { const act = md.concept === k; return { label, disabled: dis || !!md.saving, op: dis ? 0.45 : 1, bd: act ? 'var(--clin)' : 'var(--border-2)', bg: act ? 'var(--clin-soft)' : 'var(--surface)', fg: act ? 'var(--clin-ink)' : 'var(--text-2)', pick: () => set({ concept: k }) }; };
+      const invalid = Object.keys(errs).length > 0 || (md.concept === 'cuota' && !a.gm);
+      out.m = Object.assign(out.m, { pago: true, name: p.name, dni: p.dni,
+        concepts: [cOpt('cuota', 'Cuota mensual', !a.gm), cOpt('sesion', 'Sesión de consultorio', false)],
+        noGymHelp: a.gm ? '' : p.baja ? p.name + ' tiene el gimnasio dado de baja, así que no genera cuotas mensuales. Solo podés registrar sesiones de consultorio.' : p.name + ' no es socio/a del gimnasio, así que no tiene cuotas mensuales. Solo podés registrar sesiones de consultorio.',
+        isCuota: md.concept === 'cuota', isSesion: md.concept === 'sesion',
+        v: { period: md.period, consId: md.consId, monto: md.monto, medio: md.medio }, e: sh, bd,
+        periodOpts: opts,
+        periodHint: a.firstImpago ? 'Sugerido: ' + this.pLabel(a.firstImpago.k) + ', el primer período impago. Un pago no cancela otro mes salteado.' : 'Sugerido: ' + this.pLabel(md.sug) + ', el próximo período a pagar.',
+        hasCons: cs.length > 0, noCons: !cs.length,
+        consOpts: cs.map(c => { const pr = this.PROS.find(z => z.id === c.pro) || {}; return { v: c.id, l: this.DS[this.dOf(c.date).getDay()] + ' ' + this.dmy(c.date) + ' · ' + c.time + ' · ' + pr.name + (c.paid ? ' · ya pagado' : '') }; }),
+        onPeriod: e => set({ period: e.target.value }), onCons: e => set({ consId: e.target.value }, { cons: true }),
+        onMonto: e => set({ monto: e.target.value.replace(/\D/g, '') }, { monto: true }, true), blurMonto: () => set({}, { monto: true }, true),
+        onMedio: e => set({ medio: e.target.value }, { medio: true }, true), blurMedio: () => set({}, { medio: true }, true),
+        genErr: md.err && md.err.field === 'gen' ? md.err.msg : '',
+        payDisabled: invalid || !!md.saving, payOp: invalid && !md.saving ? 0.45 : md.saving ? 0.75 : 1, payBtn: md.saving ? 'Guardando…' : 'Registrar pago' });
+    }
+    out.doPago = () => {
+      if (!md || Object.keys(this.pagoErrs(md)).length || md.saving) return;
+      this.setState(y => ({ modal: Object.assign({}, y.modal, { saving: true, err: null }) }));
+      setTimeout(() => {
+        const y = this.state, m = y.modal; if (!m || m.type !== 'pago') return;
+        const p = y.persons.find(x => x.id === m.pid);
+        let e = null;
+        if (m.concept === 'cuota' && y.payments.some(z => z.kind === 'cuota' && z.pid === m.pid && z.period === m.period)) e = { field: 'period', msg: 'Ese período ya está pagado.' };
+        else if (m.concept === 'sesion' && y.payments.some(z => z.kind === 'sesion' && z.consId === m.consId)) e = { field: 'cons', msg: 'Ese turno ya tiene un pago registrado.' };
+        else if (this.props.simularError === 'registrar pago') e = { field: 'gen', msg: 'Una regla del sistema no permite registrar este pago. Revisá los datos o consultá con administración.' };
+        if (e) return this.setState({ modal: Object.assign({}, m, { saving: false, err: e }) });
+        const pay = { id: 'y' + Date.now(), pid: m.pid, kind: m.concept, date: this.TODAY, method: m.medio, amount: parseInt(m.monto, 10) };
+        if (m.concept === 'cuota') pay.period = m.period; else pay.consId = m.consId;
+        this.setState({ payments: y.payments.concat([pay]), modal: null });
+        this.flash('Pago registrado · ' + (m.concept === 'cuota' ? 'cuota de ' + this.pLabel(m.period) : 'sesión de consultorio') + ' · ' + p.name);
+      }, 900);
     };
     if (md && md.type === 'nueva') {
       out.m = Object.assign(out.m, { nueva: true, err: md.err || '',
@@ -1716,7 +1965,7 @@ class Component extends DCLogic {
       const dni = (f.nDni || '').replace(/\D/g, ''), name = (f.nName || '').trim();
       const err = !name ? 'Ingresá nombre y apellido.' : dni.length < 7 ? 'El DNI tiene que tener 7 u 8 dígitos.' : s.persons.some(p => p.dni === dni) ? 'Ya existe una persona con ese DNI.' : !md.sv.length ? 'Elegí al menos un servicio.' : '';
       if (err) return this.setState(y => ({ modal: Object.assign({}, y.modal, { err }) }));
-      this.setState(y => ({ persons: [{ id: 'p' + Date.now(), name, dni, sv: md.sv, email: f.nEmail || '', fee: md.sv.includes('gym') ? { st: 'al_dia', vence: '2026-10-29' } : { st: 'na' } }].concat(y.persons), modal: null }));
+      this.setState(y => ({ persons: [{ id: 'p' + Date.now(), name, dni, sv: md.sv, email: f.nEmail || '', alta: md.sv.includes('gym') ? this.ym(this.TODAY) : null, baja: false }].concat(y.persons), modal: null }));
       this.flash(name + ' se agregó a Personas');
     };
     return out;

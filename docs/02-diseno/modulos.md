@@ -230,17 +230,30 @@ El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de ser
 - Cada pago tiene trazabilidad completa: persona, concepto, monto, fecha y operador. `registrado_por_usuario` es **obligatorio** (`NOT NULL`): todo pago lo carga un ADMIN, no hay alta automática en el MVP.
 - Para cuotas de gym: se asocia al mes (`periodo`). Para sesiones: se asocia al turno (`turno_id`).
 - **Un pago de sesión tiene que corresponderse con su turno (RN-20):** el turno debe ser de tipo `CONSULTORIO` —un turno de gimnasio no genera honorarios, del gimnasio se cobra la cuota— y el pago debe estar a nombre de la persona de ese turno. Lo hace cumplir el motor (`trg_pago_sesion`), no el servicio: son invariantes que no dependen de `NOW()` ni del actor, y una regla así validada solo en la API se rompe con cualquier carga por fuera de ella.
-- El sistema expone el estado de cuenta de una persona: cuotas pagas/vencidas, sesiones abonadas.
+- El sistema expone el estado de cuenta de una persona: cuotas pagadas/impagas/pendientes, sesiones abonadas.
+- **Un pago de sesión se rechaza si el turno está cancelado** (`CANCELADO_EN_TIEMPO`, `CANCELADO_TARDE` o `CANCELADO_POR_PROFESIONAL`): la cancelación tardía queda registrada para la sanción, pero no genera cobro (RN-02).
 
-**Endpoints principales:**
+**Endpoints (implementados en el Sprint 5):**
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| POST   | `/api/pagos` | Registrar pago (cuota o sesión) | ADMIN |
-| GET    | `/api/pagos` | Listar pagos (filtros: persona, concepto, fechas) | ADMIN |
-| GET    | `/api/pagos/persona/{id}` | Historial de pagos de una persona | ADMIN, propia persona |
-| GET    | `/api/pagos/persona/{id}/estado-cuenta` | Resumen: cuotas al día, sesiones pagas | ADMIN, propia persona |
-| GET    | `/api/pagos/{id}` | Detalle de un pago | ADMIN |
+| POST   | `/api/pagos` | Registrar un pago. Body: `{personaId, concepto, monto, medio, periodo?, turnoId?}` (`periodo` solo para `CUOTA_MENSUAL`, día 1; `turnoId` solo para `SESION_CONSULTORIO`). Responde 201 con el pago | ADMIN |
+| GET    | `/api/pagos/persona/{id}/estado-cuenta` | Estado de cuenta: períodos `PAGADO` / `IMPAGO` / `PENDIENTE` (con el pago y su medio), sesiones abonadas, totales, `periodosImpagos`, `umbral`, `suspendido` y la excepción vigente (`{validaHasta, motivo}` o `null`) | ADMIN (cualquiera), SOCIO_PACIENTE (solo la propia) |
+| GET    | `/api/pagos/mi-estado-cuenta` | Lo mismo, para la persona vinculada al usuario autenticado (422 si el usuario no tiene ficha) | SOCIO_PACIENTE |
+
+El estado de cuenta y la reserva de gimnasio comparten la misma regla de morosidad (`MorosidadService`, RN-01): lo que el socio ve como "suspendido" es exactamente lo que le rechaza la reserva.
+
+**Medio de pago:** cada pago registra cómo se cobró (`medio_pago`: `EFECTIVO`, `TRANSFERENCIA`, `DEBITO`, `CREDITO`). Mercado Pago queda fuera del alcance (RFC), pero el tipo está diseñado para sumar `MERCADO_PAGO` más adelante con su propia migración (`ALTER TYPE ... ADD VALUE`).
+
+**Diferido (no implementado en el MVP):**
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET    | `/api/pagos` | Listar pagos (filtros: persona, concepto, fechas) |
+| GET    | `/api/pagos/persona/{id}` | Historial de pagos de una persona |
+| GET    | `/api/pagos/{id}` | Detalle de un pago |
+
+El historial por persona ya sale dentro del estado de cuenta, así que estos tres endpoints no bloquean ningún flujo.
 
 **Entidades involucradas:** `pagos`, `personas`, `turnos`, `usuarios`
 

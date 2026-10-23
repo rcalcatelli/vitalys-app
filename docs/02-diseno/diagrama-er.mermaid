@@ -84,6 +84,7 @@ erDiagram
         bigint      persona_id              FK
         enum        concepto                "CUOTA_MENSUAL | SESION_CONSULTORIO"
         numeric     monto
+        enum        medio                   "EFECTIVO | TRANSFERENCIA | DEBITO | CREDITO"
         date        periodo                 "1er día del mes. Solo CUOTA_MENSUAL"
         bigint      turno_id                FK  "UK parcial. Solo SESION_CONSULTORIO"
         bigint      registrado_por_usuario  FK

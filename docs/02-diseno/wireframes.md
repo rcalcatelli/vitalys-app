@@ -202,6 +202,17 @@ El enlace "Registrarse" navega a **W-06 — Registro público**.
 
 **Lógica:** un período figura como impago si `NOW() > (periodo + 1 mes + 10 días)` y no tiene cuota registrada; un mes salteado sigue contando aunque se hayan pagado los posteriores (RN-01). La pantalla distingue **dos estados**: con deuda por debajo de `configuracion_gym.meses_tolerancia_morosidad` muestra un aviso informativo y el socio reserva con normalidad; al alcanzar el umbral muestra la suspensión, como en el ejemplo. La suspensión **nunca alcanza a los turnos de consultorio** (Decisión de dominio 1). Si existe una excepción vigente (RN-09) se indica junto a la alerta. Los datos de cuota son de solo lectura para el socio; el pago lo registra el ADMIN.
 
+> **Implementación (Sprint 5).** La pantalla del socio es `/socio/estado-cuenta` (ítem "Estado de cuenta" del menú) y consume `GET /api/pagos/mi-estado-cuenta`. Cada período se muestra como `PAGADO` (con monto, **medio de pago** y fecha), `IMPAGO` o `PENDIENTE` (con la fecha límite); la tabla de sesiones de consultorio también muestra el medio. El aviso de suspensión y la excepción vigente (`{validaHasta, motivo}`) salen del mismo cálculo que usa la reserva de gimnasio (`MorosidadService`). Si el usuario no tiene ficha, la pantalla lo explica (422) sin ofrecer reintentar; ante un error de red ofrece reintentar. La gracia es de 10 días: hasta `periodo + 1 mes + 10 días` inclusive figura `PENDIENTE`.
+
+### W-04b — Pagos (ADMIN)
+
+Ruta `/admin/pagos` (ítem "Pagos" del menú del administrador).
+
+- **Buscador de persona:** por nombre o DNI; cada resultado lleva la etiqueta "Socio" si `es_socio_gym`.
+- **Estado de cuenta de la persona elegida:** la misma vista del socio (`GET /api/pagos/persona/{id}/estado-cuenta`) y un botón para **cambiar de persona**.
+- **Registrar pago (modal):** se elige el concepto. *Cuota mensual*: sugiere el primer período impago, bloquea los ya pagados y ofrece adelantos; no se ofrece si la persona no es socia del gimnasio. *Sesión de consultorio*: lista los turnos de la persona, excluyendo los cancelados y los de gimnasio, y marca los que ya tienen pago. En ambos casos se carga el **monto** (mayor a cero) y el **medio** (efectivo, transferencia, débito o crédito), ambos obligatorios.
+- **Resultado:** al guardar se cierra el modal, se avisa y se refresca el estado de cuenta. Un 409 (cuota o sesión ya pagada) o cualquier error del servidor se muestra dentro del modal sin cerrarlo, y el botón se bloquea mientras el envío está en curso para evitar el doble pago.
+
 > Los valores del ejemplo corresponden a Juan García en los datos de prueba (`db/dml/seed.sql`), mostrados como si el seed se hubiera cargado a fines de septiembre de 2026. El seed calcula sus fechas contra el día de la carga, así que en la base real los meses cambian pero el caso es siempre el mismo: membresía iniciada ocho meses antes, solo los dos últimos meses pagos, seis períodos impagos y una excepción vigente por 30 días. No tiene sesiones de consultorio: la única del seed es de Carlos Soto.
 
 ---

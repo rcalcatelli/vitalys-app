@@ -17,11 +17,11 @@ describe("AdminNav", () => {
     vi.mocked(notificacionesApi.listarFallidas).mockResolvedValue([]);
   });
 
-  it("ofrece Hoy primero, luego Personas y Profesionales, y marca la ruta actual", () => {
+  it("ofrece Hoy primero, luego Personas, Profesionales y Pagos, y marca la ruta actual", () => {
     renderNav(<AdminNav fallidas={0} />);
 
     const links = screen.getAllByRole("link");
-    expect(links.map((l) => l.textContent)).toEqual(["Hoy", "Personas", "Profesionales"]);
+    expect(links.map((l) => l.textContent)).toEqual(["Hoy", "Personas", "Profesionales", "Pagos"]);
     expect(screen.getByRole("link", { name: "Hoy" })).toHaveAttribute("href", "/admin/hoy");
     expect(screen.getByRole("link", { name: "Personas" })).toHaveAttribute(
       "href",

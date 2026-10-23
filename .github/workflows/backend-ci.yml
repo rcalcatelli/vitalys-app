@@ -40,6 +40,12 @@ jobs:
       - name: Verificar rutas citadas en las pruebas
         run: python scripts/verificar-rutas-docs.py
 
+      # El "Deshacer" del ingreso se sacó del diseño (PR #27) y una exportación de Claude
+      # Design lo volvió a traer. Hasta que el proyecto de Claude Design esté corregido,
+      # esto evita que vuelva a entrar sin que nadie lo note.
+      - name: Verificar el mockup exportado
+        run: python scripts/verificar-diseno.py
+
   backend:
     name: Backend (Maven verify + JaCoCo gate 0.90)
     runs-on: ubuntu-latest

@@ -74,13 +74,20 @@ class TurnoGymIT extends IntegrationTestBase {
         return restTemplate.exchange(urlBase() + ruta, metodo, new HttpEntity<>(body, headers), tipo);
     }
 
-    /** Un día hábil de acá a {@code semanas} semanas que no sea feriado. */
-    private LocalDate diaHabil(int semanas) {
-        LocalDate d = LocalDate.now(ZONA).plusWeeks(semanas);
-        while (d.getDayOfWeek() == DayOfWeek.SATURDAY
-                || d.getDayOfWeek() == DayOfWeek.SUNDAY
-                || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
+    /**
+     * El {@code n}-ésimo día hábil no feriado a partir de mañana. RN-18 deja reservar gimnasio hasta
+     * 7 días antes, así que los tests no pueden irse semanas al futuro.
+     */
+    private LocalDate diaHabil(int n) {
+        LocalDate d = LocalDate.now(ZONA);
+        int hallados = 0;
+        while (hallados < n) {
             d = d.plusDays(1);
+            if (d.getDayOfWeek() != DayOfWeek.SATURDAY
+                    && d.getDayOfWeek() != DayOfWeek.SUNDAY
+                    && jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) == 0) {
+                hallados++;
+            }
         }
         return d;
     }
@@ -234,7 +241,7 @@ class TurnoGymIT extends IntegrationTestBase {
 
     @Test
     void pi86_cupoCompleto_da422() {
-        LocalDate dia = diaHabil(4);
+        LocalDate dia = diaHabil(3);
         Socio a = socioAlDia();
         Socio b = socioAlDia();
         jdbcTemplate.update("UPDATE configuracion_gym SET cupo_por_franja = 1 WHERE id = 1");
@@ -246,6 +253,19 @@ class TurnoGymIT extends IntegrationTestBase {
         } finally {
             jdbcTemplate.update("UPDATE configuracion_gym SET cupo_por_franja = 20 WHERE id = 1");
         }
+    }
+
+    @Test
+    void pi139_anticipacionDeRn18_menosDeUnaHoraOMasDeSieteDias_da422() {
+        Socio s = socioAlDia();
+        OffsetDateTime enMediaHora = OffsetDateTime.now(ZONA).plusMinutes(30);
+        OffsetDateTime enDosSemanas = franja(diaHabil(3).plusWeeks(2), 10, 0);
+
+        ResponseEntity<String> muyPronto = reservar(s.token(), enMediaHora);
+        assertThat(muyPronto.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        ResponseEntity<String> muyLejos = reservar(s.token(), enDosSemanas);
+        assertThat(muyLejos.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(muyLejos.getBody()).contains("7 días");
     }
 
     @Test

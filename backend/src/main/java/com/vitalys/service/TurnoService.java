@@ -68,6 +68,12 @@ public class TurnoService {
     /** El check-in se acepta desde un rato antes del inicio de la franja. */
     static final long MINUTOS_CHECKIN_ANTICIPADO = 15;
 
+    /** RN-18: un turno de gimnasio se reserva con al menos esta anticipación respecto de su inicio. */
+    static final long MINUTOS_ANTICIPACION_MINIMA_GYM = 60;
+
+    /** RN-18: y como mucho con esta anticipación. */
+    static final long DIAS_ANTICIPACION_MAXIMA_GYM = 7;
+
     /** Hasta dónde mira la "próxima agenda" de un profesional (RF-41). */
     static final int HORIZONTE_PROXIMA_AGENDA_DIAS = 21;
 
@@ -176,6 +182,7 @@ public class TurnoService {
         if (!request.inicio().isAfter(ahora())) {
             throw new ReglaDeNegocioException("No se puede reservar una franja que ya empezó");
         }
+        validarAnticipacionGym(request.inicio());
         Persona persona = resolverPersona(actor, request.personaId());
 
         VeredictoMorosidad veredicto = morosidadService.veredicto(persona);
@@ -195,6 +202,19 @@ public class TurnoService {
         auditoria.registrarSiOpera(AccionOperarComo.RESERVA_GYM, turno);
         avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
+    }
+
+    /** RN-18 / CA-08-5: depende de {@code NOW()}, por eso se valida acá y no en la base. */
+    private void validarAnticipacionGym(OffsetDateTime inicio) {
+        OffsetDateTime ahora = ahora();
+        if (inicio.isBefore(ahora.plusMinutes(MINUTOS_ANTICIPACION_MINIMA_GYM))) {
+            throw new ReglaDeNegocioException(
+                    "Las reservas de gimnasio se cierran 1 hora antes del inicio de la franja");
+        }
+        if (inicio.isAfter(ahora.plusDays(DIAS_ANTICIPACION_MAXIMA_GYM))) {
+            throw new ReglaDeNegocioException(
+                    "Solo se puede reservar gimnasio hasta 7 días antes de la franja");
+        }
     }
 
     /**

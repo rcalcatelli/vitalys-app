@@ -155,13 +155,20 @@ class OperarComoIT extends IntegrationTestBase {
         return usuarioRepository.findByEmail(s.email()).orElseThrow().getId();
     }
 
-    /** Un día hábil de acá a {@code semanas} semanas que no sea feriado. */
-    private LocalDate diaHabil(int semanas) {
-        LocalDate d = LocalDate.now(ZONA).plusWeeks(semanas);
-        while (d.getDayOfWeek() == DayOfWeek.SATURDAY
-                || d.getDayOfWeek() == DayOfWeek.SUNDAY
-                || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
+    /**
+     * El {@code n}-ésimo día hábil no feriado a partir de mañana. RN-18 deja reservar gimnasio hasta
+     * 7 días antes, así que los tests no pueden irse semanas al futuro.
+     */
+    private LocalDate diaHabil(int n) {
+        LocalDate d = LocalDate.now(ZONA);
+        int hallados = 0;
+        while (hallados < n) {
             d = d.plusDays(1);
+            if (d.getDayOfWeek() != DayOfWeek.SATURDAY
+                    && d.getDayOfWeek() != DayOfWeek.SUNDAY
+                    && jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) == 0) {
+                hallados++;
+            }
         }
         return d;
     }

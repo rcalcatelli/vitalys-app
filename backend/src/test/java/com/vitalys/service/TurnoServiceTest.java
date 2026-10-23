@@ -207,6 +207,33 @@ class TurnoServiceTest {
         verify(excepcionRepository).save(vigente);
     }
 
+    /** RN-18 / CA-08-5 (PI-139): mínimo 1 hora y máximo 7 días de anticipación, con el reloj inyectado. */
+    @Test
+    void pi139_reservaConMenosDeUnaHoraDeAnticipacion_lanza422() {
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(AHORA.plusMinutes(59), null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("1 hora antes");
+    }
+
+    @Test
+    void pi139_reservaConExactamenteUnaHoraDeAnticipacion_sePermite() {
+        assertThat(service.reservarGym(socio, new ReservaGymRequest(AHORA.plusHours(1), null)).estado())
+                .isEqualTo(EstadoTurno.RESERVADO);
+    }
+
+    @Test
+    void pi139_reservaConMasDeSieteDiasDeAnticipacion_lanza422() {
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(AHORA.plusDays(7).plusMinutes(1), null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("7 días");
+    }
+
+    @Test
+    void pi139_reservaConExactamenteSieteDiasDeAnticipacion_sePermite() {
+        assertThat(service.reservarGym(socio, new ReservaGymRequest(AHORA.plusDays(7), null)).estado())
+                .isEqualTo(EstadoTurno.RESERVADO);
+    }
+
     @Test
     void reservaDeUnaFranjaQueYaEmpezo_lanza422() {
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(AHORA, null)))

@@ -131,9 +131,12 @@ class PagoControllerIT extends IntegrationTestBase {
     }
 
     private TurnoResponse reservarGym(Persona p) {
-        LocalDate d = dia;
-        while (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
-            d = d.plusDays(7);
+        // RN-18: el gimnasio se reserva hasta 7 días antes; se toma el primer día hábil no feriado desde mañana
+        LocalDate d = LocalDate.now(ZONA).plusDays(1);
+        while (d.getDayOfWeek() == DayOfWeek.SATURDAY
+                || d.getDayOfWeek() == DayOfWeek.SUNDAY
+                || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
+            d = d.plusDays(1);
         }
         ResponseEntity<TurnoResponse> r = llamar(
                 HttpMethod.POST,

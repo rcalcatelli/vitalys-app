@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { normalizarProximaAgenda, normalizarTurno, normalizarTurnos } from "./normalizar";
 import type {
   EstadoGym,
   FranjaGym,
@@ -21,7 +22,7 @@ export function estadoGym(): Promise<EstadoGym> {
 
 /** POST /api/turnos/gym: la franja dura 60 min, solo se envía el inicio. */
 export function reservarGym(inicio: string): Promise<Turno> {
-  return http.post<Turno>("/api/turnos/gym", { inicio });
+  return http.post<Turno>("/api/turnos/gym", { inicio }).then(normalizarTurno);
 }
 
 /** GET /api/turnos/disponibles: slots del día de un profesional. */
@@ -33,22 +34,24 @@ export function slotsDisponibles(profesionalId: number, fecha: string): Promise<
 
 /** GET /api/turnos/consultorio/proxima-agenda: próximo día con turnos libres de cada profesional activo. */
 export function proximaAgenda(): Promise<ProximaAgenda[]> {
-  return http.get<ProximaAgenda[]>("/api/turnos/consultorio/proxima-agenda");
+  return http
+    .get<ProximaAgenda[]>("/api/turnos/consultorio/proxima-agenda")
+    .then(normalizarProximaAgenda);
 }
 
 /** POST /api/turnos: reserva un slot de consultorio. */
 export function reservarConsultorio(profesionalId: number, inicio: string): Promise<Turno> {
-  return http.post<Turno>("/api/turnos", { profesionalId, inicio });
+  return http.post<Turno>("/api/turnos", { profesionalId, inicio }).then(normalizarTurno);
 }
 
 /** GET /api/turnos/mis-turnos: turnos del socio autenticado. */
 export function misTurnos(): Promise<Turno[]> {
-  return http.get<Turno[]>("/api/turnos/mis-turnos");
+  return http.get<Turno[]>("/api/turnos/mis-turnos").then(normalizarTurnos);
 }
 
 /** PATCH /api/turnos/{id}/cancelar: el motivo es obligatorio (máx. 500). */
 export function cancelarTurno(id: number, motivo: string): Promise<Turno> {
-  return http.patch<Turno>(`/api/turnos/${id}/cancelar`, { motivo });
+  return http.patch<Turno>(`/api/turnos/${id}/cancelar`, { motivo }).then(normalizarTurno);
 }
 
 /** GET /api/turnos/mi-agenda: agenda del profesional (por defecto, hoy a +7 días), con DNI. */
@@ -62,12 +65,12 @@ export function miAgenda(desde?: string, hasta?: string): Promise<TurnoAgenda[]>
 
 /** PATCH /api/turnos/{id}/completado: el profesional marca "Atendido". */
 export function marcarCompletado(id: number): Promise<Turno> {
-  return http.patch<Turno>(`/api/turnos/${id}/completado`);
+  return http.patch<Turno>(`/api/turnos/${id}/completado`).then(normalizarTurno);
 }
 
 /** PATCH /api/turnos/{id}/ausente: solo con el turno ya iniciado. */
 export function marcarAusente(id: number): Promise<Turno> {
-  return http.patch<Turno>(`/api/turnos/${id}/ausente`);
+  return http.patch<Turno>(`/api/turnos/${id}/ausente`).then(normalizarTurno);
 }
 
 /** GET /api/turnos?tipo&personaId&fecha: listado filtrado (ADMIN); trae el DNI de cada persona. */
@@ -82,5 +85,5 @@ export function listarTurnos(filtro: {
   if (filtro.tipo) params.set("tipo", filtro.tipo);
   if (filtro.fecha) params.set("fecha", filtro.fecha);
   const query = params.toString();
-  return http.get<Turno[]>(`/api/turnos${query ? `?${query}` : ""}`);
+  return http.get<Turno[]>(`/api/turnos${query ? `?${query}` : ""}`).then(normalizarTurnos);
 }

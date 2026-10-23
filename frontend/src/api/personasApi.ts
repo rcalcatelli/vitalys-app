@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { normalizarPersona, normalizarPersonas } from "./normalizar";
 import type {
   FiltroPersonas,
   Persona,
@@ -22,25 +23,27 @@ export function construirQuery(filtro: FiltroPersonas, texto: string): string {
 }
 
 export function listarPersonas(filtro: FiltroPersonas, texto: string): Promise<Persona[]> {
-  return http.get<Persona[]>(`/api/personas${construirQuery(filtro, texto)}`);
+  return http
+    .get<Persona[]>(`/api/personas${construirQuery(filtro, texto)}`)
+    .then(normalizarPersonas);
 }
 
 export function crearPersona(alta: PersonaAlta): Promise<Persona> {
-  return http.post<Persona>("/api/personas", alta);
+  return http.post<Persona>("/api/personas", alta).then(normalizarPersona);
 }
 
 export function vincularPersona(vinculo: PersonaVinculo): Promise<Persona> {
-  return http.post<Persona>("/api/personas/vincular", vinculo);
+  return http.post<Persona>("/api/personas/vincular", vinculo).then(normalizarPersona);
 }
 
 export function actualizarPersona(id: number, datos: PersonaDatos): Promise<Persona> {
-  return http.put<Persona>(`/api/personas/${id}`, datos);
+  return http.put<Persona>(`/api/personas/${id}`, datos).then(normalizarPersona);
 }
 
 export function darDeBajaPersona(id: number): Promise<Persona> {
-  return http.patch<Persona>(`/api/personas/${id}/baja`);
+  return http.patch<Persona>(`/api/personas/${id}/baja`).then(normalizarPersona);
 }
 
 export function reactivarPersona(id: number): Promise<Persona> {
-  return http.patch<Persona>(`/api/personas/${id}/reactivar`);
+  return http.patch<Persona>(`/api/personas/${id}/reactivar`).then(normalizarPersona);
 }

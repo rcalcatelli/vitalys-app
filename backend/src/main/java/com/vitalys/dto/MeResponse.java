@@ -1,5 +1,6 @@
 package com.vitalys.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.vitalys.domain.RolUsuario;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
@@ -35,6 +36,8 @@ public class MeResponse {
         this(id, email, rol, nombre, apellido, null, null);
     }
 
+    /** Jackson usa este constructor (con dos constructores ya no puede elegir solo). */
+    @JsonCreator
     public MeResponse(
             Long id,
             String email,

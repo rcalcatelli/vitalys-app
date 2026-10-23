@@ -319,4 +319,20 @@ class AuthServiceTest {
 
         assertThat(authService.me("maria@vitalys.test").getOperadoPor()).isEqualTo(new MeResponse.Operador(1L, null, null));
     }
+
+    @Test
+    void meResponse_idaYVueltaPorJson() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        MeResponse original = new MeResponse(
+                7L, "maria@vitalys.test", RolUsuario.SOCIO_PACIENTE, "María", "Pérez",
+                new MeResponse.Operador(1L, "Laura", "Benítez"), java.time.OffsetDateTime.parse("2026-10-20T09:30:00-03:00"));
+
+        MeResponse leido = mapper.readValue(mapper.writeValueAsString(original), MeResponse.class);
+
+        assertThat(leido).usingRecursiveComparison().ignoringFields("operarComoExpiraEn").isEqualTo(original);
+        assertThat(leido.getOperarComoExpiraEn()).isAtSameInstantAs(original.getOperarComoExpiraEn());
+        assertThat(mapper.readValue("{\"id\":1,\"email\":\"a@b.c\",\"rol\":\"ADMIN\"}", MeResponse.class).getOperadoPor())
+                .isNull();
+    }
 }

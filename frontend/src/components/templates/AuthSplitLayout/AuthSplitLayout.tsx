@@ -19,16 +19,15 @@ export interface AuthSplitLayoutProps {
  * `theme`/`onToggleTheme` ya resueltos por la page (`useTheme`), igual que
  * `AuthLayout` recibe su `footer` ya resuelto.
  *
- * Mobile first: la columna del formulario arranca en `w-full` (sin
- * `max-w-*`) y recién desde `sm:` se acota a `sm:max-w-md` — mismo criterio
- * que `AuthLayout`.
+ * Medidas del diseño: las dos mitades reparten el ancho (`flex: 1 1 420px`) y la columna del
+ * formulario se acota a 400px, con 20px de margen lateral en mobile.
  */
 export function AuthSplitLayout({ theme, onToggleTheme, children }: AuthSplitLayoutProps) {
   return (
     <div className="flex min-h-screen w-full flex-wrap">
       <BrandPanel />
-      <div className="flex w-full flex-1 items-start justify-center px-4 py-7 sm:px-5 md:py-10">
-        <div className="flex w-full flex-col gap-5 sm:max-w-md">
+      <div className="flex w-full flex-1 basis-[420px] items-start justify-center px-5 pt-7 pb-10">
+        <div className="flex w-full max-w-[400px] flex-col gap-5">
           <div className="flex items-center justify-between">
             <Logo />
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />

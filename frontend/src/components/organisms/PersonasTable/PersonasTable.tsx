@@ -15,7 +15,9 @@ export interface PersonasTableProps {
   ocupado?: boolean;
 }
 
-const COLUMNAS = "shell:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_160px]";
+// La última columna mide 120px como en el diseño (que solo tiene "Operar como"). Con el ⋯ de
+// Editar/Baja los botones desbordan hacia la izquierda sobre el aire de la columna Cuota.
+const COLUMNAS = "shell:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_120px]";
 
 /**
  * Listado de Personas (ADMIN). En mobile cada persona es una tarjeta de dos columnas; desde 760px
@@ -64,7 +66,7 @@ export function PersonasTable({
             <li
               key={p.id}
               data-testid={`persona-${p.id}`}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-t border-border px-4 py-3 first:border-t-0 shell:first:border-t ${COLUMNAS} ${activa ? "" : "opacity-60"}`}
+              className={`relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-t border-border px-4 py-3 first:border-t-0 shell:first:border-t ${COLUMNAS} ${activa ? "" : "opacity-60"}`}
             >
               <span className="flex min-w-0 flex-col">
                 <span className="font-medium text-ink">{nombre}</span>
@@ -85,7 +87,13 @@ export function PersonasTable({
                   {cuota.label}
                 </Chip>
               </span>
-              <span className="col-span-2 flex flex-wrap items-center justify-end gap-1.5 shell:col-span-1">
+              <span
+                className={`col-span-2 flex items-center justify-end gap-1.5 shell:col-span-1 shell:flex-nowrap shell:justify-self-end ${
+                  confirmando
+                    ? "flex-wrap shell:absolute shell:top-1/2 shell:right-4 shell:-translate-y-1/2 shell:bg-surface shell:pl-3"
+                    : "flex-wrap"
+                }`}
+              >
                 {confirmando ? (
                   <>
                     <span className="self-center text-sm text-ink-2">¿Dar de baja?</span>

@@ -42,7 +42,7 @@ export function IngresoLista({ turnos, marcandoId, onMarcar, vacio }: IngresoLis
           {t.estado === "RESERVADO" && (
             <Button
               variant="gym"
-              className="whitespace-nowrap"
+              className="px-4! whitespace-nowrap"
               disabled={marcandoId === t.id}
               onClick={() => onMarcar(t)}
             >

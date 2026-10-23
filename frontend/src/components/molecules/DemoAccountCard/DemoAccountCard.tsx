@@ -3,8 +3,16 @@ export interface DemoAccountCardProps {
   initials: string;
   name: string;
   description: string;
+  /** Par de colores del avatar (los mismos tonos del diseño: clin, gym o bad). */
+  tono?: "clin" | "gym" | "bad";
   onClick: () => void;
 }
+
+const TONOS = {
+  clin: "bg-clin-soft text-clin-ink",
+  gym: "bg-gym-soft text-gym-ink",
+  bad: "bg-bad-soft text-bad-ink",
+} as const;
 
 /**
  * Molécula: tarjeta de cuenta de demostración (W-01). Presentacional puro —
@@ -12,19 +20,24 @@ export interface DemoAccountCardProps {
  * `onClick`. Es `LoginForm` (organismo) quien decide qué pasa al hacer clic:
  * autocompletar sus propios campos internos, nunca iniciar sesión sola.
  *
- * Avatar en `clin-soft`/`clin-ink`: mismo par de tokens que usa el mockup
- * para el avatar de usuario logueado (sidebar/header), no uno inventado por
- * rol — la lista de demo del mockup no fija colores por ítem
- * (`{{ d.bg }}`/`{{ d.fg }}` quedan como placeholders sin resolver).
+ * Avatar con el par de tonos que fija el diseño por cuenta (`tono`).
  */
-export function DemoAccountCard({ initials, name, description, onClick }: DemoAccountCardProps) {
+export function DemoAccountCard({
+  initials,
+  name,
+  description,
+  tono = "clin",
+  onClick,
+}: DemoAccountCardProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[52px] w-full items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-left text-ink transition-colors hover:border-clin"
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-[10px] border border-border bg-surface px-3 py-2 text-left text-ink transition-colors hover:border-clin"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clin-soft text-xs font-semibold text-clin-ink">
+      <span
+        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-xs font-semibold ${TONOS[tono]}`}
+      >
         {initials}
       </span>
       <span className="flex min-w-0 flex-col">

@@ -7,6 +7,8 @@ export interface CupoGimnasioGridProps {
   ahora: Date;
   /** Inicio (ISO) del turno de gimnasio que el socio ya tiene ese día, si lo tiene. */
   tuTurno: string | null;
+  /** Si el socio no puede reservar (sin gimnasio / suspendido), la nota de todas las franjas libres. */
+  bloqueo?: "Bloqueado" | "No disponible" | null;
   /** Inicio (ISO) de la franja elegida, si hay una. */
   seleccionada: string | null;
   onElegir: (inicio: string) => void;
@@ -27,6 +29,7 @@ export function CupoGimnasioGrid({
   franjas,
   ahora,
   tuTurno,
+  bloqueo = null,
   seleccionada,
   onElegir,
 }: CupoGimnasioGridProps) {
@@ -39,6 +42,7 @@ export function CupoGimnasioGrid({
         if (esMia) motivo = "Tu turno";
         else if (inicio <= ahora.getTime()) motivo = "Ya pasó";
         else if (inicio - MS_CIERRE < ahora.getTime()) motivo = "Cierra 1 h antes";
+        else if (bloqueo !== null) motivo = bloqueo;
         else if (tuTurno !== null) motivo = "Ya tenés turno este día";
         else if (f.disponibles <= 0) motivo = "Cupo completo";
         const deshabilitada = motivo !== null;

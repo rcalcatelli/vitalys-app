@@ -4,6 +4,29 @@ import { describe, expect, it, vi } from "vitest";
 import { DemoAccountCard } from "./DemoAccountCard";
 
 describe("DemoAccountCard", () => {
+  it("el avatar toma el tono pedido (gym para recepción, bad para el suspendido)", () => {
+    const { rerender } = render(
+      <DemoAccountCard
+        initials="LB"
+        name="Laura"
+        description="Recepción"
+        tono="gym"
+        onClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("LB")).toHaveClass("bg-gym-soft", "text-gym-ink");
+    rerender(
+      <DemoAccountCard
+        initials="JG"
+        name="Juan"
+        description="Suspendido"
+        tono="bad"
+        onClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("JG")).toHaveClass("bg-bad-soft", "text-bad-ink");
+  });
+
   it("muestra iniciales, nombre y descripción, y llama a onClick al presionarla", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();

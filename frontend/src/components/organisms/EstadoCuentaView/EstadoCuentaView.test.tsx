@@ -311,13 +311,13 @@ describe("EstadoCuentaView", () => {
       expect(sesiones.getByText("$ 8.000")).toBeInTheDocument();
     });
 
-    it("sin períodos ni sesiones no dibuja encabezados", () => {
+    it("sin períodos no dibuja su encabezado; las sesiones vacías sí (como el diseño)", () => {
       stubAncho(true);
       render(
         <EstadoCuentaView vista="admin" estado={unEstadoCuenta({ periodos: [], sesiones: [] })} />,
       );
       expect(screen.queryByText("Fecha de pago")).not.toBeInTheDocument();
-      expect(screen.queryByText("Fecha del turno")).not.toBeInTheDocument();
+      expect(screen.getByText("Fecha del turno")).toBeInTheDocument();
     });
   });
 });

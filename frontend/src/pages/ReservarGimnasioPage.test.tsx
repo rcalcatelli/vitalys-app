@@ -66,7 +66,7 @@ describe("ReservarGimnasioPage", () => {
     vi.clearAllMocks();
   });
 
-  it("no socio de gimnasio: muestra el bloqueo y ninguna franja ni consulta de cupo", async () => {
+  it("no socio de gimnasio: muestra el bloqueo y las franjas como No disponible, sin poder elegirlas", async () => {
     vi.mocked(turnosApi.estadoGym).mockResolvedValue(unEstadoGym({ esSocioGym: false }));
     montar();
     expect(
@@ -74,12 +74,13 @@ describe("ReservarGimnasioPage", () => {
         "Acercate a recepción para sumarlo a tu cuenta. Tus consultas siguen igual.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Día" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /11:00 – 12:00, No disponible/ }),
+    ).toBeDisabled();
     expect(screen.queryByText(/lugares libres/)).not.toBeInTheDocument();
-    expect(turnosApi.cupoGym).not.toHaveBeenCalled();
   });
 
-  it("suspendido: muestra el texto de suspensión y ninguna franja", async () => {
+  it("suspendido: muestra el texto de suspensión y las franjas como Bloqueado", async () => {
     vi.mocked(turnosApi.estadoGym).mockResolvedValue(unEstadoGym({ suspendido: true }));
     montar();
     expect(
@@ -87,8 +88,8 @@ describe("ReservarGimnasioPage", () => {
         "Alcanzaste el límite de períodos impagos y la reserva de gimnasio está suspendida. Las consultas siguen habilitadas.",
       ),
     ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /11:00 – 12:00, Bloqueado/ })).toBeDisabled();
     expect(screen.queryByText(/lugares libres/)).not.toBeInTheDocument();
-    expect(turnosApi.cupoGym).not.toHaveBeenCalled();
   });
 
   it("con excepción vigente avisa y deja reservar", async () => {

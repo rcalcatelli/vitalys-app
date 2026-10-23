@@ -21,7 +21,8 @@ interface MensajeUi {
 
 /**
  * Reservar gimnasio (W-08 / W-02). Primero consulta el estado del socio: si no es socio de
- * gimnasio o está suspendido, muestra el bloqueo y NO renderiza días ni franjas. El selector de
+ * gimnasio o está suspendido, muestra el aviso de bloqueo y las franjas deshabilitadas
+ * ("Bloqueado" / "No disponible"), sin poder elegir ninguna. El selector de
  * 7 días es solo comodidad de la UI; el backend valida cada reserva (409/422 → mensaje + recarga).
  */
 export function ReservarGimnasioPage() {
@@ -52,7 +53,8 @@ export function ReservarGimnasioPage() {
   const feriadoCierra = feriado?.cierraGimnasio === true;
   const domingo = diaSemana(fecha) === 7;
   const cerrada = domingo || feriadoCierra;
-  const puedeVerCupo = estado !== null && !bloqueado && !cerrada;
+  // Bloqueado igual se ven los días y las franjas (deshabilitadas como "Bloqueado"), como en el diseño.
+  const puedeVerCupo = estado !== null && !cerrada;
 
   useEffect(() => {
     let vigente = true;
@@ -177,7 +179,7 @@ export function ReservarGimnasioPage() {
 
         {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
 
-        {estado && !bloqueado && (
+        {estado && (
           <>
             <ul className="flex flex-wrap gap-1.5 text-xs text-ink-2">
               {[
@@ -226,6 +228,7 @@ export function ReservarGimnasioPage() {
                 franjas={franjas}
                 ahora={ahora}
                 tuTurno={tuTurnoDe(fecha)}
+                bloqueo={bloqueado ? (estado.esSocioGym ? "Bloqueado" : "No disponible") : null}
                 seleccionada={seleccion}
                 onElegir={setSeleccion}
               />

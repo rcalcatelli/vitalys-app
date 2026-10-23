@@ -43,7 +43,7 @@ export function ProfesionalesTable({
   }
 
   return (
-    <div className="overflow-visible rounded-xl border border-border bg-surface">
+    <div className="overflow-visible min-[1100px]:rounded-xl min-[1100px]:border min-[1100px]:border-border min-[1100px]:bg-surface">
       <div
         className={`hidden gap-3 rounded-t-xl bg-surface-2 px-4 py-2.5 text-xs font-semibold tracking-wider text-ink-3 uppercase min-[1100px]:grid ${COLUMNAS}`}
       >
@@ -53,7 +53,7 @@ export function ProfesionalesTable({
         <span>Estado</span>
         <span className="text-right">Acciones</span>
       </div>
-      <ul>
+      <ul className="flex flex-col gap-4 min-[1100px]:block">
         {profesionales.map((p) => {
           const menuAbierto = menuAbiertoId === p.id;
           const nombre = nombreProfesional(p);
@@ -61,7 +61,7 @@ export function ProfesionalesTable({
             <li
               key={p.id}
               data-testid={`profesional-${p.id}`}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 border-t border-border px-4 py-3 first:border-t-0 min-[1100px]:first:border-t ${COLUMNAS}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-card min-[1100px]:rounded-none min-[1100px]:border-0 min-[1100px]:border-t min-[1100px]:px-4 min-[1100px]:py-3 min-[1100px]:shadow-none ${COLUMNAS}`}
             >
               <span
                 className={`flex min-w-0 flex-col min-[1100px]:order-1 ${p.activo ? "" : "opacity-55"}`}
@@ -97,7 +97,7 @@ export function ProfesionalesTable({
                   size="sm"
                   disabled={ocupado || !p.activo}
                   aria-label={`Disponibilidad de ${nombre}`}
-                  className="flex-1 px-3 text-small font-semibold text-clin-ink min-[1100px]:flex-none"
+                  className="flex-1 h-11! px-3 text-small font-semibold! text-clin-ink! min-[1100px]:h-[38px]! min-[1100px]:flex-none"
                   onClick={() => onDisponibilidad(p)}
                 >
                   Disponibilidad
@@ -108,7 +108,7 @@ export function ProfesionalesTable({
                   size="sm"
                   disabled={ocupado}
                   aria-label={`Editar ${nombre}`}
-                  className="flex-1 px-3 text-small min-[1100px]:flex-none"
+                  className="h-11! flex-1 px-3 text-small min-[1100px]:h-[38px]! min-[1100px]:flex-none"
                   onClick={() => onEditar(p)}
                 >
                   Editar
@@ -121,7 +121,7 @@ export function ProfesionalesTable({
                     disabled={ocupado}
                     aria-label={`Más acciones de ${nombre}`}
                     aria-expanded={menuAbierto}
-                    className="w-11 px-0 text-small font-bold min-[1100px]:w-9"
+                    className="h-11! w-11 px-0 text-small font-bold min-[1100px]:h-[38px]! min-[1100px]:w-9"
                     onClick={() => setMenuAbiertoId(menuAbierto ? null : p.id)}
                   >
                     ⋯

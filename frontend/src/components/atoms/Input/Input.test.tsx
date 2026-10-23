@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { Input } from "./Input";
 
 describe("Input", () => {
+  it("mide 44px en formularios y 46px con alto auth", () => {
+    const { rerender } = render(<Input aria-label="Campo" value="" onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Campo")).toHaveClass("h-11");
+    rerender(<Input aria-label="Campo" alto="auth" value="" onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Campo")).toHaveClass("h-[46px]");
+  });
+
   it("llama a onChange con el valor (no con el evento crudo)", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

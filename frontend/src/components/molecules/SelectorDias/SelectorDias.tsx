@@ -32,7 +32,7 @@ export function SelectorDias({ dias, activa, onElegir, tono }: SelectorDiasProps
             aria-label={`${d.dow} ${d.num}${d.sub ? `, ${d.sub}` : ""}`}
             onClick={() => onElegir(d.fecha)}
             className={[
-              "flex min-h-[76px] flex-1 basis-16 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-1 py-2",
+              "flex min-h-[76px] flex-[1_0_64px] flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-1 py-2",
               esActivo ? activo : "border-border bg-surface text-ink",
               d.cerrado && !esActivo ? "text-ink-3 opacity-60" : "",
             ].join(" ")}

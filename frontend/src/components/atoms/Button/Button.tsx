@@ -14,7 +14,7 @@ export type ButtonVariant =
   | "ghost-bad"
   | "ghost";
 
-export type ButtonSize = "sm" | "tabla" | "cta" | "md" | "modal" | "lg";
+export type ButtonSize = "xs" | "sm" | "tabla" | "cta" | "md" | "modal" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**
@@ -24,7 +24,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    */
   variant?: ButtonVariant;
   /**
-   * Altura del mockup: `sm` 38px (acciones de tabla), `tabla` 40px (Cancelar / Atendido en filas), `cta` 42px (acciones de las tarjetas de
+   * Altura del mockup: `xs` 36px (botón de tema del login), `sm` 38px (acciones de tabla), `tabla` 40px (Cancelar / Atendido en filas), `cta` 42px (acciones de las tarjetas de
    * Pagos), `md` 44px, `modal` 46px (botones de los diálogos), `lg` 48px (auth, 15px). Por defecto `outline` es `sm` y el resto `md`.
    */
   size?: ButtonSize;
@@ -40,7 +40,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const baseClasses =
   "inline-flex items-center justify-center transition-colors " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clin-soft " +
-  "disabled:cursor-not-allowed disabled:opacity-60";
+  "disabled:cursor-not-allowed disabled:opacity-45";
 
 // Calco de los botones del mockup: sólidos `font-semibold` (14px; el 15px es del tamaño `lg`) con `hover:brightness-110`
 // (`style-hover="filter:brightness(1.08)"`), tonales con borde del color del estado.
@@ -52,7 +52,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   gym: `${SOLIDO} bg-gym text-on-gym`,
   ok: `${SOLIDO} bg-ok text-white`,
   // Autorizar excepción: ámbar con texto oscuro fijo (`#1E1400` en el mockup).
-  warn: "bg-warn px-[18px] font-semibold text-[#1E1400] hover:brightness-110",
+  warn: "bg-warn px-[18px] font-semibold text-[#1E1400] hover:brightness-110 disabled:opacity-50!",
   bad: `${SOLIDO} bg-bad text-white`,
   "tonal-ok": `${TONAL} border-ok bg-ok-soft text-ok-ink`,
   "tonal-bad": `${TONAL} border-bad bg-bad-soft text-bad-ink`,
@@ -73,6 +73,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
+  xs: "h-9",
   sm: "h-[38px]",
   tabla: "h-10",
   cta: "h-[42px]",

@@ -316,7 +316,7 @@ export function EstadoCuentaView({ estado, vista, dadaDeBaja = false }: EstadoCu
       <section aria-label="Sesiones de consultorio pagadas" className="flex flex-col gap-2.5">
         <h3 className={TITULO_SECCION}>Sesiones de consultorio pagadas</h3>
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-          {ancho && sesiones.length > 0 && (
+          {ancho && (
             <div className={`${ENCABEZADO} ${GRILLA_SESIONES}`}>
               <span>Fecha del turno</span>
               <span>Profesional</span>

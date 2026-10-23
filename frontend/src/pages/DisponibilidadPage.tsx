@@ -160,10 +160,16 @@ export function DisponibilidadPage() {
     ? "Hay franjas que se superponen o son inválidas. Corregilas para poder guardar."
     : "Las franjas de un mismo día no pueden superponerse. Si achicás una franja con turnos reservados, te vamos a pedir confirmación.";
 
+  const eyebrow = esAdmin
+    ? "Recepción"
+    : profesional
+      ? `${nombreProfesional(profesional)} · ${etiquetaEspecialidad(profesional.especialidad)}`
+      : "Profesional";
+
   return (
     <>
       <PageHeader
-        eyebrow={esAdmin ? "Recepción" : "Profesional"}
+        eyebrow={eyebrow}
         titulo="Disponibilidad"
         subtitulo={
           esAdmin
@@ -219,7 +225,7 @@ export function DisponibilidadPage() {
 
             <div
               className={[
-                "rounded-xl px-4 py-3 text-sm",
+                "rounded-lg px-4 py-3 text-[13.5px]",
                 hayErrores ? "bg-bad-soft text-bad-ink" : "bg-clin-soft text-clin-ink",
               ].join(" ")}
             >

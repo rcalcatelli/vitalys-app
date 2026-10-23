@@ -49,7 +49,7 @@ export function FranjasEditor({
       aria-label="Franjas"
       className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 lg:flex-[1_1_300px]"
     >
-      <h2 className="font-heading text-lg font-semibold text-ink">Franjas</h2>
+      <h2 className="font-heading text-[17px] font-semibold text-ink">Franjas</h2>
 
       {filas.map((fila, i) => {
         const error = errores[fila.clave];
@@ -66,6 +66,7 @@ export function FranjasEditor({
             <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] items-center gap-1.5">
               <Select
                 aria-label="Día"
+                className="h-[42px]! px-1.5! text-[13.5px]!"
                 value={String(fila.diaSemana)}
                 onChange={(v) => onCambiar(fila.clave, { diaSemana: Number(v) })}
               >
@@ -77,7 +78,7 @@ export function FranjasEditor({
               </Select>
               <Select
                 aria-label="Desde"
-                className="font-mono"
+                className="h-[42px]! px-1.5! font-mono text-[13px]!"
                 value={fila.horaInicio}
                 onChange={(v) => onCambiar(fila.clave, { horaInicio: v })}
               >
@@ -89,7 +90,7 @@ export function FranjasEditor({
               </Select>
               <Select
                 aria-label="Hasta"
-                className="font-mono"
+                className="h-[42px]! px-1.5! font-mono text-[13px]!"
                 value={fila.horaFin}
                 onChange={(v) => onCambiar(fila.clave, { horaFin: v })}
               >
@@ -103,7 +104,7 @@ export function FranjasEditor({
                 type="button"
                 aria-label="Quitar franja"
                 onClick={() => onQuitar(fila.clave)}
-                className="h-11 rounded-md text-lg text-ink-3 hover:text-bad-ink"
+                className="h-[42px] rounded-md text-lg text-ink-3 hover:text-bad-ink"
               >
                 ×
               </button>
@@ -127,13 +128,19 @@ export function FranjasEditor({
         <Button
           size="md"
           type="button"
-          variant="outline"
+          variant="neutral"
+          className="px-3.5! font-normal! disabled:opacity-50!"
           disabled={!hayCambios || guardando}
           onClick={onDescartar}
         >
           Descartar
         </Button>
-        <Button type="button" disabled={!hayCambios || hayErrores || guardando} onClick={onGuardar}>
+        <Button
+          type="button"
+          className="disabled:opacity-45!"
+          disabled={!hayCambios || hayErrores || guardando}
+          onClick={onGuardar}
+        >
           {guardando ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>

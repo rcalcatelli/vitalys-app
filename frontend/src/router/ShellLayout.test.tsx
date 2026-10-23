@@ -178,6 +178,35 @@ describe("ShellLayout", () => {
     expect(await screen.findByText("Gimnasio + Nutrición")).toBeInTheDocument();
   });
 
+  it("el profesional ve 'Lic. Nombre Apellido' y su especialidad", async () => {
+    setToken("jwt");
+    const respuestas: Record<string, unknown> = {
+      "/api/auth/me": {
+        id: 7,
+        email: "val@vitalys.com",
+        rol: "PROFESIONAL",
+        nombre: "Valentina",
+        apellido: "Méndez",
+      },
+      "/api/profesionales/me": { id: 1, especialidad: "NUTRICION" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(respuestas[new URL(url, "http://x").pathname]),
+        } as Response),
+      ),
+    );
+    montar("/profesional/agenda");
+
+    expect(await screen.findByText("Lic. Valentina Méndez")).toBeInTheDocument();
+    expect(await screen.findByText("Nutrición")).toBeInTheDocument();
+    expect(screen.getByText("VM")).toBeInTheDocument();
+  });
+
   it("desktop muestra el chip de fecha y hora en la cabecera", async () => {
     sesion({ id: 1, email: "admin@vitalys.com", rol: "ADMIN" });
     montar();

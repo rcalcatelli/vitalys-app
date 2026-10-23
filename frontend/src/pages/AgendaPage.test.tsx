@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/http";
+import * as profesionalesApi from "../api/profesionalesApi";
 import * as turnosApi from "../api/turnosApi";
+import { unProfesional } from "../test/profesionalFixture";
 import { unTurno, unTurnoAgenda } from "../test/turnoFixture";
 import { AgendaPage } from "./AgendaPage";
 
@@ -19,6 +21,10 @@ vi.mock("../context/AuthContext", async (importOriginal) => {
   };
 });
 
+vi.mock("../api/profesionalesApi", () => ({
+  miPerfilProfesional: vi.fn(),
+  listarFranjas: vi.fn(),
+}));
 vi.mock("../api/turnosApi", () => ({
   miAgenda: vi.fn(),
   marcarCompletado: vi.fn(),
@@ -41,6 +47,11 @@ describe("AgendaPage", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(AHORA);
     vi.mocked(turnosApi.miAgenda).mockResolvedValue([unTurnoAgenda()]);
+    vi.mocked(profesionalesApi.miPerfilProfesional).mockResolvedValue(unProfesional());
+    // Lunes de 10:00 a 12:00 en turnos de 30 min: 10:00, 10:30, 11:00 (reservado) y 11:30.
+    vi.mocked(profesionalesApi.listarFranjas).mockResolvedValue([
+      { id: 1, diaSemana: 1, horaInicio: "10:00:00", horaFin: "12:00:00" },
+    ]);
   });
 
   afterEach(() => {
@@ -52,8 +63,27 @@ describe("AgendaPage", () => {
     montar();
     expect(await screen.findByText("Juan García")).toBeInTheDocument();
     expect(turnosApi.miAgenda).toHaveBeenCalledWith("2026-10-26", "2026-11-02");
-    expect(screen.getByText("DNI 30111222")).toBeInTheDocument();
+    expect(screen.getByText("30111222")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Agenda de hoy" })).toBeInTheDocument();
+  });
+
+  it("suma el resumen, los huecos libres y la especialidad en el encabezado", async () => {
+    montar();
+    expect(await screen.findByText("huecos libres")).toBeInTheDocument();
+    expect(screen.getByText("huecos libres").previousSibling).toHaveTextContent("3");
+    expect(screen.getByText("pacientes").previousSibling).toHaveTextContent("1");
+    expect(screen.getByText("30 min")).toBeInTheDocument();
+    expect(screen.getByText("Lunes 26 de octubre · Nutrición")).toBeInTheDocument();
+    expect(screen.getByText("En curso")).toBeInTheDocument();
+    expect(screen.getAllByText("Hueco libre (pasado)")).toHaveLength(2);
+  });
+
+  it("si no se puede leer la disponibilidad muestra la agenda sin huecos", async () => {
+    vi.mocked(profesionalesApi.miPerfilProfesional).mockRejectedValue(new Error("boom"));
+    montar();
+    expect(await screen.findByText("Juan García")).toBeInTheDocument();
+    expect(screen.queryByText("huecos libres")).not.toBeInTheDocument();
+    expect(screen.getByText("Lunes 26 de octubre")).toBeInTheDocument();
   });
 
   it("Atendido marca el turno y recarga la agenda", async () => {
@@ -82,10 +112,18 @@ describe("AgendaPage", () => {
     await waitFor(() => expect(turnosApi.miAgenda).toHaveBeenCalledTimes(2));
   });
 
-  it("sin turnos muestra el estado vacío", async () => {
+  it("sin turnos y sin disponibilidad muestra el estado vacío", async () => {
     vi.mocked(turnosApi.miAgenda).mockResolvedValue([]);
+    vi.mocked(profesionalesApi.listarFranjas).mockResolvedValue([]);
     montar();
     expect(await screen.findByText("No tenés turnos en los próximos 7 días.")).toBeInTheDocument();
+  });
+
+  it("sin turnos pero con disponibilidad lista los huecos libres de hoy", async () => {
+    vi.mocked(turnosApi.miAgenda).mockResolvedValue([]);
+    montar();
+    expect(await screen.findByText("4")).toBeInTheDocument();
+    expect(screen.getByText("huecos libres")).toBeInTheDocument();
   });
 
   it("si falla la carga muestra el error", async () => {

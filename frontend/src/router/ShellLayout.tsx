@@ -7,11 +7,13 @@ import { ShellContext } from "../components/templates/AppShell/ShellContext";
 import { useAuth } from "../context/AuthContext";
 import { useAhora } from "../hooks/useAhora";
 import { useFallidas } from "../hooks/useFallidas";
+import { useEspecialidadPropia } from "../hooks/useEspecialidadPropia";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useServiciosSocio } from "../hooks/useServiciosSocio";
 import { useTheme } from "../hooks/useTheme";
 import type { Usuario } from "../types/auth";
-import { etiquetaAhora } from "../utils/formato";
+import { etiquetaAhora, etiquetaEspecialidad } from "../utils/formato";
+import type { Especialidad } from "../types/profesional";
 import { ETIQUETAS_ROL, NAV_POR_ROL } from "./navConfig";
 
 function nombreCompleto(usuario: Usuario): string {
@@ -20,11 +22,17 @@ function nombreCompleto(usuario: Usuario): string {
 
 /**
  * Nombre completo si el backend lo informa; si no, el email (sin ficha o antes de RF-40). En el
- * socio la segunda línea son sus servicios ("Gimnasio + Nutrición") cuando se pueden resolver.
+ * socio la segunda línea son sus servicios ("Gimnasio + Nutrición") cuando se pueden resolver; en el
+ * profesional, "Lic. Nombre Apellido" y su especialidad.
  */
-function usuarioVista(usuario: Usuario, servicios: string | null): UsuarioVista {
+function usuarioVista(
+  usuario: Usuario,
+  servicios: string | null,
+  especialidad: Especialidad | null,
+): UsuarioVista {
   const completo = nombreCompleto(usuario);
-  const nombre = completo || usuario.email;
+  const esProfesional = usuario.rol === "PROFESIONAL";
+  const nombre = completo ? (esProfesional ? `Lic. ${completo}` : completo) : usuario.email;
   const iniciales = completo
     ? completo
         .split(/\s+/)
@@ -34,7 +42,9 @@ function usuarioVista(usuario: Usuario, servicios: string | null): UsuarioVista 
     : usuario.email.slice(0, 2);
   return {
     nombre,
-    detalle: servicios ?? ETIQUETAS_ROL[usuario.rol].corta,
+    detalle:
+      servicios ??
+      (especialidad ? etiquetaEspecialidad(especialidad) : ETIQUETAS_ROL[usuario.rol].corta),
     iniciales: iniciales.toUpperCase(),
   };
 }
@@ -61,6 +71,7 @@ export function ShellLayout() {
   const esAdmin = usuario?.rol === "ADMIN";
   const fallidas = useFallidas(!esAdmin);
   const servicios = useServiciosSocio(usuario?.rol !== "SOCIO_PACIENTE");
+  const especialidad = useEspecialidadPropia(usuario?.rol !== "PROFESIONAL");
 
   const contexto = useMemo(
     () => ({
@@ -96,7 +107,7 @@ export function ShellLayout() {
     <AppShell
       rolLabel={ETIQUETAS_ROL[usuario.rol].encabezado}
       items={items}
-      usuario={usuarioVista(usuario, servicios)}
+      usuario={usuarioVista(usuario, servicios, especialidad)}
       theme={theme}
       onToggleTheme={toggleTheme}
       onLogout={logout}

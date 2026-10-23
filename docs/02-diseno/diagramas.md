@@ -59,6 +59,10 @@ graph TD
         UC22[Ver historial de notificaciones]
     end
 
+    subgraph OperarComo["Operar como"]
+        UC23[Operar en nombre de un socio]
+    end
+
     SP --> UC01
     SP --> UC02
     SP --> UC03
@@ -92,6 +96,7 @@ graph TD
     AD --> UC20
     AD --> UC21
     AD --> UC22
+    AD --> UC23
 ```
 
 ---
@@ -102,7 +107,7 @@ graph TD
 stateDiagram-v2
     [*] --> RESERVADO : Reserva exitosa\n(persona / admin)
 
-    RESERVADO --> COMPLETADO : Atención finalizada\n(profesional / admin)
+    RESERVADO --> COMPLETADO : Atención finalizada o check-in\n(profesional / admin)\nguarda completado_en (RN-28)
 
     RESERVADO --> AUSENTE : Paciente no se presentó\n(profesional / admin)
 
@@ -505,6 +510,53 @@ sequenceDiagram
 
 ---
 
+## 7b. Diagrama de Secuencia — Operar como (ADMIN en nombre de un socio)
+
+```mermaid
+sequenceDiagram
+    actor A as Admin (Recepción)
+    participant FE as Frontend
+    participant F as JwtAuthenticationFilter
+    participant OC as OperarComoService
+    participant TS as TurnoService
+    participant AU as auditoria_operar_como
+    participant DB as Base de datos
+
+    A->>FE: Personas → "Operar como" (socio Juan)
+    FE->>OC: POST /api/admin/operar-como {personaId} (JWT del ADMIN)
+    OC->>DB: verifica ADMIN, sesión no suplantada, socio activo con ficha
+    OC->>AU: INSERT accion=INICIO (sesion_id = jti)
+    OC-->>FE: {token (30 min, sub=socio, act=ADMIN), expiraEn, persona}
+    FE->>FE: sessionStorage["vitalys_token_operar_como"], banner, navega a /socio/inicio
+
+    A->>FE: reserva un turno de gimnasio como Juan
+    FE->>F: POST /api/turnos/gym (token de operar como)
+    F->>DB: revalida actor ADMIN habilitado, sujeto SOCIO habilitado y sesión con INICIO y sin FIN
+    alt algo no cumple o el token venció
+        F-->>FE: 401 → el cliente descarta el token y vuelve a la sesión ADMIN
+    else sesión vigente
+        F->>TS: principal = socio, operador = ADMIN (ActorActual)
+        TS->>DB: reglas del socio (RN-01, RN-16..18) + INSERT turno (reservado_por = ADMIN)
+        TS->>AU: INSERT accion=RESERVA_GYM, turno_id (misma transacción, MANDATORY)
+        alt falla la auditoría
+            AU-->>TS: error
+            TS-->>FE: la transacción se revierte, no queda el turno
+        else
+            TS-->>FE: 201 TurnoResponse (reservadoPorRecepcion = true)
+        end
+    end
+
+    A->>FE: "Volver a Recepción"
+    FE->>OC: POST /api/operar-como/fin
+    OC->>AU: INSERT accion=FIN (la credencial deja de autenticar)
+    OC-->>FE: 204
+    FE->>FE: descarta el token, restaura la sesión ADMIN, navega a /admin/personas
+```
+
+Cualquier endpoint de ADMIN llamado con el token de operar como responde 403, porque el principal es el socio (RN-26); las escrituras fuera de la lista blanca las corta `OperarComoInterceptor`.
+
+---
+
 ## 8. Diagrama de Clases del Dominio
 
 ```mermaid
@@ -560,9 +612,10 @@ classDiagram
         +EstadoTurno estado
         +ZonedDateTime canceladoEn
         +String motivoCancelacion
+        +OffsetDateTime completadoEn
         +cancelarEnTiempo(String motivo, Usuario actor)
         +cancelarTarde(String motivo, Usuario actor)
-        +completar()
+        +completar(OffsetDateTime ahora)
         +marcarAusencia()
     }
 
@@ -590,6 +643,13 @@ classDiagram
         +esSesion() Boolean
     }
 
+    class AuditoriaOperarComo {
+        +Long id
+        +UUID sesionId
+        +AccionOperarComo accion
+        +OffsetDateTime ocurridoEn
+    }
+
     class Notificacion {
         +Long id
         +TipoNotificacion tipo
@@ -606,6 +666,9 @@ classDiagram
     Profesional "1" --> "*" DisponibilidadProfesional : disponibilidad
     Turno "1" --> "0..1" Pago : sesion
     Persona "1" --> "*" Pago : historial
+    Persona "1" --> "*" AuditoriaOperarComo : es atendida
+    Usuario "1" --> "*" AuditoriaOperarComo : operador / sujeto
+    Turno "1" --> "0..*" AuditoriaOperarComo : afectado por
     Persona "1" --> "*" Notificacion : recibe
     Turno "1" --> "*" Notificacion : genera
     Persona "1" --> "*" ExcepcionMorosidad : excepciones

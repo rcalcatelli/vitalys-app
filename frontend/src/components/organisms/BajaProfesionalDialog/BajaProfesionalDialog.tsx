@@ -69,14 +69,13 @@ export function BajaProfesionalDialog({
       {error && <FieldError>{error}</FieldError>}
 
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" className="h-11" onClick={onVolver}>
+        <Button type="button" variant="outline" size="md" onClick={onVolver}>
           Volver
         </Button>
         <Button
           type="button"
-          variant="danger"
+          variant="bad"
           disabled={impacto === null || cargando}
-          className="sm:w-auto"
           onClick={onConfirmar}
         >
           {cargando ? "Dando de baja…" : textoConfirmar}

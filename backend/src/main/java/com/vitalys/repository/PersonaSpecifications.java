@@ -2,6 +2,7 @@ package com.vitalys.repository;
 
 import com.vitalys.domain.EstadoPersona;
 import com.vitalys.domain.Persona;
+import com.vitalys.domain.RolUsuario;
 import org.springframework.data.jpa.domain.Specification;
 
 /**
@@ -18,6 +19,11 @@ public final class PersonaSpecifications {
 
     public static Specification<Persona> soloSociosGym(boolean soloGym) {
         return (root, query, cb) -> soloGym ? cb.isTrue(root.<Boolean>get("esSocioGym")) : null;
+    }
+
+    /** Solo las personas cuyo usuario tiene ese rol (el listado excluye al ADMIN y a los profesionales). */
+    public static Specification<Persona> conRolDeUsuario(RolUsuario rol) {
+        return (root, query, cb) -> cb.equal(root.get("usuario").<RolUsuario>get("rol"), rol);
     }
 
     /** Busca por nombre, apellido o DNI, sin distinguir mayúsculas. */

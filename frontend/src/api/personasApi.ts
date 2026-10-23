@@ -7,12 +7,14 @@ import type {
   PersonaVinculo,
 } from "../types/persona";
 
-/** Traduce el filtro de W-05 a los query params de GET /api/personas (RF-06). */
+/**
+ * Traduce el filtro de Personas a los query params de GET /api/personas (RF-06, RF-43). "Con deuda"
+ * se resuelve en el servidor; "Consultorio" no tiene parámetro: lo filtra la pantalla.
+ */
 export function construirQuery(filtro: FiltroPersonas, texto: string): string {
   const params = new URLSearchParams();
-  if (filtro === "ACTIVOS") params.set("estado", "ACTIVO");
-  if (filtro === "INACTIVOS") params.set("estado", "INACTIVO");
   if (filtro === "GYM") params.set("soloGym", "true");
+  if (filtro === "CON_DEUDA") params.set("conDeuda", "true");
   const q = texto.trim();
   if (q) params.set("q", q);
   const query = params.toString();

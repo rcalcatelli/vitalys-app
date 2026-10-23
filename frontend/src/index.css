@@ -8,9 +8,8 @@
  *
  * Mecanismo de tema: `:root`/`[data-theme="light"]` son los valores por
  * default (no hace falta el atributo para que se vea bien), y
- * `[data-theme="dark"]` los pisa. La app todavía no tiene un switch de tema
- * (fuera de alcance de este batch), pero el mecanismo ya está listo para
- * cuando lo haya — es cuestión de setear `data-theme` en `<html>`.
+ * `[data-theme="dark"]` los pisa. El `ThemeProvider` setea `data-theme` en
+ * `<html>` y lo persiste en localStorage (`vitalys_theme`).
  */
 :root,
 [data-theme="light"] {
@@ -134,6 +133,52 @@
   --radius-lg: 12px;
   --radius-xl: 14px;
   --radius-full: 999px;
+
+  /*
+   * Escala tipográfica puntual del mockup (11.5/12.5/13px) que Tailwind no
+   * trae: `text-micro` (cabeceras de tabla, rol), `text-caption` (eyebrows,
+   * subtítulos de tarjeta) y `text-small` (controles chicos, 13px).
+   */
+  --text-micro: 11.5px;
+  --text-caption: 12.5px;
+  --text-small: 13px;
+
+  /*
+   * El mockup no define alturas de línea por tamaño: todo hereda el 1.45 de `body`. Las utilidades
+   * `text-xs|sm|base|…` de Tailwind traen la suya (1.33, 1.43, 1.5…) y agrandarían o achicarían las
+   * cajas respecto del diseño, así que se igualan acá. Los títulos fijan su `leading-*` aparte.
+   */
+  --text-xs--line-height: 1.45;
+  --text-sm--line-height: 1.45;
+  --text-base--line-height: 1.45;
+  --text-lg--line-height: 1.45;
+  --text-xl--line-height: 1.45;
+  --text-2xl--line-height: 1.45;
+  --text-3xl--line-height: 1.45;
+
+  /* Sombra de tarjeta del mockup (`var(--shadow)`); en oscuro es `none`. */
+  --shadow-card: var(--shadow);
+
+  /*
+   * Corte entre layout móvil y escritorio del mockup (`width < 760`). Genera
+   * el variante `shell:` (>= 760px). Se declara acá aunque el shell decida su
+   * layout con `useMediaQuery`, para que las pages puedan alinear su CSS.
+   */
+  --breakpoint-shell: 760px;
+
+  /* Entrada de pantallas del mockup: fade + 8px hacia arriba, 0.3s. */
+  --animate-vt-in: vtIn 0.3s ease both;
+
+  @keyframes vtIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /*
@@ -145,29 +190,43 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  /*
+   * 14px / 1.45 en `body` y NO en `html`: el espaciado de Tailwind es rem; si
+   * se achicara la raíz, todos los paddings y gaps encogerían.
+   */
+  font-size: 14px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
-button {
-  font: inherit;
-  cursor: pointer;
-}
+/*
+ * Reset del mockup en `@layer base`: DEBE ir en una capa. Fuera de capa, estas reglas le ganan a
+ * cualquier utilidad de Tailwind (`text-sm`, `text-ink-2`…) y los botones, inputs y links
+ * ignorarían sus clases. Tailwind ya hace `font: inherit` en sus preflight; acá solo se agrega el
+ * cursor y el color de los links del design system.
+ */
+@layer base {
+  button {
+    font: inherit;
+    cursor: pointer;
+  }
 
-button:disabled {
-  cursor: not-allowed;
-}
+  button:disabled {
+    cursor: not-allowed;
+  }
 
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
 
-a {
-  color: var(--color-clin-ink);
-}
+  a {
+    color: var(--color-clin-ink);
+  }
 
-a:hover {
-  color: var(--color-clin);
+  a:hover {
+    color: var(--color-clin);
+  }
 }

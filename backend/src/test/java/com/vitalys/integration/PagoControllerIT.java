@@ -131,10 +131,8 @@ class PagoControllerIT extends IntegrationTestBase {
     }
 
     private TurnoResponse reservarGym(Persona p) {
-        LocalDate d = dia;
-        while (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
-            d = d.plusDays(7);
-        }
+        // RN-18: el gimnasio se reserva hasta 7 días antes; se toma el primer día hábil no feriado desde mañana
+        LocalDate d = DiasDeReserva.diaHabil(jdbcTemplate, 1);
         ResponseEntity<TurnoResponse> r = llamar(
                 HttpMethod.POST,
                 "/api/turnos/gym",
@@ -415,6 +413,8 @@ class PagoControllerIT extends IntegrationTestBase {
         assertThat(e.sesiones().get(0).turnoId()).isEqualTo(turno.id());
         assertThat(e.sesiones().get(0).medio().name()).isEqualTo("TRANSFERENCIA");
         assertThat(e.sesiones().get(0).fechaTurno()).isNotNull();
+        assertThat(e.sesiones().get(0).profesional()).isEqualTo("Valentina Méndez");
+        assertThat(e.sesiones().get(0).especialidad().name()).isEqualTo("NUTRICION");
         assertThat(e.totales().cantidadPagos()).isEqualTo(1);
         assertThat(e.totales().montoTotal()).isEqualByComparingTo("8000");
     }
@@ -478,6 +478,8 @@ class PagoControllerIT extends IntegrationTestBase {
             assertThat(conExcepcion.suspendido()).isEqualTo(gymConExcepcion.suspendido());
             assertThat(conExcepcion.excepcion().validaHasta()).isEqualTo(LocalDate.now(ZONA).plusDays(5));
             assertThat(conExcepcion.excepcion().motivo()).isEqualTo("plan de pago");
+            assertThat(conExcepcion.excepcion().autorizadaPor()).isNotBlank();
+            assertThat(conExcepcion.excepcion().otorgadaEl()).isNotNull();
         } finally {
             jdbcTemplate.update("UPDATE configuracion_gym SET meses_tolerancia_morosidad = ? WHERE id = 1", umbralOriginal);
         }

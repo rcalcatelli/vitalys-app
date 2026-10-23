@@ -38,11 +38,7 @@ describe("MiEstadoCuentaPage", () => {
   it("muestra el estado de cuenta del socio", async () => {
     montar();
     expect(screen.getByText("Cargando estado de cuenta…")).toBeInTheDocument();
-    expect(await screen.findByText("Estás al día")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Estado de cuenta" })).toHaveAttribute(
-      "href",
-      "/socio/estado-cuenta",
-    );
+    expect(await screen.findByText("Al día")).toBeInTheDocument();
   });
 
   it("PU-17 sin ficha (422): explica que falta la ficha y no ofrece reintentar", async () => {
@@ -58,7 +54,7 @@ describe("MiEstadoCuentaPage", () => {
     expect(await screen.findByText(/No pudimos cargar tu estado de cuenta/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
-    expect(await screen.findByText("Estás al día")).toBeInTheDocument();
+    expect(await screen.findByText("Al día")).toBeInTheDocument();
     expect(pagosApi.miEstadoCuenta).toHaveBeenCalledTimes(2);
   });
 });

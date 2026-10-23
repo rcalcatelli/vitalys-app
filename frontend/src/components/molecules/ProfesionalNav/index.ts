@@ -1,1 +1,0 @@
-export { ProfesionalNav } from "./ProfesionalNav";

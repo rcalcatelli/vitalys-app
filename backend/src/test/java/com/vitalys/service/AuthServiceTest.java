@@ -19,8 +19,16 @@ import com.vitalys.dto.RegistroRequest;
 import com.vitalys.exception.CredencialesInvalidasException;
 import com.vitalys.exception.EmailDuplicadoException;
 import com.vitalys.exception.RolNoPermitidoException;
+import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.UsuarioRepository;
+import com.vitalys.security.ActorActual;
 import com.vitalys.security.JwtService;
+import com.vitalys.security.OperarComoAuthentication;
+import java.time.Instant;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,13 +41,19 @@ class AuthServiceTest {
     private PasswordEncoder passwordEncoder;
     private JwtService jwtService;
     private AuthService authService;
+    private PersonaRepository personaRepository;
+    private ProfesionalRepository profesionalRepository;
+    private final ActorActual actorActual = new ActorActual();
 
     @BeforeEach
     void setUp() {
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         jwtService = mock(JwtService.class);
-        authService = new AuthService(usuarioRepository, passwordEncoder, jwtService);
+        personaRepository = mock(PersonaRepository.class);
+        profesionalRepository = mock(ProfesionalRepository.class);
+        authService = new AuthService(
+                usuarioRepository, passwordEncoder, jwtService, personaRepository, profesionalRepository, actorActual);
     }
 
     private RegistroRequest registroRequest(String email, String contrasena) {
@@ -203,5 +217,122 @@ class AuthServiceTest {
         assertThat(response.getId()).isEqualTo(9L);
         assertThat(response.getEmail()).isEqualTo("user@vitalys.test");
         assertThat(response.getRol()).isEqualTo(RolUsuario.ADMIN);
+    }
+
+    @Test
+    void me_deUnaPersona_traeNombreYApellidoDeLaFicha() {
+        Usuario usuario = new Usuario("laura@vitalys.test", "hash", RolUsuario.ADMIN);
+        usuario.setId(1L);
+        com.vitalys.domain.Persona persona = new com.vitalys.domain.Persona(usuario, java.time.LocalDate.of(2024, 1, 1));
+        persona.setNombre("Laura");
+        persona.setApellido("Benítez");
+        when(usuarioRepository.findByEmail("laura@vitalys.test")).thenReturn(Optional.of(usuario));
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.of(persona));
+
+        MeResponse response = authService.me("laura@vitalys.test");
+
+        assertThat(response.getNombre()).isEqualTo("Laura");
+        assertThat(response.getApellido()).isEqualTo("Benítez");
+        verifyNoInteractions(profesionalRepository);
+    }
+
+    @Test
+    void me_deUnProfesional_traeNombreYApellidoDelProfesional() {
+        Usuario usuario = new Usuario("vale@vitalys.test", "hash", RolUsuario.PROFESIONAL);
+        usuario.setId(2L);
+        com.vitalys.domain.Profesional profesional = new com.vitalys.domain.Profesional(usuario);
+        profesional.setNombre("Valentina");
+        profesional.setApellido("Méndez");
+        when(usuarioRepository.findByEmail("vale@vitalys.test")).thenReturn(Optional.of(usuario));
+        when(profesionalRepository.findByUsuarioId(2L)).thenReturn(Optional.of(profesional));
+
+        MeResponse response = authService.me("vale@vitalys.test");
+
+        assertThat(response.getNombre()).isEqualTo("Valentina");
+        assertThat(response.getApellido()).isEqualTo("Méndez");
+        verifyNoInteractions(personaRepository);
+    }
+
+    @Test
+    void me_sinFicha_nombreYApellidoNulos() {
+        Usuario usuario = new Usuario("nuevo@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        usuario.setId(3L);
+        when(usuarioRepository.findByEmail("nuevo@vitalys.test")).thenReturn(Optional.of(usuario));
+        when(personaRepository.findByUsuarioId(3L)).thenReturn(Optional.empty());
+
+        MeResponse response = authService.me("nuevo@vitalys.test");
+
+        assertThat(response.getNombre()).isNull();
+        assertThat(response.getApellido()).isNull();
+    }
+
+    @AfterEach
+    void limpiarContexto() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void me_fueraDeOperarComo_sinOperador() {
+        Usuario usuario = new Usuario("nuevo@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        usuario.setId(3L);
+        when(usuarioRepository.findByEmail("nuevo@vitalys.test")).thenReturn(Optional.of(usuario));
+
+        MeResponse response = authService.me("nuevo@vitalys.test");
+
+        assertThat(response.getOperadoPor()).isNull();
+        assertThat(response.getOperarComoExpiraEn()).isNull();
+    }
+
+    @Test
+    void me_enOperarComo_traeAlSocioYAlAdminQueOpera() {
+        Usuario socio = new Usuario("maria@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        socio.setId(7L);
+        Usuario admin = new Usuario("laura@vitalys.test", "hash", RolUsuario.ADMIN);
+        admin.setId(1L);
+        com.vitalys.domain.Persona fichaAdmin = new com.vitalys.domain.Persona(admin, java.time.LocalDate.of(2024, 1, 1));
+        fichaAdmin.setNombre("Laura");
+        fichaAdmin.setApellido("Benítez");
+        when(usuarioRepository.findByEmail("maria@vitalys.test")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(7L)).thenReturn(Optional.empty());
+        when(personaRepository.findByUsuarioId(1L)).thenReturn(Optional.of(fichaAdmin));
+        Instant vence = Instant.parse("2026-10-20T12:30:00Z");
+        SecurityContextHolder.getContext().setAuthentication(new OperarComoAuthentication(socio, admin, UUID.randomUUID(), vence));
+
+        MeResponse response = authService.me("maria@vitalys.test");
+
+        assertThat(response.getEmail()).isEqualTo("maria@vitalys.test");
+        assertThat(response.getRol()).isEqualTo(RolUsuario.SOCIO_PACIENTE);
+        assertThat(response.getOperadoPor()).isEqualTo(new MeResponse.Operador(1L, "Laura", "Benítez"));
+        assertThat(response.getOperarComoExpiraEn().toInstant()).isEqualTo(vence);
+    }
+
+    @Test
+    void me_enOperarComo_operadorSinFicha_soloElId() {
+        Usuario socio = new Usuario("maria@vitalys.test", "hash", RolUsuario.SOCIO_PACIENTE);
+        socio.setId(7L);
+        Usuario admin = new Usuario("admin@vitalys.test", "hash", RolUsuario.ADMIN);
+        admin.setId(1L);
+        when(usuarioRepository.findByEmail("maria@vitalys.test")).thenReturn(Optional.of(socio));
+        when(personaRepository.findByUsuarioId(any())).thenReturn(Optional.empty());
+        SecurityContextHolder.getContext().setAuthentication(
+                new OperarComoAuthentication(socio, admin, UUID.randomUUID(), Instant.now()));
+
+        assertThat(authService.me("maria@vitalys.test").getOperadoPor()).isEqualTo(new MeResponse.Operador(1L, null, null));
+    }
+
+    @Test
+    void meResponse_idaYVueltaPorJson() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        MeResponse original = new MeResponse(
+                7L, "maria@vitalys.test", RolUsuario.SOCIO_PACIENTE, "María", "Pérez",
+                new MeResponse.Operador(1L, "Laura", "Benítez"), java.time.OffsetDateTime.parse("2026-10-20T09:30:00-03:00"));
+
+        MeResponse leido = mapper.readValue(mapper.writeValueAsString(original), MeResponse.class);
+
+        assertThat(leido).usingRecursiveComparison().ignoringFields("operarComoExpiraEn").isEqualTo(original);
+        assertThat(leido.getOperarComoExpiraEn()).isAtSameInstantAs(original.getOperarComoExpiraEn());
+        assertThat(mapper.readValue("{\"id\":1,\"email\":\"a@b.c\",\"rol\":\"ADMIN\"}", MeResponse.class).getOperadoPor())
+                .isNull();
     }
 }

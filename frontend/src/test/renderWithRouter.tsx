@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render } from "@testing-library/react";
 import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { ToastProvider } from "../context/ToastContext";
 
 /**
  * Helper de tests: monta `ui` en la ruta `path` dentro de un `MemoryRouter` real
@@ -16,13 +18,17 @@ export function renderWithRouter(
   const { path = "/", initialEntries = [path], extraRoutes = null } = options;
 
   return render(
-    <AuthProvider>
-      <MemoryRouter initialEntries={initialEntries}>
-        <Routes>
-          <Route path={path} element={ui} />
-          {extraRoutes}
-        </Routes>
-      </MemoryRouter>
-    </AuthProvider>,
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={initialEntries}>
+            <Routes>
+              <Route path={path} element={ui} />
+              {extraRoutes}
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>,
   );
 }

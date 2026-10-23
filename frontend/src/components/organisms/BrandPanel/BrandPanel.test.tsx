@@ -17,8 +17,8 @@ describe("BrandPanel", () => {
     expect(screen.getByText("Centro de salud Vitalys")).toBeInTheDocument();
   });
 
-  it("está oculto en mobile y visible desde md: (RN de layout, no @media manual)", () => {
+  it("está oculto en mobile y visible desde shell: (RN de layout, no @media manual)", () => {
     const { container } = render(<BrandPanel />);
-    expect(container.firstChild).toHaveClass("hidden", "md:flex");
+    expect(container.firstChild).toHaveClass("hidden", "shell:flex");
   });
 });

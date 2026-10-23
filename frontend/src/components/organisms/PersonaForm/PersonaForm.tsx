@@ -34,7 +34,7 @@ function vacioANull(valor: string): string | null {
 }
 
 /**
- * Panel de alta/edición de W-05. Valida en el cliente lo mismo que el backend
+ * Contenido del modal de alta/edición/vínculo de Personas (el título lo pone el `Modal`). Valida en el cliente lo mismo que el backend
  * (DNI de 7 a 9 dígitos, contraseña ≥ 8, fecha de membresía obligatoria para
  * socios del gimnasio) para dar el error al lado del campo; el servidor sigue
  * siendo quien decide, en particular la unicidad del DNI.
@@ -103,16 +103,8 @@ export function PersonaForm({
       aria-label={
         esVinculo ? "Vincular usuario existente" : esAlta ? "Nueva persona" : "Editar persona"
       }
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
+      className="flex flex-col gap-4"
     >
-      <h2 className="font-heading text-lg font-semibold text-ink">
-        {esVinculo
-          ? "Vincular usuario existente"
-          : esAlta
-            ? "Nueva persona"
-            : `Editar ${persona.apellido}, ${persona.nombre}`}
-      </h2>
-
       {esVinculo && (
         <p className="text-sm text-ink-2">
           Para quien ya se registró en la app. Se busca por su email y no se pide contraseña: ya
@@ -184,10 +176,10 @@ export function PersonaForm({
       {mensaje && <FieldError>{mensaje}</FieldError>}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" className="h-11" onClick={onCancel}>
+        <Button type="button" variant="neutral" size="modal" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={cargando} className="sm:w-auto">
+        <Button type="submit" size="modal" disabled={cargando}>
           {cargando
             ? "Guardando…"
             : esVinculo

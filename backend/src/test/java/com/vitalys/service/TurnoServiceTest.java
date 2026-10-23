@@ -3,18 +3,19 @@ package com.vitalys.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vitalys.domain.DisponibilidadProfesional;
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.Persona;
@@ -25,6 +26,7 @@ import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ProximaAgendaResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
@@ -73,6 +75,8 @@ class TurnoServiceTest {
     private ProfesionalRepository profesionalRepository;
     private DisponibilidadProfesionalRepository disponibilidadRepository;
     private TurnoService service;
+    private com.vitalys.security.ActorActual actorActual;
+    private AuditoriaOperarComoService auditoria;
 
     private final Usuario admin = usuario(1L, RolUsuario.ADMIN);
     private final Usuario socio = usuario(2L, RolUsuario.SOCIO_PACIENTE);
@@ -92,6 +96,9 @@ class TurnoServiceTest {
         morosidadService = spy(new MorosidadService(jdbcTemplate, excepcionRepository, Clock.fixed(AHORA.toInstant(), ZONA)));
         profesionalRepository = mock(ProfesionalRepository.class);
         disponibilidadRepository = mock(DisponibilidadProfesionalRepository.class);
+        actorActual = mock(com.vitalys.security.ActorActual.class);
+        when(actorActual.idDeQuienOpera(any(Usuario.class))).thenAnswer(inv -> ((Usuario) inv.getArgument(0)).getId());
+        auditoria = mock(AuditoriaOperarComoService.class);
         service = new TurnoService(
                 turnoRepository,
                 personaRepository,
@@ -102,6 +109,8 @@ class TurnoServiceTest {
                 disponibilidadRepository,
                 jdbcTemplate,
                 avisos,
+                actorActual,
+                auditoria,
                 Clock.fixed(AHORA.toInstant(), ZONA));
 
         personaSocio = new Persona(socio, LocalDate.of(2024, 1, 1));
@@ -111,7 +120,7 @@ class TurnoServiceTest {
         personaSocio.definirMembresiaGym(true, LocalDate.of(2026, 1, 1));
         when(personaRepository.findByUsuarioId(2L)).thenReturn(Optional.of(personaSocio));
         when(personaRepository.findById(20L)).thenReturn(Optional.of(personaSocio));
-        doReturn(new EstadoDeuda(0, 6, false)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(0, 6, false));
         when(turnoRepository.saveAndFlush(any(Turno.class))).thenAnswer(inv -> {
             Turno t = inv.getArgument(0);
             if (t != null && t.getId() == null) {
@@ -119,6 +128,24 @@ class TurnoServiceTest {
             }
             return t;
         });
+    }
+
+    /**
+     * Fija la deuda de la persona del socio. El veredicto real (excepción vigente incluida) se arma
+     * como lo hace {@code MorosidadService.veredictos}, con las excepciones que devuelva el repositorio.
+     */
+    private void deuda(EstadoDeuda deuda) {
+        doAnswer(inv -> {
+                    Persona p = ((java.util.Collection<Persona>) inv.getArgument(0)).iterator().next();
+                    Optional<ExcepcionMorosidad> excepcion = !deuda.suspendido()
+                            ? Optional.empty()
+                            : excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(List.of(p.getId())).stream()
+                                    .filter(e -> e.vigenteEl(LocalDate.of(2026, 10, 20)))
+                                    .findFirst();
+                    return java.util.Map.of(p.getId(), new MorosidadService.VeredictoMorosidad(deuda, excepcion));
+                })
+                .when(morosidadService)
+                .veredictos(any());
     }
 
     private static Usuario usuario(Long id, RolUsuario rol) {
@@ -149,17 +176,17 @@ class TurnoServiceTest {
 
     @Test
     void tu08_deudaPorDebajoDelUmbral_reservaSinConsultarExcepciones() {
-        doReturn(new EstadoDeuda(2, 6, false)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(2, 6, false));
 
         service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
 
-        verify(excepcionRepository, never()).findByPersonaIdOrderByCreadoEnDesc(anyLong());
+        verify(excepcionRepository, never()).findByPersonaIdInOrderByCreadoEnDesc(any());
     }
 
     @Test
     void tu05_suspendidoSinExcepcion_lanza422() {
-        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
+        deuda(new EstadoDeuda(6, 6, true));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)))
                 .isInstanceOf(ReglaDeNegocioException.class)
@@ -169,15 +196,42 @@ class TurnoServiceTest {
 
     @Test
     void tu06_suspendidoConExcepcionDeUnSoloUso_reservaYLaConsume() {
-        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(7, 6, true));
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
         ExcepcionMorosidad vigente = new ExcepcionMorosidad(20L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), true);
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida, vigente));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vencida, vigente));
 
         service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
 
         assertThat(vigente.getTurnoId()).isEqualTo(100L);
         verify(excepcionRepository).save(vigente);
+    }
+
+    /** RN-18 / CA-08-5 (PI-139): mínimo 1 hora y máximo 7 días de anticipación, con el reloj inyectado. */
+    @Test
+    void pi139_reservaConMenosDeUnaHoraDeAnticipacion_lanza422() {
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(AHORA.plusMinutes(59), null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("1 hora antes");
+    }
+
+    @Test
+    void pi139_reservaConExactamenteUnaHoraDeAnticipacion_sePermite() {
+        assertThat(service.reservarGym(socio, new ReservaGymRequest(AHORA.plusHours(1), null)).estado())
+                .isEqualTo(EstadoTurno.RESERVADO);
+    }
+
+    @Test
+    void pi139_reservaConMasDeSieteDiasDeAnticipacion_lanza422() {
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(AHORA.plusDays(7).plusMinutes(1), null)))
+                .isInstanceOf(ReglaDeNegocioException.class)
+                .hasMessageContaining("7 días");
+    }
+
+    @Test
+    void pi139_reservaConExactamenteSieteDiasDeAnticipacion_sePermite() {
+        assertThat(service.reservarGym(socio, new ReservaGymRequest(AHORA.plusDays(7), null)).estado())
+                .isEqualTo(EstadoTurno.RESERVADO);
     }
 
     @Test
@@ -271,18 +325,18 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_alDia_noSuspendidoYSinConsultarExcepciones() {
-        doReturn(new EstadoDeuda(2, 6, false)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(2, 6, false));
 
         EstadoGymResponse e = service.estadoGym(socio, null);
 
         assertThat(e).isEqualTo(new EstadoGymResponse(true, false, 2, 6, false));
-        verify(excepcionRepository, never()).findByPersonaIdOrderByCreadoEnDesc(anyLong());
+        verify(excepcionRepository, never()).findByPersonaIdInOrderByCreadoEnDesc(any());
     }
 
     @Test
     void estadoGym_suspendidoSinExcepcion_igualQueLaReserva() {
-        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
+        deuda(new EstadoDeuda(6, 6, true));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of());
 
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, true, 6, 6, false));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)))
@@ -291,10 +345,10 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_conExcepcionVigente_noSuspendidoYLaReservaPasa() {
-        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(7, 6, true));
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
         ExcepcionMorosidad vigente = new ExcepcionMorosidad(20L, 1L, "plan de pago", LocalDate.of(2026, 10, 31), false);
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida, vigente));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vencida, vigente));
 
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, false, 7, 6, true));
         assertThat(service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)).estado()).isEqualTo(EstadoTurno.RESERVADO);
@@ -302,27 +356,27 @@ class TurnoServiceTest {
 
     @Test
     void estadoGym_excepcionVencida_siguesSuspendido() {
-        doReturn(new EstadoDeuda(7, 6, true)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(7, 6, true));
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(20L, 1L, "vieja", LocalDate.of(2026, 10, 1), false);
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of(vencida));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vencida));
 
         assertThat(service.estadoGym(socio, null).suspendido()).isTrue();
     }
 
     @Test
     void estadoGym_enElUmbral_unPeriodoAntesNoSuspendeYEnElUmbralSi() {
-        doReturn(new EstadoDeuda(5, 6, false)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(5, 6, false));
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, false, 5, 6, false));
 
-        doReturn(new EstadoDeuda(6, 6, true)).when(morosidadService).evaluar(any());
-        when(excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(20L)).thenReturn(List.of());
+        deuda(new EstadoDeuda(6, 6, true));
+        when(excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of());
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(true, true, 6, 6, false));
     }
 
     @Test
     void estadoGym_sinMembresia_devuelveCeros() {
         personaSocio.definirMembresiaGym(false, null);
-        doReturn(EstadoDeuda.SIN_MEMBRESIA).when(morosidadService).evaluar(any());
+        deuda(EstadoDeuda.SIN_MEMBRESIA);
 
         assertThat(service.estadoGym(socio, null)).isEqualTo(new EstadoGymResponse(false, false, 0, 0, false));
     }
@@ -420,7 +474,7 @@ class TurnoServiceTest {
 
         service.marcarCompletado(profesional, 200L);
 
-        verify(t).marcar(EstadoTurno.COMPLETADO);
+        verify(t).completar(AHORA);
         when(turnoRepository.usuarioDelProfesional(8L)).thenReturn(99L);
         assertThatThrownBy(() -> service.marcarCompletado(profesional, 200L))
                 .isInstanceOf(AccesoDenegadoException.class)
@@ -511,6 +565,136 @@ class TurnoServiceTest {
     private static final LocalDate MIERCOLES = LocalDate.of(2026, 10, 28);
     private static final OffsetDateTime MIERCOLES_9 = OffsetDateTime.parse("2026-10-28T09:00:00-03:00");
 
+    // ------------------------------------------------------------------ RF-41: proxima agenda
+
+    private Profesional profesionalConFranja(long id, String apellido, Especialidad esp, int dia, int minutos, LocalTime desde, LocalTime hasta) {
+        Profesional p = new Profesional(usuario(100L + id, RolUsuario.PROFESIONAL));
+        p.setId(id);
+        p.setNombre("Pro");
+        p.setApellido(apellido);
+        p.setEspecialidad(esp);
+        p.setDuracionTurnoMinutos(minutos);
+        when(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(id))
+                .thenReturn(List.of(new DisponibilidadProfesional(p, dia, desde, hasta)));
+        return p;
+    }
+
+    @Test
+    void pu32_proximaAgenda_primerDiaConLibresYCuantosHay() {
+        Profesional p = profesionalConFranja(8L, "Mendez", Especialidad.NUTRICION, 3, 30, LocalTime.of(9, 0), LocalTime.of(11, 0));
+        when(profesionalRepository.findByActivo(eq(true), any(Sort.class))).thenReturn(List.of(p));
+        List<Object[]> ocupados = new java.util.ArrayList<>();
+        // AHORA es martes 20/10: el primer miercoles es el 21/10, con un slot tomado de los cuatro
+        OffsetDateTime proximoMiercoles9 = MIERCOLES_9.minusDays(7);
+        ocupados.add(new Object[] {proximoMiercoles9.plusHours(1), proximoMiercoles9.plusMinutes(90)});
+        when(turnoRepository.ocupadosDeProfesional(eq(8L), any(), any())).thenReturn(ocupados);
+
+        List<ProximaAgendaResponse> r = service.proximasAgendas(socio, null);
+
+        assertThat(r).singleElement().satisfies(x -> {
+            assertThat(x.fecha()).isEqualTo(MIERCOLES.minusDays(7));
+            assertThat(x.libres()).isEqualTo(3);
+            assertThat(x.especialidad()).isEqualTo(Especialidad.NUTRICION);
+            assertThat(x.duracionTurnoMinutos()).isEqualTo(30);
+        });
+        verify(turnoRepository, times(1)).ocupadosDeProfesional(eq(8L), any(), any());
+    }
+
+    @Test
+    void pu32_proximaAgenda_hoyDescuentaLosSlotsQueYaPasaron() {
+        // AHORA = martes 2026-10-20 09:00: de 08:00-12:00 en turnos de 30 min quedan 09:30..11:30
+        Profesional p = profesionalConFranja(8L, "Mendez", Especialidad.NUTRICION, 2, 30, LocalTime.of(8, 0), LocalTime.of(12, 0));
+        when(profesionalRepository.findByActivo(eq(true), any(Sort.class))).thenReturn(List.of(p));
+
+        ProximaAgendaResponse r = service.proximasAgendas(admin, null).get(0);
+
+        assertThat(r.fecha()).isEqualTo(LocalDate.of(2026, 10, 20));
+        assertThat(r.libres()).isEqualTo(5);
+    }
+
+    @Test
+    void pi128_proximaAgenda_sinFranjasOTodoOcupado_devuelveSinFecha() {
+        Profesional sinFranjas = new Profesional(usuario(120L, RolUsuario.PROFESIONAL));
+        sinFranjas.setId(9L);
+        sinFranjas.setNombre("Sin");
+        sinFranjas.setApellido("Agenda");
+        sinFranjas.setEspecialidad(Especialidad.PSICOLOGIA);
+        sinFranjas.setDuracionTurnoMinutos(50);
+        Profesional lleno = profesionalConFranja(8L, "Lleno", Especialidad.NUTRICION, 3, 30, LocalTime.of(9, 0), LocalTime.of(10, 0));
+        when(profesionalRepository.findByActivo(eq(true), any(Sort.class))).thenReturn(List.of(sinFranjas, lleno));
+        List<Object[]> ocupados = new java.util.ArrayList<>();
+        ocupados.add(new Object[] {AHORA.minusDays(1), AHORA.plusDays(40)});
+        when(turnoRepository.ocupadosDeProfesional(eq(8L), any(), any())).thenReturn(ocupados);
+
+        List<ProximaAgendaResponse> r = service.proximasAgendas(socio, null);
+
+        assertThat(r).hasSize(2);
+        assertThat(r).allSatisfy(x -> {
+            assertThat(x.fecha()).isNull();
+            assertThat(x.libres()).isZero();
+        });
+        verify(turnoRepository, never()).ocupadosDeProfesional(eq(9L), any(), any());
+    }
+
+    @Test
+    void proximaAgenda_filtraPorEspecialidad() {
+        Profesional nutri = profesionalConFranja(8L, "Mendez", Especialidad.NUTRICION, 3, 30, LocalTime.of(9, 0), LocalTime.of(11, 0));
+        Profesional kine = profesionalConFranja(9L, "Rueda", Especialidad.KINESIOLOGIA, 3, 45, LocalTime.of(8, 0), LocalTime.of(12, 0));
+        when(profesionalRepository.findByActivo(eq(true), any(Sort.class))).thenReturn(List.of(nutri, kine));
+
+        assertThat(service.proximasAgendas(socio, Especialidad.KINESIOLOGIA))
+                .extracting(ProximaAgendaResponse::profesionalId)
+                .containsExactly(9L);
+    }
+
+    @Test
+    void pi129_proximaAgenda_unProfesionalNoPuede() {
+        assertThatThrownBy(() -> service.proximasAgendas(profesional, null)).isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    // ------------------------------------------------------------------ RN-28: completado_en
+
+    @Test
+    void pi124_marcarCompletado_guardaElMomentoDelCheckIn() {
+        Turno t = turnoDelSocio(AHORA.plusMinutes(10));
+
+        TurnoResponse r = service.marcarCompletado(admin, 100L);
+
+        assertThat(t.getEstado()).isEqualTo(EstadoTurno.COMPLETADO);
+        assertThat(t.getCompletadoEn()).isEqualTo(AHORA);
+        assertThat(r.completadoEn()).isEqualTo(AHORA);
+    }
+
+    @Test
+    void completadoEn_esNuloEnTurnosAunNoCompletados() {
+        Turno t = turnoDelSocio(LUNES_10);
+        assertThat(TurnoResponse.de(t).completadoEn()).isNull();
+        t.marcar(EstadoTurno.AUSENTE);
+        assertThat(t.getCompletadoEn()).isNull();
+    }
+
+    @Test
+    void turnoResponse_dniSoloEnLaVistaDelAdmin() {
+        Turno t = turnoDelSocio(LUNES_10);
+        personaSocio.setDni("38100001");
+
+        assertThat(TurnoResponse.de(t).personaDni()).isNull();
+        TurnoResponse admin = TurnoResponse.paraAdmin(t);
+        assertThat(admin.personaDni()).isEqualTo("38100001");
+        assertThat(admin.personaNombre()).isEqualTo("María");
+        assertThat(admin.personaApellido()).isEqualTo("Pérez");
+    }
+
+    @Test
+    void listar_comoAdminIncluyeElDniDeLaPersona() {
+        Turno t = turnoDelSocio(LUNES_10);
+        personaSocio.setDni("38100001");
+        when(turnoRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(t));
+
+        assertThat(service.listar(admin, null, null, null, null)).singleElement()
+                .satisfies(r -> assertThat(r.personaDni()).isEqualTo("38100001"));
+    }
+
     @Test
     void slots_partenLaFranjaPorDuracionYMarcanLosTomados() {
         nutricionista();
@@ -568,11 +752,11 @@ class TurnoServiceTest {
     @Test
     void tu09_socioSuspendidoReservaConsultorioSinQueSeEvalueLaMorosidad() {
         nutricionista();
-        doReturn(new EstadoDeuda(9, 6, true)).when(morosidadService).evaluar(any());
+        deuda(new EstadoDeuda(9, 6, true));
 
         service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9, null));
 
-        verify(morosidadService, never()).evaluar(any());
+        verify(morosidadService, never()).veredictos(any());
     }
 
     @Test
@@ -644,5 +828,91 @@ class TurnoServiceTest {
         doThrow(rechazoDelMotor("23505", "dup")).when(turnoRepository).saveAndFlush(any(Turno.class));
         assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)));
         verify(avisos, never()).confirmarReserva(any());
+    }
+
+    // ------------------------------------------------------------------ RN-26/27: Operar como
+
+    /** La request es de "Operar como": el ADMIN (id 1) opera en nombre del socio. */
+    private void operaElAdmin() {
+        when(actorActual.idDeQuienOpera(any(Usuario.class))).thenReturn(1L);
+    }
+
+    @Test
+    void pi118_operarComo_reservaConLasReglasDelSocioYGuardaAlAdminComoQuienReservo() {
+        operaElAdmin();
+
+        TurnoResponse r = service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
+
+        org.mockito.ArgumentCaptor<Turno> guardado = org.mockito.ArgumentCaptor.forClass(Turno.class);
+        verify(turnoRepository).saveAndFlush(guardado.capture());
+        assertThat(guardado.getValue().getReservadoPorUsuarioId()).isEqualTo(1L);
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+        verify(auditoria).registrarSiOpera(com.vitalys.domain.AccionOperarComo.RESERVA_GYM, guardado.getValue());
+        // Reglas del socio: para otra persona, 403 aunque detrás haya un ADMIN
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, 99L)))
+                .isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    @Test
+    void pi121_operarComo_reservaDeConsultorioAuditada() {
+        nutricionista();
+        operaElAdmin();
+
+        TurnoResponse r = service.reservarConsultorio(socio, new ReservaConsultorioRequest(8L, MIERCOLES_9.plusMinutes(30), null));
+
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+        verify(auditoria).registrarSiOpera(eq(com.vitalys.domain.AccionOperarComo.RESERVA_CONSULTORIO), any(Turno.class));
+    }
+
+    @Test
+    void operarComo_cancelacionGuardaAlAdminYSeAudita() {
+        Turno t = turnoDelSocio(LUNES_10);
+        operaElAdmin();
+
+        TurnoResponse r = service.cancelar(socio, 100L, "viaje");
+
+        assertThat(t.getCanceladoPorUsuarioId()).isEqualTo(1L);
+        assertThat(r.canceladoPorRecepcion()).isTrue();
+        assertThat(r.reservadoPorRecepcion()).isFalse();
+        verify(auditoria).registrarSiOpera(com.vitalys.domain.AccionOperarComo.CANCELACION, t);
+    }
+
+    @Test
+    void siLaAuditoriaFalla_laReservaFallaYNoSeConfirma() {
+        operaElAdmin();
+        doThrow(new IllegalStateException("No se pudo registrar la auditoría"))
+                .when(auditoria).registrarSiOpera(any(), any());
+
+        assertThatThrownBy(() -> service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null)))
+                .isInstanceOf(IllegalStateException.class);
+        verify(avisos, never()).confirmarReserva(any());
+    }
+
+    @Test
+    void pi122_porSiMismo_sinMarcaDeRecepcion() {
+        TurnoResponse r = service.reservarGym(socio, new ReservaGymRequest(LUNES_10, null));
+        assertThat(r.reservadoPorRecepcion()).isFalse();
+        assertThat(r.canceladoPorRecepcion()).isFalse();
+
+        turnoDelSocio(LUNES_10);
+        TurnoResponse cancelado = service.cancelar(socio, 100L, "viaje");
+        assertThat(cancelado.canceladoPorRecepcion()).isFalse();
+    }
+
+    @Test
+    void pi122_reservaYCancelacionDeRecepcionSinOperarComo_tambienLlevanLaMarca() {
+        TurnoResponse r = service.reservarGym(admin, new ReservaGymRequest(LUNES_10, 20L));
+        assertThat(r.reservadoPorRecepcion()).isTrue();
+
+        turnoDelSocio(LUNES_10);
+        assertThat(service.cancelar(admin, 100L, "cierre").canceladoPorRecepcion()).isTrue();
+    }
+
+    @Test
+    void turnoResponse_canceladoPorProfesional_noEsCancelacionDeRecepcion() {
+        Turno t = Turno.deGimnasio(personaSocio, 2L, LUNES_10);
+        t.cancelarPorProfesional(AHORA, 4L, "baja");
+
+        assertThat(TurnoResponse.de(t).canceladoPorRecepcion()).isFalse();
     }
 }

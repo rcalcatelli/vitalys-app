@@ -50,3 +50,20 @@ export function fechaLarga(iso: string): string {
 export function horaCorta(iso: string): string {
   return formatoHora.format(new Date(iso));
 }
+
+const formatoChip = new Intl.DateTimeFormat("es-AR", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: ZONA,
+});
+
+/** Chip de fecha y hora del encabezado de desktop: `Mar 29 sep · 10:40` (hora de Buenos Aires). */
+export function etiquetaAhora(ahora: Date): string {
+  const [dia, num, mes] = formatoChip
+    .format(ahora)
+    .replace(/[.,]/g, "")
+    .split(/\s+/)
+    .filter((t) => t !== "de");
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${num} ${mes.slice(0, 3)} · ${formatoHora.format(ahora)}`;
+}

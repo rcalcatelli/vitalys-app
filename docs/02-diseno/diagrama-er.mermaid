@@ -60,13 +60,25 @@ erDiagram
         enum        tipo_turno                  "CONSULTORIO | GYM"
         timestamptz inicio
         timestamptz fin
-        enum        estado                      "RESERVADO | COMPLETADO | AUSENTE | CANCELADO_EN_TIEMPO | CANCELADO_TARDE"
-        bigint      reservado_por_usuario_id    FK  "Persona o ADMIN que creó la reserva"
+        enum        estado                      "RESERVADO | COMPLETADO | AUSENTE | CANCELADO_EN_TIEMPO | CANCELADO_TARDE | CANCELADO_POR_PROFESIONAL"
+        bigint      reservado_por_usuario_id    FK  "Persona o ADMIN que creó la reserva (el ADMIN real si opera como)"
         timestamptz cancelado_en                "NOT NULL si cancelado"
         bigint      cancelado_por_usuario       FK  "NOT NULL si cancelado"
         text        motivo_cancelacion          "NOT NULL si cancelado"
+        timestamptz completado_en               "V16. Momento del check-in. NULL salvo COMPLETADO (chk_turno_completado_en)"
         timestamptz creado_en
         timestamptz actualizado_en
+    }
+
+    auditoria_operar_como {
+        bigint      id                      PK
+        uuid        sesion_id               "jti del JWT de la sesión"
+        bigint      operador_usuario_id     FK  "ADMIN real"
+        bigint      sujeto_usuario_id       FK  "Socio en cuyo nombre se opera"
+        bigint      persona_id              FK
+        enum        accion                  "INICIO | FIN | RESERVA_GYM | RESERVA_CONSULTORIO | CANCELACION"
+        bigint      turno_id                FK  "NULL si INICIO o FIN (chk_auditoria_turno_segun_accion)"
+        timestamptz ocurrido_en
     }
 
     excepciones_morosidad {
@@ -121,6 +133,10 @@ erDiagram
     personas                    ||--o{    pagos                       : "realiza"
     turnos                      ||--o|    pagos                       : "genera pago sesión"
     usuarios                    ||--o{    turnos                      : "reserva (trazabilidad)"
+    usuarios                    ||--o{    auditoria_operar_como       : "opera (operador)"
+    usuarios                    ||--o{    auditoria_operar_como       : "es operado (sujeto)"
+    personas                    ||--o{    auditoria_operar_como       : "es atendida"
+    turnos                      ||--o{    auditoria_operar_como       : "afectado por"
     usuarios                    ||--o{    pagos                       : "registra (admin)"
     personas                    ||--o{    notificaciones              : "recibe"
     turnos                      ||--o{    notificaciones              : "origina"

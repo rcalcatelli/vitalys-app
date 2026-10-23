@@ -2,8 +2,10 @@ package com.vitalys.service;
 
 import com.vitalys.domain.ConceptoPago;
 import com.vitalys.domain.EstadoTurno;
+import com.vitalys.domain.ExcepcionMorosidad;
 import com.vitalys.domain.Pago;
 import com.vitalys.domain.Persona;
+import com.vitalys.domain.Profesional;
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
@@ -20,6 +22,7 @@ import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.exception.ReglaDeNegocioException;
 import com.vitalys.repository.PagoRepository;
 import com.vitalys.repository.PersonaRepository;
+import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
 import com.vitalys.service.MorosidadService.PeriodoEstado;
 import com.vitalys.service.MorosidadService.VeredictoMorosidad;
@@ -55,6 +58,7 @@ public class PagoService {
     private final PagoRepository pagoRepository;
     private final PersonaRepository personaRepository;
     private final TurnoRepository turnoRepository;
+    private final ProfesionalRepository profesionalRepository;
     private final MorosidadService morosidadService;
     private final Clock clock;
 
@@ -62,11 +66,13 @@ public class PagoService {
             PagoRepository pagoRepository,
             PersonaRepository personaRepository,
             TurnoRepository turnoRepository,
+            ProfesionalRepository profesionalRepository,
             MorosidadService morosidadService,
             Clock clock) {
         this.pagoRepository = pagoRepository;
         this.personaRepository = personaRepository;
         this.turnoRepository = turnoRepository;
+        this.profesionalRepository = profesionalRepository;
         this.morosidadService = morosidadService;
         this.clock = clock;
     }
@@ -164,19 +170,18 @@ public class PagoService {
                 .findAllById(sesionesPagas.stream().map(Pago::getTurnoId).filter(Objects::nonNull).toList())
                 .stream()
                 .collect(Collectors.toMap(Turno::getId, Function.identity()));
+        // Un solo findAllById para todos los profesionales de las sesiones (sin consulta por sesión)
+        Map<Long, Profesional> profesionales = profesionalRepository
+                .findAllById(turnos.values().stream().map(Turno::getProfesionalId).filter(Objects::nonNull).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(Profesional::getId, Function.identity()));
         List<SesionDto> sesiones = sesionesPagas.stream()
-                .map(p -> new SesionDto(
-                        p.getId(),
-                        p.getTurnoId(),
-                        turnos.containsKey(p.getTurnoId()) ? turnos.get(p.getTurnoId()).getInicio() : null,
-                        p.getMonto(),
-                        p.getMedio(),
-                        p.getFechaPago()))
+                .map(p -> sesionDto(p, turnos.get(p.getTurnoId()), profesionales))
                 .toList();
 
         BigDecimal total = pagos.stream().map(Pago::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
         ExcepcionInfo excepcion = veredicto.deuda().suspendido()
-                ? veredicto.excepcion().map(e -> new ExcepcionInfo(e.getValidaHasta(), e.getMotivo())).orElse(null)
+                ? veredicto.excepcion().map(this::excepcionInfo).orElse(null)
                 : null;
         return new EstadoCuentaResponse(
                 persona.getId(),
@@ -190,6 +195,28 @@ public class PagoService {
                 periodos,
                 sesiones,
                 new Totales(pagos.size(), total));
+    }
+
+    private static SesionDto sesionDto(Pago p, Turno turno, Map<Long, Profesional> profesionales) {
+        Profesional pro = turno == null || turno.getProfesionalId() == null ? null : profesionales.get(turno.getProfesionalId());
+        return new SesionDto(
+                p.getId(),
+                p.getTurnoId(),
+                turno == null ? null : turno.getInicio(),
+                pro == null ? null : pro.getNombre() + " " + pro.getApellido(),
+                pro == null ? null : pro.getEspecialidad(),
+                p.getMonto(),
+                p.getMedio(),
+                p.getFechaPago());
+    }
+
+    /** Quién otorgó la excepción: el nombre de su ficha de persona (p. ej. la recepcionista); "Recepción" si no tiene. */
+    private ExcepcionInfo excepcionInfo(ExcepcionMorosidad e) {
+        String autor = personaRepository
+                .findByUsuarioId(e.getAutorizadoPor())
+                .map(a -> a.getNombre() + " " + a.getApellido())
+                .orElse("Recepción");
+        return new ExcepcionInfo(e.getValidaHasta(), e.getMotivo(), autor, e.getCreadoEn());
     }
 
     private static PagoDto pagoDto(Pago p) {

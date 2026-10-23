@@ -109,6 +109,25 @@ que quieras mientras la base esté vacía; si ya cargaste el seed una vez, volve
 va a fallar por violación de las restricciones `UNIQUE` (email, DNI, etc.) — es el
 comportamiento esperado, no un bug.
 
+**Resembrar una base que ya tiene datos.** El seed **calcula sus fechas contra el día en que se
+carga** (tabla temporal `seed_ref`): la morosidad (RN-01) y el estado de cada turno dependen de
+`NOW()`. Una base sembrada hace semanas muestra períodos corridos, turnos pasados y casos de
+demostración que ya no dicen lo que prometen (por ejemplo, un socio "al día" que ya debe cuotas).
+Antes de una demo hay que vaciar y volver a cargar. Como el seed no tiene `ON CONFLICT`, primero se
+vacían las tablas de datos —sin tocar `flyway_schema_history` ni `configuracion_gym`—:
+
+```sql
+TRUNCATE usuarios, feriados RESTART IDENTITY CASCADE;
+```
+
+`CASCADE` arrastra personas, profesionales, turnos, pagos, excepciones, notificaciones y la
+auditoría de "Operar como", que dependen de `usuarios`. Después se corre otra vez el seed
+(`docker compose --profile seed up seed` en local; el SQL Editor en Supabase). **Esto borra todos
+los datos**: solo para entornos de desarrollo o de demostración, nunca con datos reales.
+
+> **Supabase gratuito.** El proyecto se pausa tras ~7 días sin actividad (RG-02). Reactivalo desde
+> el dashboard unos días antes de la demo o de la entrega y resembrá la base ese mismo día.
+
 ### 3.5 Ver logs
 
 ```bash
@@ -172,7 +191,9 @@ db/migration/
 ├── V12__cancelacion_por_profesional.sql    cancelación en cascada por disponibilidad
 ├── V13__profesionales_disponibilidad.sql   profesionales y disponibilidad
 ├── V14__pagos_medio.sql                    medio de pago de cada cobro
-└── V15__avisos_de_deuda.sql                un aviso de deuda por período impago (RF-37)
+├── V15__avisos_de_deuda.sql                un aviso de deuda por período impago (RF-37)
+├── V16__completado_en.sql                  hora real del check-in (RN-28)
+└── V17__auditoria_operar_como.sql          auditoría de "Operar como" (RF-39, RN-27)
 ```
 
 > El orden lo da el **número de versión**, no el orden alfabético. `V10` va después de
@@ -290,6 +311,9 @@ agregues ahí se empaqueta y se ejecuta automáticamente.
 | `V13__profesionales_disponibilidad.sql` | Ajustes de profesionales y disponibilidad del Sprint 3 (ver `MigracionV13IT`). |
 | `V14__pagos_medio.sql` | Tipo `medio_pago` (`EFECTIVO`, `TRANSFERENCIA`, `DEBITO`, `CREDITO`) y columna `pagos.medio NOT NULL` (backfill `EFECTIVO` para las filas existentes y sin DEFAULT de ahí en más). Mercado Pago se sumaría con su propia migración. |
 | `V15__avisos_de_deuda.sql` | Columna `notificaciones.periodo` para los avisos de deuda y de suspensión (RF-37), con `chk_notificacion_periodo` y el índice único parcial `uq_aviso_deuda_periodo`: un solo aviso por persona y período. |
+
+| `V16__completado_en.sql` | Columna `turnos.completado_en` (momento del check-in, RN-28) y `chk_turno_completado_en`: solo un turno `COMPLETADO` puede tenerla. Sin backfill: los completados anteriores quedan en `NULL`. |
+| `V17__auditoria_operar_como.sql` | Tipo `accion_operar_como` (`INICIO`, `FIN`, `RESERVA_GYM`, `RESERVA_CONSULTORIO`, `CANCELACION`) y tabla `auditoria_operar_como` con `chk_auditoria_operador_distinto`, `chk_auditoria_turno_segun_accion` y los índices `idx_auditoria_operar_como_persona`, `idx_auditoria_operar_como_operador` e `idx_auditoria_operar_como_sesion` (RF-39, RN-26, RN-27). |
 
 > **Ojo con el orden al aplicarlas a mano.** Flyway ordena por número de versión, pero un `ls db/migration/V*.sql` del shell ordena alfabéticamente y pone `V10` entre `V1` y `V2`. Si las corrés sueltas, usá `ls db/migration/V*.sql | sort -V`. Con `docker compose` no hace falta: lo resuelve Flyway.
 

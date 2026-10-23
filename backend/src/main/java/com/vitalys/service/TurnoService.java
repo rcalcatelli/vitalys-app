@@ -1,6 +1,8 @@
 package com.vitalys.service;
 
+import com.vitalys.domain.AccionOperarComo;
 import com.vitalys.domain.DisponibilidadProfesional;
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.Persona;
 import com.vitalys.domain.Profesional;
@@ -10,6 +12,7 @@ import com.vitalys.domain.Turno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ProximaAgendaResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
@@ -25,6 +28,7 @@ import com.vitalys.repository.FeriadoRepository;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.ProfesionalRepository;
 import com.vitalys.repository.TurnoRepository;
+import com.vitalys.security.ActorActual;
 import com.vitalys.service.MorosidadService.EstadoDeuda;
 import com.vitalys.service.MorosidadService.VeredictoMorosidad;
 import com.vitalys.service.notificaciones.AvisosTurnoService;
@@ -51,6 +55,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>La grilla, el cupo, los feriados y la superposición los valida el motor; el servicio
  * valida lo que depende de {@code NOW()} o del actor: morosidad (RN-01), excepciones (RN-09),
  * anticipación de la cancelación (RN-02) y autorización por rol (RNF-03).
+ *
+ * <p>"Operar como" (RN-26/27): el actor es el socio, así que reserva y cancela con SUS reglas;
+ * {@code reservado_por}/{@code cancelado_por} guardan al ADMIN que opera (D8) y cada escritura se
+ * audita en la misma transacción.
  */
 @Service
 public class TurnoService {
@@ -59,6 +67,15 @@ public class TurnoService {
 
     /** El check-in se acepta desde un rato antes del inicio de la franja. */
     static final long MINUTOS_CHECKIN_ANTICIPADO = 15;
+
+    /** RN-18: un turno de gimnasio se reserva con al menos esta anticipación respecto de su inicio. */
+    static final long MINUTOS_ANTICIPACION_MINIMA_GYM = 60;
+
+    /** RN-18: y como mucho con esta anticipación. */
+    static final long DIAS_ANTICIPACION_MAXIMA_GYM = 7;
+
+    /** Hasta dónde mira la "próxima agenda" de un profesional (RF-41). */
+    static final int HORIZONTE_PROXIMA_AGENDA_DIAS = 21;
 
     private final TurnoRepository turnoRepository;
     private final PersonaRepository personaRepository;
@@ -69,6 +86,8 @@ public class TurnoService {
     private final DisponibilidadProfesionalRepository disponibilidadRepository;
     private final JdbcTemplate jdbcTemplate;
     private final AvisosTurnoService avisos;
+    private final ActorActual actorActual;
+    private final AuditoriaOperarComoService auditoria;
     private final Clock clock;
 
     public TurnoService(
@@ -81,6 +100,8 @@ public class TurnoService {
             DisponibilidadProfesionalRepository disponibilidadRepository,
             JdbcTemplate jdbcTemplate,
             AvisosTurnoService avisos,
+            ActorActual actorActual,
+            AuditoriaOperarComoService auditoria,
             Clock clock) {
         this.turnoRepository = turnoRepository;
         this.personaRepository = personaRepository;
@@ -91,6 +112,8 @@ public class TurnoService {
         this.disponibilidadRepository = disponibilidadRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.avisos = avisos;
+        this.actorActual = actorActual;
+        this.auditoria = auditoria;
         this.clock = clock;
     }
 
@@ -159,6 +182,7 @@ public class TurnoService {
         if (!request.inicio().isAfter(ahora())) {
             throw new ReglaDeNegocioException("No se puede reservar una franja que ya empezó");
         }
+        validarAnticipacionGym(request.inicio());
         Persona persona = resolverPersona(actor, request.personaId());
 
         VeredictoMorosidad veredicto = morosidadService.veredicto(persona);
@@ -170,13 +194,27 @@ public class TurnoService {
                     deuda.periodosImpagos(), deuda.umbral()));
         }
 
-        Turno turno = guardar(Turno.deGimnasio(persona, actor.getId(), request.inicio()));
+        Turno turno = guardar(Turno.deGimnasio(persona, actorActual.idDeQuienOpera(actor), request.inicio()));
         veredicto.excepcion().ifPresent(e -> {
             e.consumirEn(turno.getId());
             excepcionRepository.save(e);
         });
+        auditoria.registrarSiOpera(AccionOperarComo.RESERVA_GYM, turno);
         avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
+    }
+
+    /** RN-18 / CA-08-5: depende de {@code NOW()}, por eso se valida acá y no en la base. */
+    private void validarAnticipacionGym(OffsetDateTime inicio) {
+        OffsetDateTime ahora = ahora();
+        if (inicio.isBefore(ahora.plusMinutes(MINUTOS_ANTICIPACION_MINIMA_GYM))) {
+            throw new ReglaDeNegocioException(
+                    "Las reservas de gimnasio se cierran 1 hora antes del inicio de la franja");
+        }
+        if (inicio.isAfter(ahora.plusDays(DIAS_ANTICIPACION_MAXIMA_GYM))) {
+            throw new ReglaDeNegocioException(
+                    "Solo se puede reservar gimnasio hasta 7 días antes de la franja");
+        }
     }
 
     /**
@@ -261,7 +299,9 @@ public class TurnoService {
                 .findFirst()
                 .orElseThrow(() -> new ReglaDeNegocioException(
                         "Ese horario no está dentro de la disponibilidad del profesional"));
-        Turno turno = guardar(Turno.deConsultorio(persona, profesional.getId(), actor.getId(), slot[0], slot[1]));
+        Turno turno = guardar(Turno.deConsultorio(
+                persona, profesional.getId(), actorActual.idDeQuienOpera(actor), slot[0], slot[1]));
+        auditoria.registrarSiOpera(AccionOperarComo.RESERVA_CONSULTORIO, turno);
         avisos.confirmarReserva(turno);
         return TurnoResponse.de(turno);
     }
@@ -290,11 +330,61 @@ public class TurnoService {
                 .toList();
     }
 
+    /**
+     * RF-41: para cada profesional activo (de la especialidad, si se indica), el primer día desde hoy
+     * con al menos un turno libre dentro de {@value #HORIZONTE_PROXIMA_AGENDA_DIAS} días y cuántos
+     * tiene ese día. Usa la misma generación de slots y la misma ocupación que {@link #slotsDisponibles}
+     * (RN-03: solo cuentan los turnos que ocupan lugar; los slots que ya pasaron no están libres).
+     * Dos consultas por profesional sin importar cuántos días recorra.
+     */
+    @Transactional(readOnly = true)
+    public List<ProximaAgendaResponse> proximasAgendas(Usuario actor, Especialidad especialidad) {
+        if (actor.getRol() == RolUsuario.PROFESIONAL) {
+            throw new AccesoDenegadoException("Un profesional no reserva turnos");
+        }
+        LocalDate hoy = LocalDate.now(clock);
+        OffsetDateTime desde = hoy.atStartOfDay(ZONA).toOffsetDateTime();
+        OffsetDateTime hasta = hoy.plusDays(HORIZONTE_PROXIMA_AGENDA_DIAS).atStartOfDay(ZONA).toOffsetDateTime();
+        java.time.Instant ahora = ahora().toInstant();
+        List<ProximaAgendaResponse> respuesta = new ArrayList<>();
+        for (Profesional p : profesionalRepository.findByActivo(true, Sort.by("apellido", "nombre"))) {
+            if (especialidad != null && p.getEspecialidad() != especialidad) {
+                continue;
+            }
+            List<DisponibilidadProfesional> franjas =
+                    disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(p.getId());
+            LocalDate fecha = null;
+            int libres = 0;
+            if (franjas.stream().anyMatch(DisponibilidadProfesional::isActivo)) {
+                List<java.time.Instant[]> ocupados = new ArrayList<>();
+                for (Object[] fila : turnoRepository.ocupadosDeProfesional(p.getId(), desde, hasta)) {
+                    ocupados.add(new java.time.Instant[] {instante(fila[0]), instante(fila[1])});
+                }
+                for (int i = 0; i < HORIZONTE_PROXIMA_AGENDA_DIAS && fecha == null; i++) {
+                    LocalDate dia = hoy.plusDays(i);
+                    int n = (int) generarSlots(franjasDelDia(franjas, dia), dia, p.getDuracionTurnoMinutos()).stream()
+                            .filter(s -> s[0].toInstant().isAfter(ahora)
+                                    && ocupados.stream().noneMatch(o -> o[0].isBefore(s[1].toInstant()) && o[1].isAfter(s[0].toInstant())))
+                            .count();
+                    if (n > 0) {
+                        fecha = dia;
+                        libres = n;
+                    }
+                }
+            }
+            respuesta.add(new ProximaAgendaResponse(
+                    p.getId(), p.getNombre(), p.getApellido(), p.getEspecialidad(), p.getDuracionTurnoMinutos(), fecha, libres));
+        }
+        return respuesta;
+    }
+
     private List<DisponibilidadProfesional> franjasDelDia(Long profesionalId, LocalDate fecha) {
+        return franjasDelDia(disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(profesionalId), fecha);
+    }
+
+    private static List<DisponibilidadProfesional> franjasDelDia(List<DisponibilidadProfesional> franjas, LocalDate fecha) {
         int dia = fecha.getDayOfWeek().getValue();
-        return disponibilidadRepository.findByProfesionalIdOrderByDiaSemanaAscHoraInicioAsc(profesionalId).stream()
-                .filter(f -> f.isActivo() && f.getDiaSemana() == dia)
-                .toList();
+        return franjas.stream().filter(f -> f.isActivo() && f.getDiaSemana() == dia).toList();
     }
 
     /**
@@ -349,8 +439,9 @@ public class TurnoService {
         if (!turno.estaReservado()) {
             throw new ReglaDeNegocioException("Solo se puede cancelar un turno reservado; este está " + turno.getEstado());
         }
-        turno.cancelar(ahora(), actor.getId(), motivo.trim());
+        turno.cancelar(ahora(), actorActual.idDeQuienOpera(actor), motivo.trim());
         Turno cancelado = guardar(turno);
+        auditoria.registrarSiOpera(AccionOperarComo.CANCELACION, cancelado);
         avisos.avisarCancelacion(cancelado);
         return TurnoResponse.de(cancelado);
     }
@@ -362,7 +453,7 @@ public class TurnoService {
         if (ahora().isBefore(turno.getInicio().minusMinutes(MINUTOS_CHECKIN_ANTICIPADO))) {
             throw new ReglaDeNegocioException("Todavía no se puede registrar la asistencia: el turno no empezó");
         }
-        turno.marcar(EstadoTurno.COMPLETADO);
+        turno.completar(ahora());
         return TurnoResponse.de(guardar(turno));
     }
 
@@ -442,7 +533,7 @@ public class TurnoService {
                     cb.greaterThanOrEqualTo(root.<OffsetDateTime>get("inicio"), desde),
                     cb.lessThan(root.<OffsetDateTime>get("inicio"), hasta)));
         }
-        return turnoRepository.findAll(filtro, Sort.by("inicio")).stream().map(TurnoResponse::de).toList();
+        return turnoRepository.findAll(filtro, Sort.by("inicio")).stream().map(TurnoResponse::paraAdmin).toList();
     }
 
     // ---------------------------------------------------------------- auxiliares

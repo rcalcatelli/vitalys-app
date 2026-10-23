@@ -1,3 +1,4 @@
+import type { ChipTone } from "../components/atoms/Chip";
 import type { EstadoPeriodo, MedioPago } from "../types/pago";
 import { fechaBA } from "./fechaBA";
 
@@ -39,16 +40,21 @@ export function etiquetaEstadoPeriodo(estado: EstadoPeriodo): string {
   return ETIQUETA_ESTADO[estado];
 }
 
-/** Clases del chip de un período: pagado en verde, impago en rojo, pendiente (en gracia) en ámbar. */
-export function clasesEstadoPeriodo(estado: EstadoPeriodo): string {
-  if (estado === "PAGADO") return "bg-ok-soft text-ok-ink";
-  if (estado === "IMPAGO") return "bg-bad-soft text-bad-ink";
-  return "bg-warn-soft text-warn-ink";
+/** Tono del chip de un período: pagado en verde, impago en rojo, pendiente (en gracia) en ámbar. */
+export function tonoEstadoPeriodo(estado: EstadoPeriodo): ChipTone {
+  if (estado === "PAGADO") return "ok";
+  if (estado === "IMPAGO") return "bad";
+  return "warn";
 }
 
 /** `2026-10-01` → `Octubre 2026`. */
 export function etiquetaPeriodo(periodo: string): string {
   return `${MESES[Number(periodo.slice(5, 7)) - 1]} ${periodo.slice(0, 4)}`;
+}
+
+/** `2026-10-01` → `octubre 2026` (para frases: "La cuota de octubre 2026 vence…"). */
+export function etiquetaPeriodoEnFrase(periodo: string): string {
+  return etiquetaPeriodo(periodo).toLowerCase();
 }
 
 /** `2026-10-15` → `15/10/2026`. */
@@ -61,15 +67,16 @@ export function fechaInstanteDMA(instante: string): string {
   return fechaDMA(fechaBA(instante));
 }
 
-const formatoMonto = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
+const formatoEntero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
+const formatoDecimal = new Intl.NumberFormat("es-AR", {
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-/** `15000` → `$ 15.000,00` (ARS). */
+/** `35000` → `$ 35.000`; con centavos, `$ 8.000,50` (ARS, como el mockup). */
 export function formatearMonto(monto: number): string {
-  return formatoMonto.format(monto).replace(/\u00a0/g, " ");
+  const formato = Number.isInteger(monto) ? formatoEntero : formatoDecimal;
+  return `$ ${formato.format(monto)}`;
 }
 
 /** Suma `n` meses a un período `YYYY-MM-01` (cruza años). */

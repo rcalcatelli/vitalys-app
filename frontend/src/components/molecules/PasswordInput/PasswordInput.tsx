@@ -68,7 +68,7 @@ export function PasswordInput({ id, label, ...inputProps }: PasswordInputProps) 
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
         <Input {...inputProps} id={id} type={visible ? "text" : "password"} hasTrailingIcon />

@@ -8,7 +8,7 @@ export function homePathForRol(rol: RolUsuario): string {
     case "PROFESIONAL":
       return "/profesional/agenda";
     case "SOCIO_PACIENTE":
-      return "/socio/turnos";
+      return "/socio/inicio";
     default:
       return "/login";
   }

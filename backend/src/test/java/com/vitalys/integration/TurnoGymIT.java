@@ -1,6 +1,7 @@
 package com.vitalys.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vitalys.domain.RolUsuario;
 import com.vitalys.domain.Usuario;
@@ -73,13 +74,24 @@ class TurnoGymIT extends IntegrationTestBase {
         return restTemplate.exchange(urlBase() + ruta, metodo, new HttpEntity<>(body, headers), tipo);
     }
 
-    /** Un día hábil de acá a {@code semanas} semanas que no sea feriado. */
-    private LocalDate diaHabil(int semanas) {
-        LocalDate d = LocalDate.now(ZONA).plusWeeks(semanas);
+    /**
+     * El {@code n}-ésimo día hábil no feriado a partir de mañana, siempre dentro de la ventana de RN-18
+     * (hasta 7 días de anticipación); ver {@link DiasDeReserva}.
+     */
+    private LocalDate diaHabil(int n) {
+        return DiasDeReserva.diaHabil(jdbcTemplate, n);
+    }
+
+    /**
+     * Un día hábil de hace al menos {@code semanas} semanas que no sea feriado. Correr un turno a un
+     * día así no puede chocar con la grilla de un sábado ni con un feriado que cierra el gimnasio.
+     */
+    private LocalDate diaHabilPasado(int semanas) {
+        LocalDate d = LocalDate.now(ZONA).minusWeeks(semanas);
         while (d.getDayOfWeek() == DayOfWeek.SATURDAY
                 || d.getDayOfWeek() == DayOfWeek.SUNDAY
                 || jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) > 0) {
-            d = d.plusDays(1);
+            d = d.minusDays(1);
         }
         return d;
     }
@@ -178,6 +190,26 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     @Test
+    void pi137_excepcionParaSocioNoSuspendido_da422YNoQuedaRegistrada() {
+        Socio alDia = socioAlDia();
+        Map<String, Object> exc = Map.of(
+                "personaId", alDia.persona().id(),
+                "motivo", "Intento sin suspensión",
+                "validaHasta", LocalDate.now(ZONA).plusMonths(1).toString(),
+                "unSoloUso", true);
+
+        ResponseEntity<String> r = llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("no está suspendida por morosidad");
+        assertThat(llamar(
+                                HttpMethod.GET, "/api/excepciones-morosidad/persona/" + alDia.persona().id(), null, tokenAdmin,
+                                ExcepcionMorosidadResponse[].class)
+                        .getBody())
+                .isEmpty();
+    }
+
+    @Test
     void pi85_unTurnoDeGimnasioPorDia_segundoDa409() {
         Socio s = socioAlDia();
         LocalDate dia = diaHabil(2);
@@ -219,7 +251,7 @@ class TurnoGymIT extends IntegrationTestBase {
 
     @Test
     void pi86_cupoCompleto_da422() {
-        LocalDate dia = diaHabil(4);
+        LocalDate dia = diaHabil(3);
         Socio a = socioAlDia();
         Socio b = socioAlDia();
         jdbcTemplate.update("UPDATE configuracion_gym SET cupo_por_franja = 1 WHERE id = 1");
@@ -231,6 +263,19 @@ class TurnoGymIT extends IntegrationTestBase {
         } finally {
             jdbcTemplate.update("UPDATE configuracion_gym SET cupo_por_franja = 20 WHERE id = 1");
         }
+    }
+
+    @Test
+    void pi139_anticipacionDeRn18_menosDeUnaHoraOMasDeSieteDias_da422() {
+        Socio s = socioAlDia();
+        OffsetDateTime enMediaHora = OffsetDateTime.now(ZONA).plusMinutes(30);
+        OffsetDateTime enDosSemanas = franja(diaHabil(3).plusWeeks(2), 10, 0);
+
+        ResponseEntity<String> muyPronto = reservar(s.token(), enMediaHora);
+        assertThat(muyPronto.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        ResponseEntity<String> muyLejos = reservar(s.token(), enDosSemanas);
+        assertThat(muyLejos.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(muyLejos.getBody()).contains("7 días");
     }
 
     @Test
@@ -272,6 +317,50 @@ class TurnoGymIT extends IntegrationTestBase {
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(llamar(HttpMethod.POST, "/api/excepciones-morosidad", exc, tokenAdmin, String.class).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------ RN-28: completado_en y DNI del listado
+
+    @Test
+    void pi124_checkInGuardaCompletadoEnYElListadoDelAdminTraeElDni() {
+        Socio s = socioAlDia();
+        LocalDate dia = diaHabil(2);
+        TurnoResponse t = reservarOk(s.token(), franja(dia, 15, 0));
+        assertThat(t.completadoEn()).isNull();
+        // El turno ya empezó: se lo corre a un día hábil pasado que no sea feriado, a la misma hora
+        // de la grilla. Un corrimiento fijo podía caer en un feriado y el motor lo rechazaría.
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(diaHabilPasado(2), dia);
+        jdbcTemplate.update(
+                "UPDATE turnos SET inicio = inicio - make_interval(days => ?), fin = fin - make_interval(days => ?) WHERE id = ?",
+                (int) dias, (int) dias, t.id());
+
+        ResponseEntity<TurnoResponse> r = llamar(HttpMethod.PATCH, "/api/turnos/" + t.id() + "/completado", null, tokenAdmin, TurnoResponse.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody().estado().name()).isEqualTo("COMPLETADO");
+        assertThat(r.getBody().completadoEn()).isNotNull().isAfter(OffsetDateTime.now().minusMinutes(2));
+        assertThat(jdbcTemplate.queryForObject("SELECT completado_en IS NOT NULL FROM turnos WHERE id = ?", Boolean.class, t.id())).isTrue();
+
+        TurnoResponse[] listado = llamar(HttpMethod.GET, "/api/turnos?tipo=GYM&personaId=" + s.persona().id(), null, tokenAdmin, TurnoResponse[].class).getBody();
+        assertThat(listado).singleElement().satisfies(x -> {
+            assertThat(x.personaDni()).isEqualTo(s.persona().dni());
+            assertThat(x.personaNombre()).isEqualTo("Socio");
+            assertThat(x.personaApellido()).isEqualTo("Prueba");
+            assertThat(x.completadoEn()).isNotNull();
+        });
+        // El socio ve sus turnos sin el DNI (solo el listado del ADMIN lo expone)
+        TurnoResponse[] mios = llamar(HttpMethod.GET, "/api/turnos/mis-turnos", null, s.token(), TurnoResponse[].class).getBody();
+        assertThat(mios).singleElement().satisfies(x -> assertThat(x.personaDni()).isNull());
+    }
+
+    @Test
+    void completadoEn_soloEnTurnosCompletadosLoGarantizaLaBase() {
+        Socio s = socioAlDia();
+        TurnoResponse t = reservarOk(s.token(), franja(diaHabil(2), 16, 0));
+
+        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE turnos SET completado_en = NOW() WHERE id = ?", t.id()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+                .hasMessageContaining("chk_turno_completado_en");
     }
 
     // ------------------------------------------------------------------ estado de gimnasio

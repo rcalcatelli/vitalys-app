@@ -65,4 +65,22 @@ class TurnoTest {
         assertThat(gym(T).anticipacionRequerida()).isEqualTo(Turno.ANTICIPACION_GYM);
         assertThat(Turno.ANTICIPACION_CONSULTORIO.toHours()).isEqualTo(24);
     }
+
+    @Test
+    void completar_dejaElEstadoYElMomentoDelCheckIn() {
+        Turno t = gym(T);
+        assertThat(t.getCompletadoEn()).isNull();
+
+        t.completar(T.minusMinutes(5));
+
+        assertThat(t.getEstado()).isEqualTo(EstadoTurno.COMPLETADO);
+        assertThat(t.getCompletadoEn()).isEqualTo(T.minusMinutes(5));
+    }
+
+    @Test
+    void marcarAusente_noInventaUnMomentoDeCheckIn() {
+        Turno t = gym(T);
+        t.marcar(EstadoTurno.AUSENTE);
+        assertThat(t.getCompletadoEn()).isNull();
+    }
 }

@@ -68,6 +68,9 @@ public class Turno {
     @Column(name = "motivo_cancelacion", columnDefinition = "text")
     private String motivoCancelacion;
 
+    @Column(name = "completado_en")
+    private OffsetDateTime completadoEn;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private OffsetDateTime creadoEn;
 
@@ -121,6 +124,12 @@ public class Turno {
         this.canceladoEn = ahora;
         this.canceladoPorUsuarioId = usuarioId;
         this.motivoCancelacion = motivo;
+    }
+
+    /** RN-28: el check-in deja constancia del momento ({@code chk_turno_completado_en}). */
+    public void completar(OffsetDateTime ahora) {
+        this.estado = EstadoTurno.COMPLETADO;
+        this.completadoEn = ahora;
     }
 
     public void marcar(EstadoTurno nuevo) {
@@ -177,6 +186,10 @@ public class Turno {
 
     public String getMotivoCancelacion() {
         return motivoCancelacion;
+    }
+
+    public OffsetDateTime getCompletadoEn() {
+        return completadoEn;
     }
 
     /** Momento en que se reservó (lo completa la base). */

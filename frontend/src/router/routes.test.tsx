@@ -3,17 +3,23 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setToken } from "../api/http";
 import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { ToastProvider } from "../context/ToastContext";
 import { unEstadoCuenta } from "../test/pagoFixture";
 import { unEstadoGym } from "../test/turnoFixture";
 import { AppRoutes } from "./routes";
 
 function renderAt(path: string) {
   return render(
-    <AuthProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </AuthProvider>,
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <AppRoutes />
+          </MemoryRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -58,8 +64,10 @@ describe("AppRoutes", () => {
     "/admin/profesionales",
     "/admin/pagos",
     "/profesional/agenda",
+    "/socio/inicio",
     "/socio/turnos",
     "/socio/estado-cuenta",
+    "/admin/ingreso",
     "/socio/reservar-gimnasio",
     "/socio/reservar-consultorio",
     "/profesional/disponibilidad",
@@ -90,7 +98,7 @@ describe("AppRoutes", () => {
     ["/socio/reservar-gimnasio", "Reservar gimnasio"],
     ["/socio/reservar-consultorio", "Turno de consultorio"],
     ["/socio/turnos", "Mis turnos"],
-    ["/socio/estado-cuenta", "Estado de cuenta"],
+    ["/socio/estado-cuenta", "Mi estado de cuenta"],
   ])("%s muestra su pantalla al socio", async (path, titulo) => {
     sesionComo("SOCIO_PACIENTE");
     renderAt(path);
@@ -102,19 +110,26 @@ describe("AppRoutes", () => {
     async (path) => {
       sesionComo("PROFESIONAL");
       renderAt(path);
-      expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Agenda de hoy" })).toBeInTheDocument();
     },
   );
 
   it("/profesional/agenda muestra la agenda al profesional", async () => {
     sesionComo("PROFESIONAL");
     renderAt("/profesional/agenda");
-    expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Agenda de hoy" })).toBeInTheDocument();
   });
 
-  it("/profesional/agenda rechaza al socio y lo manda a sus turnos", async () => {
+  it("/profesional/agenda rechaza al socio y lo manda a su inicio", async () => {
     sesionComo("SOCIO_PACIENTE");
     renderAt("/profesional/agenda");
-    expect(await screen.findByRole("heading", { name: "Mis turnos" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Inicio" })).toBeInTheDocument();
+  });
+
+  it("/admin/ingreso muestra su pantalla a recepción dentro del shell", async () => {
+    sesionComo("ADMIN");
+    renderAt("/admin/ingreso");
+    expect(await screen.findByRole("heading", { name: "Ingreso al gimnasio" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Principal" })).toBeInTheDocument();
   });
 });

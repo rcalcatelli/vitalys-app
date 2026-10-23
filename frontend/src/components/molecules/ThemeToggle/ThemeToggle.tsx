@@ -17,7 +17,7 @@ export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
   const label = theme === "light" ? "Modo oscuro" : "Modo claro";
 
   return (
-    <Button type="button" variant="outline" onClick={onToggle}>
+    <Button type="button" variant="outline" size="xs" onClick={onToggle}>
       {label}
     </Button>
   );

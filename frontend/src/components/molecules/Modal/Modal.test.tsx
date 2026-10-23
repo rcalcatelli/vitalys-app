@@ -35,4 +35,16 @@ describe("Modal", () => {
     await user.click(screen.getByRole("presentation"));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("se dibuja en document.body, fuera del árbol que lo abre (el shell anima con transform)", () => {
+    const { container } = render(
+      <div className="animate-vt-in">
+        <Modal titulo="T" onClose={vi.fn()}>
+          <p>Contenido</p>
+        </Modal>
+      </div>,
+    );
+    expect(container.querySelector("[role=dialog]")).toBeNull();
+    expect(document.body.querySelector("[role=dialog]")).not.toBeNull();
+  });
 });

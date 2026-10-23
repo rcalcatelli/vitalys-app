@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -79,6 +81,10 @@ class MorosidadServiceTest {
     private MorosidadService servicio(List<LocalDate> pagos, int umbral, String hoy) {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForList(anyString(), eq(LocalDate.class), any(Object[].class))).thenReturn(pagos);
+        when(jdbc.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(pagos.stream()
+                        .map(f -> java.util.Map.<String, Object>of("persona_id", 7L, "periodo", java.sql.Date.valueOf(f)))
+                        .toList());
         when(jdbc.queryForObject(anyString(), eq(Integer.class))).thenReturn(umbral);
         Clock clock = Clock.fixed(d(hoy).atTime(12, 0).atZone(ZONA).toInstant(), ZONA);
         return new MorosidadService(jdbc, excepciones, clock);
@@ -180,7 +186,7 @@ class MorosidadServiceTest {
 
     @Test
     void veredicto_suspendidoSinExcepcion_bloquea() {
-        when(excepciones.findByPersonaIdOrderByCreadoEnDesc(7L)).thenReturn(List.of());
+        when(excepciones.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of());
 
         VeredictoMorosidad v = servicio(List.of(), 6, "2026-07-20").veredicto(socio("2026-01-01"));
 
@@ -192,13 +198,71 @@ class MorosidadServiceTest {
     void veredicto_suspendidoConExcepcionVigente_noBloquea_yVencidaSi() {
         ExcepcionMorosidad vencida = new ExcepcionMorosidad(7L, 1L, "vieja", d("2026-07-01"), false);
         ExcepcionMorosidad vigente = new ExcepcionMorosidad(7L, 1L, "plan de pago", d("2026-07-31"), false);
-        when(excepciones.findByPersonaIdOrderByCreadoEnDesc(7L)).thenReturn(List.of(vencida, vigente));
+        when(excepciones.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vencida, vigente));
 
         VeredictoMorosidad conVigente = servicio(List.of(), 6, "2026-07-20").veredicto(socio("2026-01-01"));
         assertThat(conVigente.bloqueado()).isFalse();
         assertThat(conVigente.excepcion()).contains(vigente);
 
-        when(excepciones.findByPersonaIdOrderByCreadoEnDesc(7L)).thenReturn(List.of(vencida));
+        when(excepciones.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vencida));
         assertThat(servicio(List.of(), 6, "2026-07-20").veredicto(socio("2026-01-01")).bloqueado()).isTrue();
+    }
+
+    // ------------------------------------------------------------------ veredictos en lote
+
+    private static Persona socio(long id, String inicioMembresia) {
+        Persona p = socio(inicioMembresia);
+        p.setId(id);
+        return p;
+    }
+
+    @Test
+    void veredictos_resuelveVariosSociosConTresConsultasYLasReglasDeSiempre() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Integer.class))).thenReturn(6);
+        // 1: al dia (todo pago hasta 2026-07), 2: sin pagos desde enero (6 impagos) con excepcion, 3: sin pagos desde enero, sin excepcion
+        List<java.util.Map<String, Object>> filas = new java.util.ArrayList<>();
+        for (int m = 1; m <= 7; m++) {
+            filas.add(java.util.Map.of("persona_id", 1L, "periodo", java.sql.Date.valueOf(LocalDate.of(2026, m, 1))));
+        }
+        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(filas);
+        ExcepcionMorosidad vigente = new ExcepcionMorosidad(2L, 9L, "plan de pago", d("2026-07-31"), false);
+        when(excepciones.findByPersonaIdInOrderByCreadoEnDesc(any())).thenReturn(List.of(vigente));
+        Clock clock = Clock.fixed(d("2026-07-20").atTime(12, 0).atZone(ZONA).toInstant(), ZONA);
+        Persona sinMembresia = socio(4L, "2026-01-01");
+        sinMembresia.definirMembresiaGym(false, null);
+
+        var r = new MorosidadService(jdbc, excepciones, clock)
+                .veredictos(List.of(socio(1L, "2026-01-01"), socio(2L, "2026-01-01"), socio(3L, "2026-01-01"), sinMembresia));
+
+        assertThat(r.get(1L).deuda().periodosImpagos()).isZero();
+        assertThat(r.get(1L).bloqueado()).isFalse();
+        assertThat(r.get(2L).deuda().suspendido()).isTrue();
+        assertThat(r.get(2L).excepcion()).contains(vigente);
+        assertThat(r.get(2L).bloqueado()).isFalse();
+        assertThat(r.get(3L).deuda().periodosImpagos()).isEqualTo(6);
+        assertThat(r.get(3L).bloqueado()).isTrue();
+        assertThat(r.get(4L).deuda()).isEqualTo(EstadoDeuda.SIN_MEMBRESIA);
+        verify(jdbc, times(1)).queryForObject(anyString(), eq(Integer.class));
+        verify(jdbc, times(1)).queryForList(anyString(), any(Object[].class));
+        verify(excepciones, times(1)).findByPersonaIdInOrderByCreadoEnDesc(any());
+    }
+
+    @Test
+    void veredictos_soloSinMembresia_noConsultaNada() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        Persona p = socio(5L, "2026-01-01");
+        p.definirMembresiaGym(false, null);
+
+        var r = new MorosidadService(jdbc, excepciones, Clock.systemUTC()).veredictos(List.of(p));
+
+        assertThat(r.get(5L).bloqueado()).isFalse();
+        verifyNoInteractions(jdbc, excepciones);
+    }
+
+    @Test
+    void veredictos_listaVacia() {
+        assertThat(new MorosidadService(mock(JdbcTemplate.class), excepciones, Clock.systemUTC()).veredictos(List.of()))
+                .isEmpty();
     }
 }

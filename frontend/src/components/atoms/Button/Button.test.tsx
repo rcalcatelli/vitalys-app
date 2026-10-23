@@ -54,13 +54,95 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Modo oscuro" })).toHaveClass("border-border");
   });
 
-  it("acepta variant danger para acciones destructivas", () => {
+  it("acepta variant bad para acciones destructivas", () => {
     render(
-      <Button type="button" variant="danger">
+      <Button type="button" variant="bad">
         Dar de baja
       </Button>,
     );
 
     expect(screen.getByRole("button", { name: "Dar de baja" })).toHaveClass("bg-bad");
+  });
+
+  it("por defecto mide lo que su texto (44px) y fullWidth lo estira a 48px del login", () => {
+    const { rerender } = render(<Button type="button">Guardar</Button>);
+    const boton = screen.getByRole("button", { name: "Guardar" });
+    expect(boton).toHaveClass("h-11");
+    expect(boton).not.toHaveClass("w-full");
+
+    rerender(
+      <Button type="button" size="lg" fullWidth>
+        Guardar
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Guardar" })).toHaveClass("h-12", "w-full");
+  });
+
+  it("outline es chico (38px) salvo que se pida otro tamaño", () => {
+    const { rerender } = render(
+      <Button type="button" variant="outline">
+        Ver
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Ver" })).toHaveClass("h-[38px]");
+
+    rerender(
+      <Button type="button" variant="outline" size="md">
+        Ver
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Ver" })).toHaveClass("h-11");
+  });
+
+  it.each([
+    ["gym", "bg-gym"],
+    ["ok", "bg-ok"],
+    ["tonal-ok", "bg-ok-soft"],
+    ["tonal-bad", "bg-bad-soft"],
+    ["outline-bad", "text-bad-ink"],
+    ["ghost-bad", "text-bad-ink"],
+  ] as const)("variant %s aplica su tono", (variant, clase) => {
+    render(
+      <Button type="button" variant={variant}>
+        Acción
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Acción" })).toHaveClass(clase);
+  });
+
+  it("tiene las alturas del mockup: 38, 42, 44, 46 y 48", () => {
+    render(
+      <>
+        <Button size="sm">A</Button>
+        <Button size="cta">B</Button>
+        <Button size="md">C</Button>
+        <Button size="modal">D</Button>
+        <Button size="lg">E</Button>
+        <Button size="tabla">F</Button>
+      </>,
+    );
+    expect(screen.getByText("F")).toHaveClass("h-10");
+    expect(screen.getByText("A")).toHaveClass("h-[38px]");
+    expect(screen.getByText("B")).toHaveClass("h-[42px]");
+    expect(screen.getByText("C")).toHaveClass("h-11");
+    expect(screen.getByText("D")).toHaveClass("h-[46px]");
+    expect(screen.getByText("E")).toHaveClass("h-12", "text-[15px]");
+  });
+
+  it("neutral y warn son las variantes de tarjetas y excepción", () => {
+    render(
+      <>
+        <Button variant="neutral">Neutra</Button>
+        <Button variant="warn">Autorizar</Button>
+      </>,
+    );
+    expect(screen.getByText("Neutra")).toHaveClass("border-border-2");
+    expect(screen.getByText("Autorizar")).toHaveClass("bg-warn");
+  });
+
+  it("esquinas lg redondea a 10px", () => {
+    render(<Button esquinas="lg">Nueva</Button>);
+    expect(screen.getByText("Nueva")).toHaveClass("rounded-[10px]");
+    expect(screen.getByText("Nueva")).not.toHaveClass("rounded-md");
   });
 });

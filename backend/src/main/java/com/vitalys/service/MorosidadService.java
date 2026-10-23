@@ -6,9 +6,12 @@ import com.vitalys.repository.ExcepcionMorosidadRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -62,15 +65,75 @@ public class MorosidadService {
 
     /** Única fuente de verdad de la suspensión: la usan la reserva, el estado de gimnasio y el estado de cuenta. */
     public VeredictoMorosidad veredicto(Persona persona) {
-        EstadoDeuda deuda = evaluar(persona);
-        if (!deuda.suspendido()) {
-            return new VeredictoMorosidad(deuda, Optional.empty());
+        return veredictos(List.of(persona)).get(persona.getId());
+    }
+
+    /**
+     * El mismo veredicto de {@link #veredicto} para muchas personas a la vez, en tres consultas
+     * fijas (umbral, cuotas pagas y excepciones) sin importar cuántas personas sean. Las que no
+     * tienen membresía de gimnasio no consultan nada. La clave del mapa es el id de la persona.
+     */
+    public Map<Long, VeredictoMorosidad> veredictos(Collection<Persona> personas) {
+        Map<Long, VeredictoMorosidad> resultado = new HashMap<>();
+        List<Persona> socios = new ArrayList<>();
+        for (Persona p : personas) {
+            if (!p.isEsSocioGym() || p.getFechaInicioMembresia() == null) {
+                resultado.put(p.getId(), new VeredictoMorosidad(EstadoDeuda.SIN_MEMBRESIA, Optional.empty()));
+            } else {
+                socios.add(p);
+            }
+        }
+        if (socios.isEmpty()) {
+            return resultado;
         }
         LocalDate hoy = LocalDate.now(clock);
-        Optional<ExcepcionMorosidad> excepcion = excepcionRepository.findByPersonaIdOrderByCreadoEnDesc(persona.getId()).stream()
-                .filter(e -> e.vigenteEl(hoy))
-                .findFirst();
-        return new VeredictoMorosidad(deuda, excepcion);
+        Integer umbral = jdbcTemplate.queryForObject(
+                "SELECT meses_tolerancia_morosidad FROM configuracion_gym WHERE id = 1", Integer.class);
+        Map<Long, Set<LocalDate>> pagadas = cuotasPagadas(socios);
+
+        Map<Long, EstadoDeuda> deudas = new HashMap<>();
+        List<Long> suspendidos = new ArrayList<>();
+        for (Persona p : socios) {
+            int impagos = contarImpagos(
+                    p.getFechaInicioMembresia(), pagadas.getOrDefault(p.getId(), Set.of()), hoy);
+            EstadoDeuda deuda = new EstadoDeuda(impagos, umbral, impagos >= umbral);
+            deudas.put(p.getId(), deuda);
+            if (deuda.suspendido()) {
+                suspendidos.add(p.getId());
+            }
+        }
+        Map<Long, List<ExcepcionMorosidad>> excepciones = new HashMap<>();
+        if (!suspendidos.isEmpty()) {
+            for (ExcepcionMorosidad e : excepcionRepository.findByPersonaIdInOrderByCreadoEnDesc(suspendidos)) {
+                excepciones.computeIfAbsent(e.getPersonaId(), k -> new ArrayList<>()).add(e);
+            }
+        }
+        for (Persona p : socios) {
+            EstadoDeuda deuda = deudas.get(p.getId());
+            Optional<ExcepcionMorosidad> excepcion = !deuda.suspendido()
+                    ? Optional.empty()
+                    : excepciones.getOrDefault(p.getId(), List.of()).stream()
+                            .filter(e -> e.vigenteEl(hoy))
+                            .findFirst();
+            resultado.put(p.getId(), new VeredictoMorosidad(deuda, excepcion));
+        }
+        return resultado;
+    }
+
+    private Map<Long, Set<LocalDate>> cuotasPagadas(List<Persona> socios) {
+        Object[] ids = socios.stream().map(Persona::getId).toArray();
+        String marcas = String.join(",", Collections.nCopies(ids.length, "?"));
+        Map<Long, Set<LocalDate>> porPersona = new HashMap<>();
+        for (Map<String, Object> fila : jdbcTemplate.queryForList(
+                "SELECT persona_id, periodo FROM pagos WHERE concepto = 'CUOTA_MENSUAL' AND persona_id IN (" + marcas + ")",
+                ids)) {
+            Object periodo = fila.get("periodo");
+            LocalDate fecha = periodo instanceof java.sql.Date d ? d.toLocalDate() : (LocalDate) periodo;
+            porPersona
+                    .computeIfAbsent(((Number) fila.get("persona_id")).longValue(), k -> new HashSet<>())
+                    .add(fecha);
+        }
+        return porPersona;
     }
 
     public EstadoDeuda evaluar(Persona persona) {

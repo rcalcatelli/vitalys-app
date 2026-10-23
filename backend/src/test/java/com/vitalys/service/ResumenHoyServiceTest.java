@@ -6,6 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vitalys.domain.ExcepcionMorosidad;
@@ -23,6 +26,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,11 +79,12 @@ class ResumenHoyServiceTest {
         Persona conExcepcion = socio(4, "Luis");
         when(personaRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(alDia, conDeuda, suspendido, conExcepcion));
-        when(morosidadService.veredicto(alDia)).thenReturn(new VeredictoMorosidad(new EstadoDeuda(0, 6, false), Optional.empty()));
-        when(morosidadService.veredicto(conDeuda)).thenReturn(new VeredictoMorosidad(new EstadoDeuda(2, 6, false), Optional.empty()));
-        when(morosidadService.veredicto(suspendido)).thenReturn(new VeredictoMorosidad(new EstadoDeuda(7, 6, true), Optional.empty()));
         ExcepcionMorosidad exc = new ExcepcionMorosidad(4L, 1L, "plan", LocalDate.of(2026, 11, 20), false);
-        when(morosidadService.veredicto(conExcepcion)).thenReturn(new VeredictoMorosidad(new EstadoDeuda(6, 6, true), Optional.of(exc)));
+        when(morosidadService.veredictos(any())).thenReturn(Map.of(
+                1L, new VeredictoMorosidad(new EstadoDeuda(0, 6, false), Optional.empty()),
+                2L, new VeredictoMorosidad(new EstadoDeuda(2, 6, false), Optional.empty()),
+                3L, new VeredictoMorosidad(new EstadoDeuda(7, 6, true), Optional.empty()),
+                4L, new VeredictoMorosidad(new EstadoDeuda(6, 6, true), Optional.of(exc))));
 
         ResumenHoyResponse r = service.resumen(admin);
 
@@ -92,6 +97,11 @@ class ResumenHoyServiceTest {
         assertThat(r.requierenAtencion()).extracting(s -> s.persona()).containsExactly("Prueba, Juan", "Prueba, Luis", "Prueba, Ana");
         assertThat(r.requierenAtencion().get(1).excepcionHasta()).isEqualTo(LocalDate.of(2026, 11, 20));
         assertThat(r.requierenAtencion().get(1).suspendido()).isFalse();
+        assertThat(r.requierenAtencion().get(0).nombrePila()).isEqualTo("Juan");
+        assertThat(r.requierenAtencion().get(0).apellido()).isEqualTo("Prueba");
+        // Una sola consulta de deuda para todos los socios (antes, una por socio)
+        verify(morosidadService, times(1)).veredictos(any());
+        verify(morosidadService, never()).veredicto(any());
     }
 
     @Test

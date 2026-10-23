@@ -15,6 +15,9 @@ export function unaPersona(overrides: Partial<Persona> = {}): Persona {
     fechaInicioMembresia: "2026-01-01",
     fechaAlta: "2023-05-15",
     fechaBaja: null,
+    cuota: { periodosImpagos: 0, umbral: 6, suspendido: false, excepcionHasta: null },
+    especialidades: [],
+    tieneUsuarioSocio: true,
     ...overrides,
   };
 }

@@ -1,10 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vitalys App</title>
+    <!--
+      Tema sin destello: aplica data-theme antes del primer render con el mismo criterio que
+      ThemeProvider (vitalys_theme guardado > prefers-color-scheme > light). Sin esto, el modo
+      oscuro parpadea en claro hasta que React monta.
+    -->
+    <script>
+      (function () {
+        try {
+          var guardado = localStorage.getItem("vitalys_theme");
+          var tema =
+            guardado === "light" || guardado === "dark"
+              ? guardado
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", tema);
+        } catch (e) {}
+      })();
+    </script>
     <!--
       Tipografía del design system real (docs/02-diseno/design-system/Vitalys.dc.html):
       Schibsted Grotesk para títulos, IBM Plex Sans para cuerpo, IBM Plex Mono

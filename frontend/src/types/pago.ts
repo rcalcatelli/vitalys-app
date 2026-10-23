@@ -1,3 +1,5 @@
+import type { Especialidad } from "./profesional";
+
 // Contrato real del Módulo 5 (pagos). Espeja los DTOs del backend (EstadoCuentaResponse,
 // RegistrarPagoRequest, PagoResponse). Las fechas calendario llegan como `YYYY-MM-DD` y los
 // instantes como ISO-8601 con offset de Buenos Aires. Los montos son números (ARS).
@@ -26,7 +28,11 @@ export interface PeriodoDto {
 export interface SesionDto {
   pagoId: number;
   turnoId: number;
-  fechaTurno: string;
+  /** `null` si el turno ya no se conoce. */
+  fechaTurno: string | null;
+  /** "Nombre Apellido" del profesional del turno; `null` si el turno no se conoce. */
+  profesional: string | null;
+  especialidad: Especialidad | null;
   monto: number;
   medio: MedioPago;
   fechaPago: string;
@@ -36,6 +42,9 @@ export interface SesionDto {
 export interface ExcepcionInfo {
   validaHasta: string;
   motivo: string;
+  /** Quién la autorizó y cuándo (copy del ADMIN: "Autorizada por X el ..."). */
+  autorizadaPor: string | null;
+  otorgadaEl: string | null;
 }
 
 export interface EstadoCuenta {
@@ -71,4 +80,22 @@ export interface PagoRegistrado {
   periodo: string | null;
   turnoId: number | null;
   fechaPago: string;
+}
+
+/** POST /api/excepciones-morosidad: motivo obligatorio, vencimiento `YYYY-MM-DD` y modalidad. */
+export interface NuevaExcepcion {
+  personaId: number;
+  motivo: string;
+  validaHasta: string;
+  unSoloUso: boolean;
+}
+
+export interface Excepcion {
+  id: number;
+  personaId: number;
+  autorizadoPor: number;
+  motivo: string;
+  validaHasta: string;
+  unSoloUso: boolean;
+  turnoId: number | null;
 }

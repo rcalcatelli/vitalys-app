@@ -35,6 +35,7 @@ function montar(props: Partial<RegistrarPagoDialogProps> = {}) {
   render(
     <RegistrarPagoDialog
       nombre="Juan García"
+      dni="38100002"
       estado={conDeuda()}
       turnos={TURNOS}
       onConfirmar={onConfirmar}
@@ -46,28 +47,65 @@ function montar(props: Partial<RegistrarPagoDialogProps> = {}) {
 }
 
 describe("RegistrarPagoDialog", () => {
-  it("PU-19 cuota: sugiere el primer período impago, bloquea los pagados y ofrece adelantos", () => {
+  it("muestra nombre y DNI de la persona", () => {
+    montar();
+    expect(screen.getByText(/Juan García · DNI/)).toBeInTheDocument();
+    expect(screen.getByText("38100002")).toBeInTheDocument();
+  });
+
+  it("PU-19 cuota: sugiere el primer período impago y rotula el estado de cada opción", () => {
     montar();
     const periodo = screen.getByLabelText("Período");
     expect(periodo).toHaveValue("2026-10-01");
-    expect(screen.getByRole("option", { name: "Septiembre 2026 (ya pagado)" })).toBeDisabled();
-    expect(screen.getByRole("option", { name: "Octubre 2026" })).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Septiembre 2026 · pagado" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Octubre 2026 · impago · sugerido" })).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Noviembre 2026 · pendiente" })).toBeEnabled();
     // Pago adelantado: dos meses después del último período.
-    expect(screen.getByRole("option", { name: "Diciembre 2026" })).toBeEnabled();
-    expect(screen.getByRole("option", { name: "Enero 2027" })).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Diciembre 2026 · pendiente" })).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Enero 2027 · pendiente" })).toBeEnabled();
+    expect(
+      screen.getByText(
+        "Sugerido: octubre 2026, el primer período impago. Un pago no cancela otro mes salteado.",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("PU-20 valida monto y medio antes de enviar", async () => {
+  it("sin impagos sugiere el próximo período a pagar", () => {
+    montar({
+      estado: unEstadoCuenta({
+        periodos: [unPeriodo({ periodo: "2026-10-01", estado: "PENDIENTE", pago: null })],
+        sesiones: [],
+      }),
+    });
+    expect(
+      screen.getByText("Sugerido: octubre 2026, el próximo período a pagar."),
+    ).toBeInTheDocument();
+  });
+
+  it("PU-20 el botón queda deshabilitado y los errores aparecen al tocar cada campo", async () => {
     const { onConfirmar } = montar();
-    await userEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
-    expect(screen.getByText(/Ingresá un monto mayor a cero./)).toBeInTheDocument();
-    expect(screen.getByText(/Elegí el medio de pago./)).toBeInTheDocument();
+    const registrar = screen.getByRole("button", { name: "Registrar pago" });
+    expect(registrar).toBeDisabled();
+    expect(screen.queryByText("Ingresá el monto.")).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Monto"), "0");
-    await userEvent.selectOptions(screen.getByLabelText("Medio de pago"), "EFECTIVO");
-    await userEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
-    expect(screen.getByText(/Ingresá un monto mayor a cero./)).toBeInTheDocument();
+    expect(screen.getByText("El monto tiene que ser mayor a 0.")).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText("Monto"));
+    expect(screen.getByText("Ingresá el monto.")).toBeInTheDocument();
+
+    const medio = screen.getByLabelText("Medio de pago");
+    await userEvent.selectOptions(medio, "EFECTIVO");
+    await userEvent.selectOptions(medio, "");
+    expect(screen.getByText("Elegí un medio de pago.")).toBeInTheDocument();
+    expect(registrar).toBeDisabled();
     expect(onConfirmar).not.toHaveBeenCalled();
+  });
+
+  it("el monto lleva el prefijo $ y descarta lo que no es número", async () => {
+    montar();
+    expect(screen.getByText("$")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Monto"), "1a5b0,50");
+    expect(screen.getByLabelText("Monto")).toHaveValue("150,50");
   });
 
   it("PU-21 envía la cuota con período, monto y medio", async () => {
@@ -86,21 +124,27 @@ describe("RegistrarPagoDialog", () => {
   });
 
   it("PU-22 sesión: excluye cancelados y gimnasio, marca los ya pagados y envía el turno", async () => {
-    const { onConfirmar } = montar();
+    const { onConfirmar } = montar({
+      profesionalDe: (id) => (id === 1 ? "Lic. Valentina Méndez" : null),
+    });
     await userEvent.click(screen.getByRole("button", { name: "Sesión de consultorio" }));
 
     const opciones = screen
       .getAllByRole("option")
       .filter((o) => /· \d\d:\d\d/.test(o.textContent ?? ""));
     expect(opciones).toHaveLength(2);
-    expect(opciones[0]).toBeDisabled();
-    expect(opciones[0]).toHaveTextContent("(ya pagado)");
+    // Más reciente primero; el ya pagado queda deshabilitado.
+    expect(opciones[0]).toHaveTextContent("Jue 29/10/2026 · 11:00 · Lic. Valentina Méndez");
+    expect(opciones[1]).toBeDisabled();
+    expect(opciones[1]).toHaveTextContent("· ya pagado");
     expect(screen.getByText("No se muestran los turnos cancelados.")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
-    expect(screen.getByText(/Elegí el turno que se paga./)).toBeInTheDocument();
+    const turno = screen.getByLabelText("Turno de consultorio");
+    await userEvent.selectOptions(turno, "51");
+    await userEvent.selectOptions(turno, "");
+    expect(screen.getByText("Elegí el turno que se paga.")).toBeInTheDocument();
 
-    await userEvent.selectOptions(screen.getByLabelText("Turno de consultorio"), "51");
+    await userEvent.selectOptions(turno, "51");
     await userEvent.type(screen.getByLabelText("Monto"), "8000");
     await userEvent.selectOptions(screen.getByLabelText("Medio de pago"), "DEBITO");
     await userEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
@@ -122,15 +166,27 @@ describe("RegistrarPagoDialog", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText(/No es socio del gimnasio/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Juan García no es socio\/a del gimnasio, así que no tiene cuotas mensuales/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Período")).not.toBeInTheDocument();
+  });
+
+  it("una persona dada de baja tampoco genera cuotas", () => {
+    montar({ dadaDeBaja: true });
+    expect(screen.getByRole("button", { name: "Cuota mensual" })).toBeDisabled();
+    expect(
+      screen.getByText(/tiene el gimnasio dado de baja, así que no genera cuotas mensuales/),
+    ).toBeInTheDocument();
   });
 
   it("PU-24 muestra el error del servidor y bloquea el doble envío", async () => {
     const { onConfirmar } = montar({ error: "Ese período ya está pagado", enviando: true });
     expect(screen.getByText("No se pudo registrar el pago")).toBeInTheDocument();
     expect(screen.getByText("Ese período ya está pagado")).toBeInTheDocument();
-    const boton = screen.getByRole("button", { name: "Registrando…" });
+    const boton = screen.getByRole("button", { name: "Guardando…" });
     expect(boton).toBeDisabled();
     await userEvent.click(boton);
     expect(onConfirmar).not.toHaveBeenCalled();
@@ -141,6 +197,7 @@ describe("RegistrarPagoDialog", () => {
     const { unmount } = render(
       <RegistrarPagoDialog
         nombre="Ana"
+        dni="1"
         estado={base}
         turnos={null}
         onConfirmar={vi.fn()}
@@ -153,18 +210,24 @@ describe("RegistrarPagoDialog", () => {
     const vacio = render(
       <RegistrarPagoDialog
         nombre="Ana"
+        dni="1"
         estado={base}
         turnos={[TURNOS[2]]}
         onConfirmar={vi.fn()}
         onCancelar={vi.fn()}
       />,
     );
-    expect(screen.getByText("No tiene turnos de consultorio para cobrar.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /No tiene turnos de consultorio para cobrar\. Los turnos cancelados no se pueden cobrar\./,
+      ),
+    ).toBeInTheDocument();
     vacio.unmount();
 
     render(
       <RegistrarPagoDialog
         nombre="Ana"
+        dni="1"
         estado={base}
         turnos={null}
         errorTurnos
@@ -178,14 +241,13 @@ describe("RegistrarPagoDialog", () => {
     expect(screen.queryByText("Cargando turnos…")).not.toBeInTheDocument();
   });
 
-  it("cancelar cierra sin enviar, y sin períodos sin pagar no sugiere ninguno", async () => {
+  it("cancelar cierra sin enviar, y con todo pagado sugiere el primer adelanto", async () => {
     const { onCancelar, onConfirmar } = montar({
       estado: unEstadoCuenta({
         periodos: [unPeriodo({ periodo: "2026-12-01" })],
         sesiones: [],
       }),
     });
-    // Todo pagado: el primer adelanto (enero) queda como sugerido.
     expect(screen.getByLabelText("Período")).toHaveValue("2027-01-01");
     await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancelar).toHaveBeenCalled();
@@ -197,10 +259,19 @@ describe("RegistrarPagoDialog", () => {
       estado: unEstadoCuenta({ periodos: [], sesiones: [] }),
     });
     expect(screen.getByLabelText("Período")).toHaveDisplayValue("Elegí un período");
+    expect(
+      screen.getByText("Elegí el período que se paga.", { selector: "span" }),
+    ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Monto"), "100");
     await userEvent.selectOptions(screen.getByLabelText("Medio de pago"), "CREDITO");
-    await userEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
-    expect(screen.getByText(/Elegí el período que se paga./)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Registrar pago" })).toBeDisabled();
     expect(onConfirmar).not.toHaveBeenCalled();
+  });
+
+  it("elegir un período y volver a vaciarlo marca el campo", async () => {
+    montar();
+    const periodo = screen.getByLabelText("Período");
+    await userEvent.selectOptions(periodo, "");
+    expect(screen.getAllByText("Elegí el período que se paga.").length).toBeGreaterThan(0);
   });
 });

@@ -1,1 +1,0 @@
-export { SocioNav } from "./SocioNav";

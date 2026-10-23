@@ -1,11 +1,13 @@
 package com.vitalys.controller;
 
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoTurno;
 import com.vitalys.domain.TipoTurno;
 import com.vitalys.domain.Usuario;
 import com.vitalys.dto.CancelacionRequest;
 import com.vitalys.dto.EstadoGymResponse;
 import com.vitalys.dto.FranjaGymResponse;
+import com.vitalys.dto.ProximaAgendaResponse;
 import com.vitalys.dto.ReservaConsultorioRequest;
 import com.vitalys.dto.ReservaGymRequest;
 import com.vitalys.dto.SlotConsultorioResponse;
@@ -68,6 +70,13 @@ public class TurnoController {
     public List<SlotConsultorioResponse> disponibles(
             @RequestParam Long profesionalId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         return turnoService.slotsDisponibles(profesionalId, fecha);
+    }
+
+    @GetMapping("/consultorio/proxima-agenda")
+    @Operation(summary = "Próxima agenda por profesional", description = "Para cada profesional activo (de la especialidad indicada, si hay), el primer día con turnos libres en los próximos 21 días y cuántos libres tiene; sin fecha si no tiene agenda. SOCIO_PACIENTE y ADMIN (RF-41).")
+    public List<ProximaAgendaResponse> proximaAgenda(
+            @AuthenticationPrincipal Usuario actor, @RequestParam(required = false) Especialidad especialidad) {
+        return turnoService.proximasAgendas(actor, especialidad);
     }
 
     @PostMapping

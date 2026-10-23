@@ -20,6 +20,7 @@
 | `tipo_feriado` | `INAMOVIBLE` · `TRASLADABLE` · `TURISTICO` · `NO_LABORABLE` |
 | `origen_feriado` | `OFICIAL` · `MANUAL` |
 | `tipo_notificacion` | `CONFIRMACION_TURNO` · `AVISO_CANCELACION` · `RECORDATORIO` · `AVISO_DEUDA` · `AVISO_SUSPENSION` |
+| `accion_operar_como` | `INICIO` · `FIN` · `RESERVA_GYM` · `RESERVA_CONSULTORIO` · `CANCELACION` (V17; ver `auditoria_operar_como`) |
 
 ---
 
@@ -128,10 +129,11 @@ Reservas de slots entre una persona y un profesional (consultorio) o del gimnasi
 | `inicio` | `TIMESTAMPTZ` | NO | < fin | Inicio del turno (fecha y hora con zona horaria) |
 | `fin` | `TIMESTAMPTZ` | NO | > inicio | Fin estimado del turno |
 | `estado` | `estado_turno` | NO | ENUM · DEFAULT 'RESERVADO' | Ver ciclo de vida abajo |
-| `reservado_por_usuario_id` | `BIGINT` | NO | FK usuarios | Usuario que creó la reserva (la propia persona o un ADMIN) |
+| `reservado_por_usuario_id` | `BIGINT` | NO | FK usuarios | Usuario que creó la reserva (la propia persona o un ADMIN). Durante "Operar como" (RN-27) es el **ADMIN real**, no el socio |
 | `cancelado_en` | `TIMESTAMPTZ` | SÍ | Obligatorio si cancelado | Fecha y hora de la cancelación |
-| `cancelado_por_usuario` | `BIGINT` | SÍ | FK usuarios · Obligatorio si cancelado | Siempre registrado: puede ser socio, profesional o admin |
+| `cancelado_por_usuario` | `BIGINT` | SÍ | FK usuarios · Obligatorio si cancelado | Siempre registrado: puede ser socio, profesional o admin (el ADMIN real si se canceló operando como el socio, RN-27) |
 | `motivo_cancelacion` | `TEXT` | SÍ | Obligatorio si cancelado | Razón de la cancelación |
+| `completado_en` | `TIMESTAMPTZ` | SÍ | `chk_turno_completado_en` | Momento del check-in (RN-28). Lo completa `Turno.completar(ahora)` al pasar a `COMPLETADO`; `NULL` en cualquier otro estado y en los turnos completados antes de `V16` |
 | `creado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Fecha y hora de creación |
 | `actualizado_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Actualizado automáticamente por trigger |
 
@@ -149,6 +151,8 @@ RESERVADO ──► COMPLETADO          (profesional o admin, al finalizar la at
 Los dos primeros estados de cancelación registran **la anticipación con la que avisó el paciente**; `CANCELADO_POR_PROFESIONAL` marca una cancelación que el paciente no decidió y que por lo tanto no le computa (RN-24). Que el lugar se libere o no lo decide un dato distinto del estado: si `cancelado_en` es anterior al `inicio` del turno, el lugar se libera — incluso siendo `CANCELADO_TARDE`.
 
 **Información de la cancelación (`chk_cancelacion_info`):** los tres estados de cancelación —`CANCELADO_EN_TIEMPO`, `CANCELADO_TARDE` y, desde `V13`, `CANCELADO_POR_PROFESIONAL`— exigen `cancelado_en`, `cancelado_por_usuario` y `motivo_cancelacion`. Hasta V12 el CHECK enumeraba solo los dos primeros y un turno cancelado por el profesional podía guardarse "sin firma"; como `cancelado_en` es lo que decide si el lugar se libera, no podía quedar vacío.
+
+**Momento del check-in (`chk_turno_completado_en`, `V16__completado_en.sql`):** `completado_en IS NULL OR estado = 'COMPLETADO'`. Solo un turno completado puede tener hora de ingreso. La migración **no hace backfill**: los turnos `COMPLETADO` anteriores quedan con `NULL`, porque el momento real no se puede reconstruir y inventarlo sería falsear el dato; la pantalla Ingreso muestra en esos casos "Ingresó" sin hora (PI-125). Lo escribe únicamente `Turno.completar(ahora)`, con el `Clock` inyectado en `TurnoService.marcarCompletado`, y la API lo expone como `completadoEn` (RN-28).
 
 **Ocupación del lugar (`fn_turno_ocupa_lugar`):** un turno ocupa su lugar si su estado es `RESERVADO`, `COMPLETADO` o `AUSENTE`, **o** si fue cancelado a partir del inicio de la franja (`cancelado_en >= inicio`). Una cancelación registrada antes del inicio libera el lugar, sea en tiempo o tarde: el estado registra la anticipación del aviso, no decide la ocupación (RN-02, RN-03). Es el mismo criterio que ya regía para `AUSENTE` — una vez que la franja empezó, el lugar se consumió (RN-08).
 
@@ -282,6 +286,35 @@ Registro de pagos realizados. Maneja dos conceptos diferenciados: cuotas mensual
 
 ---
 
+## Tabla: `auditoria_operar_como`
+
+Registro de las sesiones de "Operar como" (RF-39, RN-26) y de cada escritura hecha dentro de ellas (RN-27). Se crea en `V17__auditoria_operar_como.sql`. Solo se inserta: no hay actualizaciones ni bajas.
+
+| Campo | Tipo | Nulable | Restricciones | Descripción |
+|-------|------|---------|---------------|-------------|
+| `id` | `BIGSERIAL` | NO | PK | Identificador interno autoincremental |
+| `sesion_id` | `UUID` | NO | — | `jti` del JWT de la sesión: agrupa el `INICIO`, las escrituras y el `FIN` de una misma suplantación |
+| `operador_usuario_id` | `BIGINT` | NO | FK usuarios | El ADMIN real que opera |
+| `sujeto_usuario_id` | `BIGINT` | NO | FK usuarios | El socio en cuyo nombre se opera |
+| `persona_id` | `BIGINT` | NO | FK personas | Ficha del socio sujeto |
+| `accion` | `accion_operar_como` | NO | ENUM | `INICIO` · `FIN` · `RESERVA_GYM` · `RESERVA_CONSULTORIO` · `CANCELACION` |
+| `turno_id` | `BIGINT` | SÍ | FK turnos | Turno afectado; `NULL` en `INICIO` y `FIN` |
+| `ocurrido_en` | `TIMESTAMPTZ` | NO | DEFAULT NOW() | Momento del hecho |
+
+**Restricciones:**
+- `chk_auditoria_operador_distinto`: `operador_usuario_id <> sujeto_usuario_id`. Nadie se suplanta a sí mismo.
+- `chk_auditoria_turno_segun_accion`: `(accion IN ('INICIO', 'FIN')) = (turno_id IS NULL)`. El inicio y el fin no afectan un turno; las demás acciones siempre lo afectan.
+
+**Índices:** `idx_auditoria_operar_como_persona` sobre `(persona_id, ocurrido_en DESC)` (qué se hizo en nombre de un socio), `idx_auditoria_operar_como_operador` sobre `(operador_usuario_id, ocurrido_en DESC)` (qué hizo un ADMIN) e `idx_auditoria_operar_como_sesion` sobre `(sesion_id)` (la usa el filtro de autenticación en cada request para saber si la sesión tiene `INICIO` y no tiene `FIN`).
+
+**Por qué `FIN` está en el enum:** el JWT es *stateless*, así que descartarlo en el navegador no lo vuelve inválido. La fila `FIN` es lo que lo revoca en el servidor: el filtro acepta una credencial de "Operar como" solo si su `sesion_id` tiene fila `INICIO` y todavía no tiene `FIN`. Una credencial forjada con un `jti` sin `INICIO` auditado tampoco autentica.
+
+**Atomicidad:** las filas de escritura (`RESERVA_*`, `CANCELACION`) se insertan en la **misma transacción** que el turno, con `Propagation.MANDATORY`. Si la fila de auditoría no se puede guardar, la operación completa se revierte (RN-27, PI-121).
+
+**Visibilidad:** esta tabla no la expone ningún endpoint. Al socio solo le llega la marca `reservadoPorRecepcion` / `canceladoPorRecepcion` del turno, que se deduce de `reservado_por_usuario_id` / `cancelado_por_usuario` distinto del usuario de la persona, sin revelar quién fue el ADMIN.
+
+---
+
 ## Tabla: `notificaciones`
 
 Log de emails enviados al sistema. Registra todos los envíos para auditoría; no se eliminan registros.
@@ -321,4 +354,5 @@ El modelo se encuentra en **3FN (Tercera Forma Normal)**:
 - `profesionales` es una tabla separada de `personas` porque un profesional puede no ser socio/paciente, y sus atributos (especialidad, disponibilidad) no aplican a personas. Esto evita atributos nulos en una tabla de propósito general.
 - `disponibilidad_profesional` es una tabla hija de `profesionales` porque un profesional puede tener múltiples franjas horarias por día, y las franjas cambian con frecuencia.
 - `excepciones_morosidad` es una tabla independiente para mantener un registro auditable de decisiones administrativas, separado del estado de la persona.
+- `auditoria_operar_como` es independiente de `turnos` y `notificaciones` porque registra al **operador**, un dato que ninguna de las dos modela: `turnos` guarda quién reservó, pero no en nombre de quién actuaba ni durante qué sesión, y una sesión que no escribe nada (solo lee) también debe quedar con su `INICIO` y su `FIN`.
 - `configuracion_gym` es una tabla de fila única para no hardcodear el cupo por franja en la aplicación; permite cambiarlo sin deploy.

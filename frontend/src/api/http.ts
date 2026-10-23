@@ -2,6 +2,10 @@
 // No hay endpoint de logout server-side (Decisión 9 / RNF-10): el token se descarta
 // solo en el cliente.
 const TOKEN_KEY = "vitalys_token";
+// Credencial de "Operar como" (RF-39): vive en sessionStorage, así queda atada a la pestaña y
+// sobrevive a una recarga, pero otras pestañas siguen con la sesión del ADMIN. Si existe, gana
+// sobre el token del ADMIN en localStorage.
+const TOKEN_OPERAR_COMO_KEY = "vitalys_token_operar_como";
 
 // Base URL configurable por entorno (Vite env var). Nunca hardcodear una URL de
 // despliegue real ni un secreto: en desarrollo, si no está seteada, se usa "" y las
@@ -10,7 +14,39 @@ const TOKEN_KEY = "vitalys_token";
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? "";
 
 export function getToken(): string | null {
+  return getTokenOperarComo() ?? localStorage.getItem(TOKEN_KEY);
+}
+
+/** Token de la sesión del ADMIN, ignorando una suplantación en curso. */
+export function getTokenAdmin(): string | null {
   return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getTokenOperarComo(): string | null {
+  return sessionStorage.getItem(TOKEN_OPERAR_COMO_KEY);
+}
+
+export function setTokenOperarComo(token: string): void {
+  sessionStorage.setItem(TOKEN_OPERAR_COMO_KEY, token);
+}
+
+export function clearTokenOperarComo(): void {
+  sessionStorage.removeItem(TOKEN_OPERAR_COMO_KEY);
+}
+
+type AlVencerOperarComo = () => void;
+let alVencerOperarComo: AlVencerOperarComo | null = null;
+
+/**
+ * Registra quién se entera cuando una request hecha con la credencial de "Operar como" recibe un
+ * 401 (venció, el socio se dio de baja, se terminó en otra pestaña): el contexto de auth la
+ * descarta y vuelve a la sesión del ADMIN. Devuelve la función para desregistrar.
+ */
+export function onOperarComoVencido(callback: AlVencerOperarComo): () => void {
+  alVencerOperarComo = callback;
+  return () => {
+    if (alVencerOperarComo === callback) alVencerOperarComo = null;
+  };
 }
 
 export function setToken(token: string): void {
@@ -19,6 +55,7 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  clearTokenOperarComo();
 }
 
 export class ApiError extends Error {
@@ -52,6 +89,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     "Content-Type": "application/json",
   };
 
+  // Solo las requests autenticadas llevan token: `auth=false` (login, registro) NUNCA envía la
+  // credencial de "Operar como", que el backend rechazaría con 403.
+  const suplantando = auth && getTokenOperarComo() !== null;
   if (auth) {
     const token = getToken();
     if (token) {
@@ -66,6 +106,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
+    if (response.status === 401 && suplantando) alVencerOperarComo?.();
     let message = `Error ${response.status}`;
     let errorBody: unknown;
     try {

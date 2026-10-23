@@ -16,8 +16,7 @@ export interface RegistroFormProps {
 // Mismo estilo de enlace-botón que `LoginForm` (RN de consistencia visual entre
 // las dos pantallas de auth, no duplicado a propósito porque cada organismo es
 // independiente y no comparten un padre común más que el layout).
-const linkButtonClasses =
-  "border-0 bg-transparent p-0 text-clin-ink underline-offset-2 hover:text-clin hover:underline";
+const linkButtonClasses = "border-0 bg-transparent p-0 text-clin-ink underline hover:text-clin";
 
 /**
  * Organismo del formulario de registro (W-06), calcado del estado
@@ -71,7 +70,7 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="mb-1.5 font-heading text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+        <h2 className="mt-2 mb-1.5 font-heading text-[28px] font-semibold tracking-[-0.01em] text-ink">
           Creá tu cuenta
         </h2>
         <p className="text-ink-2">Con la misma cuenta podés usar el gimnasio y los consultorios.</p>
@@ -84,6 +83,7 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
         className="flex flex-col gap-3.5 text-left"
       >
         <FormField
+          alto="auth"
           id={emailId}
           label="Email"
           name="email"
@@ -95,6 +95,7 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
         />
 
         <PasswordInput
+          alto="auth"
           id={passwordId}
           label="Contraseña"
           name="password"
@@ -107,6 +108,7 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
         />
 
         <PasswordInput
+          alto="auth"
           id={confirmPasswordId}
           label="Confirmar contraseña"
           name="confirmPassword"
@@ -117,13 +119,13 @@ export function RegistroForm({ onSubmit, onGoToLogin, error, cargando }: Registr
           onChange={setConfirmarContrasena}
         />
 
-        <Button type="submit" disabled={cargando}>
+        <Button type="submit" size="lg" fullWidth disabled={cargando}>
           {cargando ? "Creando cuenta…" : "Crear cuenta"}
         </Button>
 
         {errorAMostrar !== null && <FieldError id={errorId}>{errorAMostrar}</FieldError>}
 
-        <span className="text-center text-sm text-ink-2">
+        <span className="text-center text-[13px] text-ink-2">
           ¿Ya tenés cuenta?{" "}
           <button type="button" onClick={onGoToLogin} className={linkButtonClasses}>
             Ingresá

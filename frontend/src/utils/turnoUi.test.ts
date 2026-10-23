@@ -4,7 +4,10 @@ import {
   PROFESIONAL_NO_DISPONIBLE,
   describirTurno,
   diaCorto,
+  SALA_GIMNASIO,
   limiteCancelacionHoras,
+  marcaRecepcion,
+  servicioDeTurno,
 } from "./turnoUi";
 
 describe("turnoUi", () => {
@@ -36,5 +39,30 @@ describe("turnoUi", () => {
   it("formatea el día corto en Buenos Aires", () => {
     expect(diaCorto("2026-10-26T10:00:00-03:00")).toBe("Lun 26/10");
     expect(diaCorto("2026-10-27T01:30:00Z")).toBe("Lun 26/10");
+  });
+
+  it("describe el servicio del socio: sala en gimnasio, especialidad y profesional en consultorio", () => {
+    expect(servicioDeTurno({ tipoTurno: "GYM", profesionalId: null }, [])).toEqual({
+      servicio: "Gimnasio",
+      quien: SALA_GIMNASIO,
+    });
+    expect(
+      servicioDeTurno({ tipoTurno: "CONSULTORIO", profesionalId: 1 }, [unProfesional()]),
+    ).toEqual({ servicio: "Nutrición", quien: "Lic. Valentina Méndez" });
+    expect(servicioDeTurno({ tipoTurno: "CONSULTORIO", profesionalId: 9 }, [])).toEqual({
+      servicio: "Consulta",
+      quien: PROFESIONAL_NO_DISPONIBLE,
+    });
+  });
+
+  it("marca los turnos operados por Recepción (la cancelación gana a la reserva)", () => {
+    const base = { reservadoPorRecepcion: false, canceladoPorRecepcion: false };
+    expect(marcaRecepcion(base)).toBeNull();
+    expect(marcaRecepcion({ ...base, reservadoPorRecepcion: true })).toBe(
+      "Reservado por Recepción",
+    );
+    expect(marcaRecepcion({ reservadoPorRecepcion: true, canceladoPorRecepcion: true })).toBe(
+      "Cancelado por Recepción",
+    );
   });
 });

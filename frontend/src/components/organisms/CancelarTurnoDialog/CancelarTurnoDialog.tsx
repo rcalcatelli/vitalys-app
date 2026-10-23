@@ -49,8 +49,8 @@ export function CancelarTurnoDialog({
 
   return (
     <>
-      <div className="flex flex-col gap-0.5 text-sm">
-        <span className="font-semibold text-ink">
+      <div className="flex flex-col gap-0.5 rounded-lg bg-surface-2 px-3.5 py-3 text-[13px]">
+        <span className="text-[15px] font-semibold text-ink">
           {quien ? `${servicio} · ${quien}` : servicio}
         </span>
         <span className="text-ink-2">
@@ -60,7 +60,7 @@ export function CancelarTurnoDialog({
 
       <div
         className={[
-          "flex flex-col gap-0.5 rounded-xl px-4 py-3 text-sm",
+          "flex flex-col gap-0.5 rounded-lg px-3.5 py-3 text-[13px]",
           enTermino ? "bg-ok-soft text-ok-ink" : "bg-warn-soft text-warn-ink",
         ].join(" ")}
       >
@@ -89,10 +89,10 @@ export function CancelarTurnoDialog({
       {error && <FieldError>{error}</FieldError>}
 
       <div className="flex gap-2">
-        <Button type="button" variant="outline" className="h-12" onClick={onVolver}>
+        <Button type="button" variant="outline" size="modal" onClick={onVolver}>
           Volver
         </Button>
-        <Button type="button" variant="danger" disabled={cargando} onClick={confirmar}>
+        <Button type="button" variant="bad" size="modal" disabled={cargando} onClick={confirmar}>
           Confirmar cancelación
         </Button>
       </div>

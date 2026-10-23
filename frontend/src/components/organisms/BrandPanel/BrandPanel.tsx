@@ -12,24 +12,24 @@ import { Logo } from "../../atoms/Logo";
  * el texto y el logo interno eran `#FFFFFF` fijos en ambos temas) — por eso
  * `bg-brand` sigue siendo un token (varía con el tema) pero el texto no.
  *
- * Oculto en mobile (`hidden md:flex`, ver decisión de mobile-first en
+ * Oculto en mobile (`hidden shell:flex`, el mismo corte de 760px del shell, ver decisión de mobile-first en
  * `components/README.md`): en una pantalla angosta este panel se comería
  * el alto disponible antes de llegar al formulario, que es la prioridad.
  */
 export function BrandPanel() {
   return (
-    <div className="hidden md:flex md:flex-1 md:min-h-screen md:flex-col md:justify-between md:gap-10 md:bg-brand md:p-10 lg:p-12">
+    <div className="hidden shell:flex shell:min-h-screen shell:flex-1 shell:basis-[420px] shell:flex-col shell:justify-between shell:bg-brand shell:px-12 shell:py-10">
       <Logo variant="brand" size="lg" />
 
-      <div className="flex max-w-md flex-col gap-4">
-        <h1 className="text-pretty font-heading text-3xl leading-tight font-semibold tracking-tight text-white lg:text-5xl">
+      <div className="max-w-[440px]">
+        <h1 className="mb-4 font-heading text-[44px] leading-[1.05] font-semibold tracking-[-0.02em] text-balance text-white">
           Tu salud y tu entrenamiento, en una sola cuenta.
         </h1>
-        <p className="text-pretty text-base text-white/85">
+        <p className="text-base text-pretty text-white/85">
           Reservá el gimnasio y pedí turno con Nutrición, Psicología o Kinesiología desde el mismo
           lugar.
         </p>
-        <ul className="mt-2 flex flex-col gap-2.5 text-sm text-white">
+        <ul className="mt-8 flex flex-col gap-2.5 text-sm text-white">
           <li className="flex items-center gap-2.5">
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-gym" aria-hidden="true" />
             Gimnasio · lun a vie 07–22 · sáb 09–13

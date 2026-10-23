@@ -36,8 +36,8 @@ export function SemanaGrid({ filas, errores, duracionTurnoMinutos }: SemanaGridP
       className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface p-4 lg:flex-[2_1_420px]"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-heading text-lg font-semibold text-ink">Semana</h2>
-        <span className="text-xs text-ink-3">Consultas de {duracionTurnoMinutos} min</span>
+        <h2 className="font-heading text-[17px] font-semibold text-ink">Semana</h2>
+        <span className="text-[12.5px] text-ink-3">Consultas de {duracionTurnoMinutos} min</span>
       </div>
       <div className="overflow-x-auto" aria-hidden="true">
         <div className="grid min-w-[360px] gap-1" style={{ gridTemplateColumns: columnas }}>

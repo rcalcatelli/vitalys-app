@@ -21,7 +21,7 @@ export function Aviso({ tono, titulo, children }: AvisoProps) {
   return (
     <div
       role={tono === "bad" ? "alert" : "status"}
-      className={`flex flex-col gap-1 rounded-xl border px-4 py-3 text-sm ${CLASES[tono]}`}
+      className={`flex flex-col gap-1 rounded-lg border px-4 py-3 text-[13.5px] ${CLASES[tono]}`}
     >
       {titulo && <strong className="font-semibold">{titulo}</strong>}
       <span>{children}</span>

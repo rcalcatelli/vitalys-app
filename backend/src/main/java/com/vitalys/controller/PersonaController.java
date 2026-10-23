@@ -40,13 +40,15 @@ public class PersonaController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar personas", description = "Filtros por estado, texto (nombre, apellido o DNI) y socios del gimnasio. ADMIN (RF-06).")
+    @Operation(summary = "Listar personas", description = "Solo personas con usuario SOCIO_PACIENTE. Filtros por estado, texto (nombre, apellido o DNI), socios del gimnasio y con deuda; incluye cuota, especialidades y tieneUsuarioSocio. ADMIN (RF-06, RF-43).")
     public List<PersonaResponse> listar(
             @AuthenticationPrincipal Usuario actor,
             @RequestParam(required = false) EstadoPersona estado,
             @Parameter(description = "Nombre, apellido o DNI") @RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "false") boolean soloGym) {
-        return personaService.listar(actor, estado, q, soloGym);
+            @RequestParam(defaultValue = "false") boolean soloGym,
+            @Parameter(description = "Solo quienes tienen al menos un período de cuota impago (RN-01)")
+                    @RequestParam(defaultValue = "false") boolean conDeuda) {
+        return personaService.listar(actor, estado, q, soloGym, conDeuda);
     }
 
     @GetMapping("/{id}")

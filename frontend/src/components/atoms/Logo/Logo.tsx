@@ -16,13 +16,13 @@ export interface LogoProps {
 }
 
 const iconSizeClasses: Record<LogoSize, string> = {
-  md: "h-6 w-6",
-  lg: "h-7 w-7",
+  md: "h-[26px] w-[26px] rounded-[7px]",
+  lg: "h-7 w-7 rounded-lg",
 };
 
 const textSizeClasses: Record<LogoSize, string> = {
-  md: "text-lg",
-  lg: "text-xl",
+  md: "text-[19px]",
+  lg: "text-[21px] tracking-[-0.01em]",
 };
 
 /**
@@ -38,21 +38,22 @@ export function Logo({ variant = "surface", size = "md" }: LogoProps) {
     <div className="flex items-center gap-2.5">
       <div
         className={[
-          "relative shrink-0 rounded-md",
+          "relative shrink-0",
           iconSizeClasses[size],
           isBrand ? "bg-white" : "bg-clin",
         ].join(" ")}
       >
         <span
           className={[
-            "absolute -right-[3px] -bottom-[3px] h-2.5 w-2.5 rounded-sm border-2",
+            "absolute -right-[3px] -bottom-[3px] rounded-[3px] border-2",
+            size === "lg" ? "h-[11px] w-[11px]" : "h-2.5 w-2.5",
             isBrand ? "bg-gym border-brand" : "bg-gym border-bg",
           ].join(" ")}
         />
       </div>
       <span
         className={[
-          "font-heading font-bold tracking-tight",
+          "font-heading font-bold",
           textSizeClasses[size],
           isBrand ? "text-white" : "text-ink",
         ].join(" ")}

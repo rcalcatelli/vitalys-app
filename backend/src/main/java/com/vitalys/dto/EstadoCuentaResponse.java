@@ -1,5 +1,6 @@
 package com.vitalys.dto;
 
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.MedioPago;
 import com.vitalys.service.MorosidadService.EstadoPeriodo;
 import java.math.BigDecimal;
@@ -25,14 +26,23 @@ public record EstadoCuentaResponse(
         List<SesionDto> sesiones,
         Totales totales) {
 
-    public record ExcepcionInfo(LocalDate validaHasta, String motivo) {}
+    /** {@code autorizadaPor} es el nombre de quien la otorgó y {@code otorgadaEl} cuándo (copy del ADMIN: "Autorizada por X el ..."). */
+    public record ExcepcionInfo(LocalDate validaHasta, String motivo, String autorizadaPor, OffsetDateTime otorgadaEl) {}
 
     public record PagoDto(Long id, BigDecimal monto, MedioPago medio, OffsetDateTime fechaPago) {}
 
     public record PeriodoDto(LocalDate periodo, LocalDate vence, LocalDate limite, EstadoPeriodo estado, PagoDto pago) {}
 
+    /** {@code profesional} y {@code especialidad} salen del turno cobrado; null si el turno no se conoce. */
     public record SesionDto(
-            Long pagoId, Long turnoId, OffsetDateTime fechaTurno, BigDecimal monto, MedioPago medio, OffsetDateTime fechaPago) {}
+            Long pagoId,
+            Long turnoId,
+            OffsetDateTime fechaTurno,
+            String profesional,
+            Especialidad especialidad,
+            BigDecimal monto,
+            MedioPago medio,
+            OffsetDateTime fechaPago) {}
 
     public record Totales(int cantidadPagos, BigDecimal montoTotal) {}
 }

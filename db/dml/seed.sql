@@ -168,7 +168,13 @@ INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimie
    'Ana', 'Fernández', '38100005', '11-2005-0005', '2000-09-30', 'ACTIVO', true,  '2025-06-01', (SELECT (mes - INTERVAL '6 months')::date FROM seed_ref), NULL),
 
   ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@mail.com'),
-   'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15');
+   'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15'),
+
+  -- Laura Benítez: la persona de recepción (admin@vitalys.com). Es la ficha del ADMIN: da nombre
+  -- a la sesión (/api/auth/me) y es quien figura en "Autorizada por ..." de las excepciones. No es
+  -- un socio ni un paciente: el listado de Personas solo muestra usuarios SOCIO_PACIENTE.
+  ((SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'),
+   'Laura', 'Benítez', '30555001', '11-2007-0007', '1987-02-14', 'ACTIVO', false, '2023-01-02', NULL, NULL);
 
 -- ---------------------------------------------------------------------------
 -- 4. DISPONIBILIDAD DE PROFESIONALES

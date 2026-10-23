@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AgendaPage } from "../pages/AgendaPage";
 import { DisponibilidadPage } from "../pages/DisponibilidadPage";
 import { HoyPage } from "../pages/HoyPage";
+import { IngresoPage } from "../pages/IngresoPage";
+import { InicioPage } from "../pages/InicioPage";
 import { LoginPage } from "../pages/LoginPage";
 import { MiEstadoCuentaPage } from "../pages/MiEstadoCuentaPage";
 import { MisTurnosPage } from "../pages/MisTurnosPage";
@@ -13,11 +15,13 @@ import { RegistroPage } from "../pages/RegistroPage";
 import { ReservarConsultorioPage } from "../pages/ReservarConsultorioPage";
 import { ReservarGimnasioPage } from "../pages/ReservarGimnasioPage";
 import { RoleGuard } from "./RoleGuard";
+import { ShellLayout } from "./ShellLayout";
 
 /**
- * Rutas de la app, protegidas por rol con RoleGuard. La home de cada rol la define
- * `homePathForRol`: el ADMIN entra a "Hoy en el centro"; `/admin/dashboard` se conserva como
- * alias para no romper enlaces viejos.
+ * Rutas de la app. Las pantallas logueadas cuelgan de un layout por rol (`RoleGuard` > `ShellLayout`
+ * > `<Outlet/>`): el shell (sidebar o tab bar, tema, toasts) se monta una sola vez y las pages solo
+ * dibujan su contenido. La home de cada rol la define `homePathForRol`: el ADMIN entra a "Hoy en el
+ * centro"; `/admin/dashboard` se conserva como alias para no romper enlaces viejos.
  */
 export function AppRoutes() {
   return (
@@ -29,103 +33,44 @@ export function AppRoutes() {
       <Route path="/admin/dashboard" element={<Navigate to="/admin/hoy" replace />} />
 
       <Route
-        path="/admin/hoy"
         element={
           <RoleGuard allowedRoles={["ADMIN"]}>
-            <HoyPage />
+            <ShellLayout />
           </RoleGuard>
         }
-      />
+      >
+        <Route path="/admin/hoy" element={<HoyPage />} />
+        <Route path="/admin/ingreso" element={<IngresoPage />} />
+        <Route path="/admin/personas" element={<PersonasPage />} />
+        <Route path="/admin/pagos" element={<PagosPage />} />
+        <Route path="/admin/profesionales" element={<ProfesionalesPage />} />
+        <Route path="/admin/profesionales/:id/disponibilidad" element={<DisponibilidadPage />} />
+      </Route>
 
       <Route
-        path="/admin/personas"
-        element={
-          <RoleGuard allowedRoles={["ADMIN"]}>
-            <PersonasPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/admin/pagos"
-        element={
-          <RoleGuard allowedRoles={["ADMIN"]}>
-            <PagosPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/admin/profesionales"
-        element={
-          <RoleGuard allowedRoles={["ADMIN"]}>
-            <ProfesionalesPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/admin/profesionales/:id/disponibilidad"
-        element={
-          <RoleGuard allowedRoles={["ADMIN"]}>
-            <DisponibilidadPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/profesional/disponibilidad"
         element={
           <RoleGuard allowedRoles={["PROFESIONAL"]}>
-            <DisponibilidadPage />
+            <ShellLayout />
           </RoleGuard>
         }
-      />
+      >
+        <Route path="/profesional/agenda" element={<AgendaPage />} />
+        <Route path="/profesional/disponibilidad" element={<DisponibilidadPage />} />
+      </Route>
 
       <Route
-        path="/profesional/agenda"
-        element={
-          <RoleGuard allowedRoles={["PROFESIONAL"]}>
-            <AgendaPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/socio/reservar-gimnasio"
         element={
           <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <ReservarGimnasioPage />
+            <ShellLayout />
           </RoleGuard>
         }
-      />
-
-      <Route
-        path="/socio/reservar-consultorio"
-        element={
-          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <ReservarConsultorioPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/socio/turnos"
-        element={
-          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <MisTurnosPage />
-          </RoleGuard>
-        }
-      />
-
-      <Route
-        path="/socio/estado-cuenta"
-        element={
-          <RoleGuard allowedRoles={["SOCIO_PACIENTE"]}>
-            <MiEstadoCuentaPage />
-          </RoleGuard>
-        }
-      />
+      >
+        <Route path="/socio/inicio" element={<InicioPage />} />
+        <Route path="/socio/reservar-gimnasio" element={<ReservarGimnasioPage />} />
+        <Route path="/socio/reservar-consultorio" element={<ReservarConsultorioPage />} />
+        <Route path="/socio/turnos" element={<MisTurnosPage />} />
+        <Route path="/socio/estado-cuenta" element={<MiEstadoCuentaPage />} />
+      </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />

@@ -29,10 +29,11 @@ describe("AgendaDia", () => {
 
   it("muestra hora, paciente, DNI y el título del día", () => {
     montar("2026-10-26T12:00:00Z"); // 09:00 BA
-    expect(screen.getByRole("heading", { name: "Lunes 26 de octubre · hoy" })).toBeInTheDocument();
-    expect(screen.getByText("11:00 – 11:30")).toBeInTheDocument();
+    expect(screen.getByText("11:00")).toBeInTheDocument();
+    expect(screen.getByText("11:30")).toBeInTheDocument();
     expect(screen.getByText("Juan García")).toBeInTheDocument();
-    expect(screen.getByText("DNI 30111222")).toBeInTheDocument();
+    expect(screen.getByText("30111222")).toBeInTheDocument();
+    expect(screen.getByText(/^DNI/)).toBeInTheDocument();
   });
 
   it("faltan 30 min: Atendido y Ausente deshabilitados con la ayuda de ambos horarios", () => {
@@ -102,9 +103,76 @@ describe("AgendaDia", () => {
       unTurnoAgenda({ id: 1 }),
     ]);
     const titulos = screen.getAllByRole("heading").map((h) => h.textContent);
-    expect(titulos).toEqual(["Lunes 26 de octubre · hoy", "Miércoles 28 de octubre"]);
+    expect(titulos).toEqual(["Miércoles 28 de octubre"]);
     const segundo = screen.getByRole("region", { name: "Miércoles 28 de octubre" });
-    expect(within(segundo).getByText("09:00 – 09:30")).toBeInTheDocument();
+    expect(within(segundo).getByText("09:00")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Hoy" })).getByText("11:00"),
+    ).toBeInTheDocument();
+  });
+
+  it("hoy muestra el resumen, los huecos libres y el turno en curso resaltado", () => {
+    const huecos = [
+      { inicio: "2026-10-26T09:00:00-03:00", fin: "2026-10-26T09:30:00-03:00" },
+      { inicio: "2026-10-26T12:00:00-03:00", fin: "2026-10-26T12:30:00-03:00" },
+    ];
+    render(
+      <AgendaDia
+        turnos={[
+          unTurnoAgenda({
+            id: 1,
+            inicio: "2026-10-26T08:00:00-03:00",
+            fin: "2026-10-26T08:30:00-03:00",
+            estado: "COMPLETADO",
+          }),
+          unTurnoAgenda({
+            id: 2,
+            inicio: "2026-10-26T10:30:00-03:00",
+            fin: "2026-10-26T11:00:00-03:00",
+          }),
+        ]}
+        ahora={new Date("2026-10-26T13:40:00Z")} // 10:40 BA
+        hoy={HOY}
+        huecos={huecos}
+        duracionTurnoMinutos={30}
+        onAtendido={vi.fn()}
+        onAusente={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("pacientes").previousSibling).toHaveTextContent("2");
+    expect(screen.getByText("huecos libres").previousSibling).toHaveTextContent("2");
+    expect(screen.getByText("atendidos").previousSibling).toHaveTextContent("1");
+    expect(screen.getByText("por consulta").previousSibling).toHaveTextContent("30 min");
+    expect(screen.getByText("Hueco libre (pasado)")).toBeInTheDocument();
+    expect(screen.getByText("Libre")).toBeInTheDocument();
+    expect(screen.getByText("En curso")).toBeInTheDocument();
+    const filas = within(screen.getByRole("list", { name: "Hoy" })).getAllByRole("listitem");
+    expect(filas).toHaveLength(4);
+    expect(filas[0]).toHaveTextContent("08:00");
+    expect(filas[2]).toHaveClass("bg-clin-soft");
+    expect(filas[2]).toHaveAttribute("aria-current", "time");
+  });
+
+  it("sin disponibilidad no muestra huecos ni minutos por consulta", () => {
+    montar("2026-10-26T12:00:00Z");
+    expect(screen.queryByText("huecos libres")).not.toBeInTheDocument();
+    expect(screen.queryByText("por consulta")).not.toBeInTheDocument();
+  });
+
+  it("un turno cancelado no figura en la agenda", () => {
+    montar("2026-10-26T12:00:00Z", [
+      unTurnoAgenda({ id: 1, estado: "CANCELADO_EN_TIEMPO" }),
+      unTurnoAgenda({ id: 2, persona: "Ana Pérez" }),
+    ]);
+    expect(screen.queryByText("Juan García")).not.toBeInTheDocument();
+    expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
+  });
+
+  it("hoy sin turnos pero con otros días no rompe y lo avisa", () => {
+    montar("2026-10-26T12:00:00Z", [
+      unTurnoAgenda({ inicio: "2026-10-28T09:00:00-03:00", fin: "2026-10-28T09:30:00-03:00" }),
+    ]);
+    expect(screen.getByText("No tenés turnos hoy.")).toBeInTheDocument();
   });
 
   it("sin turnos muestra el estado vacío", () => {

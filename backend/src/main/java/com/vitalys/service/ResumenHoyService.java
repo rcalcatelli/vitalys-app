@@ -19,6 +19,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Panel de inicio del ADMIN ("Hoy en el centro", W-09): lo que pasa hoy en el gimnasio y en los
  * consultorios, y quién necesita atención por deuda. No calcula reglas propias: la ocupación sale
- * de {@link TurnoService#cupoGym} y la deuda de {@link MorosidadService#veredicto}, las mismas que
+ * de {@link TurnoService#cupoGym} y la deuda de {@link MorosidadService#veredictos} (en lote, sin consultar por socio), las mismas que
  * usan la reserva y el estado de cuenta.
  */
 @Service
@@ -79,14 +80,17 @@ public class ResumenHoyService {
         List<Persona> socios = personaRepository.findAll(
                 PersonaSpecifications.conEstado(EstadoPersona.ACTIVO).and(PersonaSpecifications.soloSociosGym(true)),
                 Sort.by("apellido", "nombre"));
+        Map<Long, VeredictoMorosidad> veredictos = morosidadService.veredictos(socios);
         for (Persona p : socios) {
-            VeredictoMorosidad v = morosidadService.veredicto(p);
+            VeredictoMorosidad v = veredictos.get(p.getId());
             if (v.deuda().periodosImpagos() == 0) {
                 continue;
             }
             atencion.add(new SocioConDeudaResponse(
                     p.getId(),
                     p.getApellido() + ", " + p.getNombre(),
+                    p.getNombre(),
+                    p.getApellido(),
                     p.getDni(),
                     v.deuda().periodosImpagos(),
                     v.deuda().umbral(),

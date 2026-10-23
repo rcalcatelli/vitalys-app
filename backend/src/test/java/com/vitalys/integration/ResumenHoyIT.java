@@ -74,6 +74,8 @@ class ResumenHoyIT extends IntegrationTestBase {
                 .anySatisfy(s -> {
                     assertThat(s.personaId()).isEqualTo(persona.id());
                     assertThat(s.suspendido()).isTrue();
+                    assertThat(s.nombrePila()).isEqualTo("Suspendido");
+                    assertThat(s.apellido()).isEqualTo("Panel");
                     assertThat(s.periodosImpagos()).isGreaterThanOrEqualTo(s.umbral());
                 });
         assertThat(llamar(HttpMethod.GET, "/api/admin/resumen-hoy", null, login(emailSocio), String.class).getStatusCode())

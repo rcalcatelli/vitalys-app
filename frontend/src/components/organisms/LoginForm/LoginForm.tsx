@@ -28,8 +28,7 @@ export interface LoginFormProps {
 // delegan en un callback de la page — visualmente se calcan como enlace de
 // texto (`bg-transparent border-0 p-0`, ya que el reset global de `button` en
 // `index.css` no quita el chrome nativo del botón).
-const linkButtonClasses =
-  "border-0 bg-transparent p-0 text-clin-ink underline-offset-2 hover:text-clin hover:underline";
+const linkButtonClasses = "border-0 bg-transparent p-0 text-clin-ink underline hover:text-clin";
 
 /**
  * Organismo del formulario de login (W-01). Presentacional: junta
@@ -71,7 +70,7 @@ export function LoginForm({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="mb-1.5 font-heading text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+        <h2 className="mt-2 mb-1.5 font-heading text-[28px] font-semibold tracking-[-0.01em] text-ink">
           Ingresá a tu cuenta
         </h2>
         <p className="text-ink-2">Una sola cuenta para el gimnasio y los consultorios.</p>
@@ -84,6 +83,7 @@ export function LoginForm({
         className="flex flex-col gap-3.5 text-left"
       >
         <FormField
+          alto="auth"
           id={identificadorId}
           label="DNI o email"
           name="identificador"
@@ -97,20 +97,22 @@ export function LoginForm({
         />
 
         <PasswordInput
+          alto="auth"
           id={passwordId}
           label="Contraseña"
           name="password"
           autoComplete="current-password"
+          placeholder="••••••••"
           required
           value={contrasena}
           onChange={setContrasena}
         />
 
-        <Button type="submit" disabled={cargando}>
+        <Button type="submit" size="lg" fullWidth disabled={cargando}>
           {cargando ? "Ingresando…" : "Ingresar"}
         </Button>
 
-        <div className="flex flex-wrap justify-between gap-2 text-sm">
+        <div className="flex flex-wrap justify-between gap-2 text-[13px]">
           <button type="button" onClick={onForgotPassword} className={linkButtonClasses}>
             ¿Olvidaste tu contraseña?
           </button>
@@ -136,6 +138,7 @@ export function LoginForm({
               initials={cuenta.initials}
               name={cuenta.name}
               description={cuenta.description}
+              tono={cuenta.tono}
               onClick={() => handleSelectDemo(cuenta)}
             />
           ))}

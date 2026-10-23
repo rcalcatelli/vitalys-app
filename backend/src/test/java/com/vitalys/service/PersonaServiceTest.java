@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.vitalys.domain.Especialidad;
 import com.vitalys.domain.EstadoPersona;
 import com.vitalys.domain.Persona;
 import com.vitalys.domain.RolUsuario;
@@ -25,11 +26,15 @@ import com.vitalys.exception.RecursoNoEncontradoException;
 import com.vitalys.exception.ReglaDeNegocioException;
 import com.vitalys.repository.PersonaRepository;
 import com.vitalys.repository.UsuarioRepository;
+import com.vitalys.domain.ExcepcionMorosidad;
+import com.vitalys.service.MorosidadService.EstadoDeuda;
+import com.vitalys.service.MorosidadService.VeredictoMorosidad;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +50,7 @@ class PersonaServiceTest {
     private PersonaRepository personaRepository;
     private UsuarioRepository usuarioRepository;
     private PasswordEncoder passwordEncoder;
+    private MorosidadService morosidadService;
     private PersonaService service;
 
     private final Usuario admin = usuario(1L, "admin@vitalys.com", RolUsuario.ADMIN);
@@ -55,8 +61,9 @@ class PersonaServiceTest {
         personaRepository = mock(PersonaRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
+        morosidadService = mock(MorosidadService.class);
         Clock clock = Clock.fixed(Instant.parse("2026-10-20T15:00:00Z"), ZoneId.of("America/Argentina/Buenos_Aires"));
-        service = new PersonaService(personaRepository, usuarioRepository, passwordEncoder, clock);
+        service = new PersonaService(personaRepository, usuarioRepository, passwordEncoder, morosidadService, clock);
         when(personaRepository.saveAndFlush(any(Persona.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -84,7 +91,7 @@ class PersonaServiceTest {
         when(personaRepository.findAll(any(Specification.class), any(Sort.class)))
                 .thenReturn(List.of(persona(10L, socio)));
 
-        List<PersonaResponse> lista = service.listar(admin, EstadoPersona.ACTIVO, "pérez", true);
+        List<PersonaResponse> lista = service.listar(admin, EstadoPersona.ACTIVO, "pérez", true, false);
 
         assertThat(lista).singleElement().satisfies(r -> {
             assertThat(r.dni()).isEqualTo("38100001");
@@ -96,13 +103,88 @@ class PersonaServiceTest {
     void listar_sinFiltros_tambienFunciona() {
         when(personaRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());
 
-        assertThat(service.listar(admin, null, "  ", false)).isEmpty();
+        assertThat(service.listar(admin, null, "  ", false, false)).isEmpty();
     }
 
     @Test
     void listar_comoSocio_esRechazadoEnElServicio() {
-        assertThatThrownBy(() -> service.listar(socio, null, null, false)).isInstanceOf(AccesoDenegadoException.class);
+        assertThatThrownBy(() -> service.listar(socio, null, null, false, false)).isInstanceOf(AccesoDenegadoException.class);
         verifyNoInteractions(personaRepository);
+    }
+
+    // ------------------------------------------------------------------ RF-43: cuota, servicios, conDeuda
+
+    private Persona socioGym(long id, String dni) {
+        Usuario u = usuario(100L + id, "gym" + id + "@mail.com", RolUsuario.SOCIO_PACIENTE);
+        Persona p = persona(id, u);
+        p.setDni(dni);
+        p.definirMembresiaGym(true, LocalDate.of(2026, 1, 1));
+        return p;
+    }
+
+    @Test
+    void pi132_listar_incluyeLaCuotaDeMorosidadServiceYSoloLaDeSociosGym() {
+        Persona conDeuda = socioGym(11L, "1");
+        Persona suspendida = socioGym(12L, "2");
+        Persona conExcepcion = socioGym(13L, "3");
+        Persona soloConsultorio = persona(14L, usuario(114L, "c@mail.com", RolUsuario.SOCIO_PACIENTE));
+        when(personaRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(conDeuda, suspendida, conExcepcion, soloConsultorio));
+        ExcepcionMorosidad exc = new ExcepcionMorosidad(13L, 1L, "plan", LocalDate.of(2026, 11, 15), false);
+        when(morosidadService.veredictos(any())).thenReturn(Map.of(
+                11L, new VeredictoMorosidad(new EstadoDeuda(1, 6, false), Optional.empty()),
+                12L, new VeredictoMorosidad(new EstadoDeuda(6, 6, true), Optional.empty()),
+                13L, new VeredictoMorosidad(new EstadoDeuda(6, 6, true), Optional.of(exc)),
+                14L, new VeredictoMorosidad(EstadoDeuda.SIN_MEMBRESIA, Optional.empty())));
+
+        List<PersonaResponse> r = service.listar(admin, null, null, false, false);
+
+        assertThat(r.get(0).cuota()).isEqualTo(new PersonaResponse.CuotaInfo(1, 6, false, null));
+        assertThat(r.get(1).cuota().suspendido()).isTrue();
+        assertThat(r.get(2).cuota()).isEqualTo(new PersonaResponse.CuotaInfo(6, 6, false, LocalDate.of(2026, 11, 15)));
+        assertThat(r.get(3).cuota()).isNull();
+        assertThat(r).allSatisfy(x -> assertThat(x.tieneUsuarioSocio()).isTrue());
+        verify(morosidadService).veredictos(any());
+    }
+
+    @Test
+    void pi133_conDeuda_listaSoloALosQueTienenAlMenosUnPeriodoImpago() {
+        Persona alDia = socioGym(11L, "1");
+        Persona conDeuda = socioGym(12L, "2");
+        Persona sinMembresia = persona(13L, usuario(113L, "c@mail.com", RolUsuario.SOCIO_PACIENTE));
+        when(personaRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(alDia, conDeuda, sinMembresia));
+        when(morosidadService.veredictos(any())).thenReturn(Map.of(
+                11L, new VeredictoMorosidad(new EstadoDeuda(0, 6, false), Optional.empty()),
+                12L, new VeredictoMorosidad(new EstadoDeuda(1, 6, false), Optional.empty()),
+                13L, new VeredictoMorosidad(EstadoDeuda.SIN_MEMBRESIA, Optional.empty())));
+
+        assertThat(service.listar(admin, null, null, false, true)).extracting(PersonaResponse::id).containsExactly(12L);
+    }
+
+    @Test
+    void listar_especialidadesAtendidasEnUnaSolaConsulta() {
+        Persona a = socioGym(11L, "1");
+        Persona b = socioGym(12L, "2");
+        when(personaRepository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(a, b));
+        when(morosidadService.veredictos(any())).thenReturn(Map.of());
+        when(personaRepository.especialidadesAtendidas(any()))
+                .thenReturn(List.of(new Object[] {11L, "KINESIOLOGIA"}, new Object[] {11L, "NUTRICION"}));
+
+        List<PersonaResponse> r = service.listar(admin, null, null, false, false);
+
+        assertThat(r.get(0).especialidades()).containsExactly(Especialidad.KINESIOLOGIA, Especialidad.NUTRICION);
+        assertThat(r.get(1).especialidades()).isEmpty();
+        verify(personaRepository).especialidadesAtendidas(List.of(11L, 12L));
+    }
+
+    @Test
+    void tieneUsuarioSocio_falsoSiElUsuarioNoEsSocioODeshabilitado() {
+        Usuario deshabilitado = usuario(5L, "off@mail.com", RolUsuario.SOCIO_PACIENTE);
+        deshabilitado.setActivo(false);
+        assertThat(PersonaResponse.de(persona(20L, deshabilitado)).tieneUsuarioSocio()).isFalse();
+        assertThat(PersonaResponse.de(persona(21L, admin)).tieneUsuarioSocio()).isFalse();
+        assertThat(PersonaResponse.de(persona(22L, socio)).tieneUsuarioSocio()).isTrue();
     }
 
     @Test

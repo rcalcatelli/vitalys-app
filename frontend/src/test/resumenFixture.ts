@@ -35,6 +35,8 @@ export function unResumen(overrides: Partial<ResumenHoy> = {}): ResumenHoy {
       {
         personaId: 2,
         persona: "García, Juan",
+        nombrePila: "Juan",
+        apellido: "García",
         dni: "38100002",
         periodosImpagos: 6,
         umbral: 6,
@@ -44,6 +46,8 @@ export function unResumen(overrides: Partial<ResumenHoy> = {}): ResumenHoy {
       {
         personaId: 7,
         persona: "Ruiz, Pablo",
+        nombrePila: "Pablo",
+        apellido: "Ruiz",
         dni: "38100007",
         periodosImpagos: 7,
         umbral: 6,
@@ -53,6 +57,8 @@ export function unResumen(overrides: Partial<ResumenHoy> = {}): ResumenHoy {
       {
         personaId: 5,
         persona: "Fernández, Ana",
+        nombrePila: "Ana",
+        apellido: "Fernández",
         dni: "38100005",
         periodosImpagos: 2,
         umbral: 6,

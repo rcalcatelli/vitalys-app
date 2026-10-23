@@ -13,6 +13,8 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
    * excluyentes evita ese conflicto de raíz.
    */
   hasTrailingIcon?: boolean;
+  /** `auth` = 46px del login/registro del diseño; `form` (default) = 44px de los formularios de modal. */
+  alto?: "form" | "auth";
 }
 
 /**
@@ -20,12 +22,18 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
  * el valor ya "desempaquetado" (string), no el `ChangeEvent` crudo, para que
  * las moléculas/organismos que lo usan no acoplen su estado a la forma del evento.
  */
-export function Input({ onChange, className, hasTrailingIcon = false, ...props }: InputProps) {
+export function Input({
+  onChange,
+  className,
+  hasTrailingIcon = false,
+  alto = "form",
+  ...props
+}: InputProps) {
   const classes = [
-    // `h-12` (48px): calco del input del mockup (`height:46px`, redondeado al
-    // step de Tailwind más cercano) — ya cubre de sobra el mínimo táctil de
-    // 44px, mobile first (no hace falta "corregir" en ningún breakpoint).
-    "w-full h-12 rounded-md border border-border-2 bg-surface text-base text-ink",
+    // Alturas del diseño: 46px en login/registro, 44px en los formularios de los modales
+    // (ambas cubren el mínimo táctil de 44px).
+    alto === "auth" ? "h-[46px]" : "h-11",
+    "w-full rounded-md border border-border-2 bg-surface text-[15px] font-medium text-ink",
     hasTrailingIcon ? "pl-3 pr-12" : "px-3",
     "focus:outline-none focus:border-clin focus:ring-2 focus:ring-clin-soft",
     "disabled:cursor-not-allowed disabled:opacity-60",

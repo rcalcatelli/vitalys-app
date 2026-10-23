@@ -1,39 +1,44 @@
 import { useState } from "react";
 import { Button } from "../../atoms/Button";
+import { Chip } from "../../atoms/Chip";
 import type { Persona } from "../../../types/persona";
+import { chipCuota, serviciosDe } from "../../../utils/personaUi";
 
 export interface PersonasTableProps {
   personas: Persona[];
   onEditar: (persona: Persona) => void;
   onBaja: (persona: Persona) => void;
   onReactivar: (persona: Persona) => void;
+  /** "Operar como": solo se ofrece a quien tiene un usuario de socio activo (RF-39, RF-43). */
+  onOperarComo: (persona: Persona) => void;
   /** Deshabilita las acciones mientras hay una operación en curso. */
   ocupado?: boolean;
 }
 
-/** `2026-05-31` → `31/05/2026`, sin pasar por `Date` para no correr el día por zona horaria. */
-function fechaCorta(iso: string): string {
-  const [anio, mes, dia] = iso.split("-");
-  return `${dia}/${mes}/${anio}`;
-}
-
-const chipBase =
-  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
+// La última columna mide 120px como en el diseño (que solo tiene "Operar como") cuando hay lugar
+// (>= 1280px: los botones desbordan hacia la izquierda sobre el aire de la columna Cuota). Entre
+// 1024 y 1279px el contenido es más angosto y esa columna aloja "Operar como" + ⋯ enteros (156px)
+// para que no pisen los chips de Cuota. Entre 760 y 1023px no hay ancho ni para eso: las acciones
+// pasan a una segunda línea de la fila, alineadas a la derecha.
+const COLUMNAS =
+  "shell:grid-cols-[1.5fr_1fr_1.7fr_1.4fr] min-[1024px]:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_156px] min-[1280px]:grid-cols-[1.5fr_1fr_1.7fr_1.4fr_120px]";
 
 /**
- * Listado de W-05. En mobile cada persona es una tarjeta; desde `md:` pasa a
- * grilla de columnas como la tabla del mockup. La baja pide una confirmación
- * en la misma fila: es una acción sobre la ficha de otra persona y no se
- * dispara con un solo toque.
+ * Listado de Personas (ADMIN). En mobile cada persona es una tarjeta de dos columnas; desde 760px
+ * pasa a la tabla del mockup (Nombre, DNI, Servicios, Cuota y acciones). La acción principal es
+ * "Operar como"; Editar y Baja/Reactivar viven en el menú ⋯. La baja pide una confirmación en la
+ * misma fila: es una acción sobre la ficha de otra persona y no se dispara con un solo toque.
  */
 export function PersonasTable({
   personas,
   onEditar,
   onBaja,
   onReactivar,
+  onOperarComo,
   ocupado = false,
 }: PersonasTableProps) {
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+  const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
 
   if (personas.length === 0) {
     return (
@@ -44,61 +49,64 @@ export function PersonasTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="hidden bg-surface-2 px-4 py-2.5 text-xs font-semibold tracking-wider text-ink-3 uppercase md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10.5rem] md:gap-3">
+    <div className="overflow-visible rounded-xl border border-border bg-surface">
+      <div
+        className={`hidden gap-3 rounded-t-xl bg-surface-2 px-4 py-2.5 text-xs font-semibold tracking-[0.05em] text-ink-3 uppercase shell:grid ${COLUMNAS}`}
+      >
         <span>Nombre</span>
         <span>DNI</span>
-        <span>Gimnasio</span>
-        <span>Estado</span>
+        <span>Servicios</span>
+        <span>Cuota</span>
         <span className="sr-only">Acciones</span>
       </div>
       <ul>
         {personas.map((p) => {
           const activa = p.estado === "ACTIVO";
           const confirmando = confirmandoId === p.id;
+          const menuAbierto = menuAbiertoId === p.id;
+          const nombre = `${p.nombre} ${p.apellido}`;
+          const cuota = chipCuota(p);
           return (
             <li
               key={p.id}
               data-testid={`persona-${p.id}`}
-              className={[
-                "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-t border-border px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10.5rem] md:first:border-t",
-                activa ? "" : "opacity-60",
-              ].join(" ")}
+              className={`relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-t border-border px-4 py-3 first:border-t-0 shell:first:border-t ${COLUMNAS} ${activa ? "" : "opacity-60"}`}
             >
               <span className="flex min-w-0 flex-col">
-                <span className="font-medium text-ink">
-                  {p.apellido}, {p.nombre}
-                </span>
+                <span className="font-medium text-ink">{nombre}</span>
                 <span className="truncate text-xs text-ink-3">{p.email}</span>
-                {!activa && p.fechaBaja && (
-                  <span className="text-xs text-ink-3">Baja el {fechaCorta(p.fechaBaja)}</span>
-                )}
               </span>
-              <span className="text-right font-mono text-sm text-ink-2 md:text-left">{p.dni}</span>
-              <span>
-                {p.esSocioGym ? (
-                  <span className={`${chipBase} bg-gym-soft text-gym-ink`}>Socio gym</span>
-                ) : (
-                  <span className="text-sm text-ink-3">—</span>
-                )}
+              <span className="text-right font-mono text-small text-ink-2 shell:text-left">
+                {p.dni}
               </span>
-              <span className="justify-self-end md:justify-self-start">
-                <span
-                  className={`${chipBase} ${activa ? "bg-ok-soft text-ok-ink" : "bg-surface-2 text-ink-3"}`}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  {activa ? "Activo" : "Inactivo"}
-                </span>
+              <span className="flex flex-wrap gap-1">
+                {serviciosDe(p).map((s) => (
+                  <Chip key={s.label} tone={s.tone} tamano="etiqueta">
+                    {s.label}
+                  </Chip>
+                ))}
               </span>
-              <span className="col-span-2 flex flex-wrap justify-end gap-2 md:col-span-1">
+              <span className="justify-self-end shell:justify-self-start">
+                <Chip tone={cuota.tone} dot>
+                  {cuota.label}
+                </Chip>
+              </span>
+              <span
+                className={`col-span-2 flex items-center justify-end gap-1.5 shell:col-span-4 shell:flex-nowrap shell:justify-self-end min-[1024px]:col-span-1 ${
+                  confirmando
+                    ? "flex-wrap min-[1024px]:absolute min-[1024px]:top-1/2 min-[1024px]:right-4 min-[1024px]:-translate-y-1/2 min-[1024px]:bg-surface min-[1024px]:pl-3"
+                    : "flex-wrap"
+                }`}
+              >
                 {confirmando ? (
                   <>
                     <span className="self-center text-sm text-ink-2">¿Dar de baja?</span>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="neutral"
+                      size="sm"
                       disabled={ocupado}
-                      className="hover:border-bad"
+                      className="px-3 text-small hover:border-bad"
                       onClick={() => {
                         setConfirmandoId(null);
                         onBaja(p);
@@ -106,38 +114,80 @@ export function PersonasTable({
                     >
                       Sí, dar de baja
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setConfirmandoId(null)}>
+                    <Button
+                      type="button"
+                      variant="neutral"
+                      size="sm"
+                      className="px-3 text-small"
+                      onClick={() => setConfirmandoId(null)}
+                    >
                       No
                     </Button>
                   </>
-                ) : activa ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={ocupado}
-                      onClick={() => onEditar(p)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={ocupado}
-                      onClick={() => setConfirmandoId(p.id)}
-                    >
-                      Baja
-                    </Button>
-                  </>
                 ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={ocupado}
-                    onClick={() => onReactivar(p)}
-                  >
-                    Reactivar
-                  </Button>
+                  <>
+                    {activa && p.tieneUsuarioSocio && (
+                      <Button
+                        type="button"
+                        variant="neutral"
+                        size="sm"
+                        disabled={ocupado}
+                        aria-label={`Operar como ${nombre}`}
+                        className="px-3 text-small whitespace-nowrap"
+                        onClick={() => onOperarComo(p)}
+                      >
+                        Operar como
+                      </Button>
+                    )}
+                    <span className="relative flex">
+                      <Button
+                        type="button"
+                        variant="neutral"
+                        size="sm"
+                        disabled={ocupado}
+                        aria-label={`Más acciones de ${nombre}`}
+                        aria-expanded={menuAbierto}
+                        className="w-[38px] px-0 text-small font-bold"
+                        onClick={() => setMenuAbiertoId(menuAbierto ? null : p.id)}
+                      >
+                        ⋯
+                      </Button>
+                      {menuAbierto && (
+                        <>
+                          <div
+                            role="presentation"
+                            onClick={() => setMenuAbiertoId(null)}
+                            className="fixed inset-0 z-40"
+                          />
+                          <div className="absolute top-[calc(100%+4px)] right-0 z-41 min-w-44 rounded-lg border border-border bg-surface p-1 shadow-lg">
+                            {activa && (
+                              <button
+                                type="button"
+                                className="h-11 w-full rounded-md px-3 text-left text-sm font-medium text-ink hover:bg-surface-2"
+                                onClick={() => {
+                                  setMenuAbiertoId(null);
+                                  onEditar(p);
+                                }}
+                              >
+                                Editar
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className={`h-11 w-full rounded-md px-3 text-left text-sm font-semibold hover:bg-surface-2 ${activa ? "text-bad-ink" : "text-clin-ink"}`}
+                              onClick={() => {
+                                setMenuAbiertoId(null);
+                                if (activa) setConfirmandoId(p.id);
+                                else onReactivar(p);
+                              }}
+                            >
+                              {activa ? "Dar de baja" : "Reactivar"}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </span>
+                  </>
                 )}
               </span>
             </li>

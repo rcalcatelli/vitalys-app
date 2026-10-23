@@ -28,14 +28,18 @@ Ningún componente escribe un color literal.
 nombran así y no `primary`/`secondary`: el nombre dice qué significa, no qué lugar ocupa en
 una jerarquía visual.
 
-## El mockup no resuelve el responsive
+## Responsive
 
-**No tiene ninguna `@media`**: es estático, pensado para escritorio. Sus tamaños de fuente van
-de 10,5 px a 48 px, y los más chicos corresponden a tablas densas de escritorio.
+La versión actual del prototipo **sí es responsive**: por debajo de **760 px** cambia el
+layout (encabezado de 56 px y barra de pestañas inferior en lugar de la sidebar de 248 px,
+tablas que pasan a tarjetas y modales que se vuelven hojas inferiores). El frontend replica ese
+punto de corte (`--breakpoint-shell: 760px`) y el shell elige su layout con
+`useMediaQuery("(max-width: 759px)")`, de modo que el menú no se renderiza dos veces.
 
-El comportamiento responsive lo escribe el frontend siguiendo la convención **mobile first**
-del proyecto: las clases sin prefijo son el estado móvil y los breakpoints solo agregan. Los
-tamaños del mockup se usan como referencia de escala, no como base móvil.
+El resto del comportamiento responsive lo escribe el frontend siguiendo la convención **mobile
+first** del proyecto: las clases sin prefijo son el estado móvil y los breakpoints solo agregan.
+La base tipográfica es 14 px con interlineado 1,45 en `body` (no en `html`, para no encoger los
+espaciados en `rem`).
 
 ## Desviaciones deliberadas respecto del mockup
 
@@ -76,9 +80,12 @@ estará disponible más adelante. No hay endpoint de recuperación ni ningún RF
 
 ### La tarjeta de demostración "Laura Benítez"
 
-El mockup muestra cinco cuentas de demostración. Cuatro tienen correlato real en
-`db/dml/seed.sql`; la quinta no existe. En su lugar se usa la cuenta de administración que sí
-está cargada. Una tarjeta que autocompleta credenciales inexistentes es peor que no tenerla.
+El mockup muestra cinco cuentas de demostración. Cuatro tenían correlato real en
+`db/dml/seed.sql`; la de Recepción, "Laura Benítez", no existía, y en su lugar se usaba la
+cuenta de administración. Desde `ui-pixel-perfect` el seed de desarrollo le da a
+`admin@vitalys.com` una ficha de persona "Laura Benítez" (sin membresía de gimnasio), y la
+tarjeta coincide con la realidad. No es una migración: las migraciones nunca siembran datos de
+demostración.
 
 ### El ingreso al gimnasio no tiene "Deshacer"
 
@@ -89,10 +96,11 @@ por error, el registro queda y se corrige a mano; si en el futuro hace falta rev
 de uso nuevo con su regla (hasta cuándo se puede y quién), no un botón en la pantalla. Por el
 mismo motivo la agenda del profesional tampoco lo tiene.
 
-## Vistas que el mockup define y todavía no se construyeron
+## Vistas del mockup
 
-El mockup incluye, además de la autenticación, tres vistas completas de la aplicación:
-`socio`, `profesional` y `recepcion`, con agenda, turnos, pagos, personas y notificaciones.
-
-Corresponden a los **Sprints 3, 4 y 5** y son otras issues. Van a consumir los mismos tokens y
-los mismos componentes de `frontend/src/components/`, sin rehacer la capa de diseño.
+Las tres vistas del mockup —`socio`, `profesional` y `recepcion`— están construidas y consumen
+los mismos tokens y componentes de `frontend/src/components/`. La lista completa y razonada de
+los puntos en que la aplicación se aparta del prototipo (registro, campos extra de las altas,
+ventana de Atendido de 15 minutos, fechas de vencimiento reales, motivo obligatorio al cancelar,
+validación de RN-18 en el backend, entre otros) está en la sección **"Desvíos documentados
+respecto del diseño"** de [`../wireframes.md`](../wireframes.md).

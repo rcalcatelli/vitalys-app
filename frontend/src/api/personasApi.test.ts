@@ -16,8 +16,8 @@ function ok(body: unknown): Response {
 describe("construirQuery", () => {
   it.each([
     ["TODOS", "", ""],
-    ["ACTIVOS", "", "?estado=ACTIVO"],
-    ["INACTIVOS", " gómez ", "?estado=INACTIVO&q=g%C3%B3mez"],
+    ["CON_DEUDA", "", "?conDeuda=true"],
+    ["CONSULTORIO", " gómez ", "?q=g%C3%B3mez"],
     ["GYM", "381", "?soloGym=true&q=381"],
   ] as const)("%s + '%s' → '%s'", (filtro, texto, esperado) => {
     expect(construirQuery(filtro, texto)).toBe(esperado);
@@ -30,8 +30,8 @@ describe("personasApi", () => {
   });
 
   it("lista con los filtros como query params", async () => {
-    await listarPersonas("ACTIVOS", "juan");
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/personas?estado=ACTIVO&q=juan");
+    await listarPersonas("CON_DEUDA", "juan");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/personas?conDeuda=true&q=juan");
   });
 
   it("usa el verbo y la ruta de cada operación", async () => {

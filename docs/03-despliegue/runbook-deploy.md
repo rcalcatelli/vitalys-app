@@ -80,6 +80,8 @@ Deben aparecer todas las versiones con `success = true`, y las tablas en **Table
 
 **Datos de prueba (opcional).** Si querés cargarlos, ejecutá `db/dml/seed.sql` en el SQL Editor
 **después** de que Flyway haya corrido, nunca antes: el seed asume el esquema ya creado.
+Sus fechas son relativas al día de la carga, así que **resembrá antes de cada demo** (cómo vaciar y
+volver a cargar: [`entorno-local-docker.md`](entorno-local-docker.md), §3.4).
 
 > Si alguna vez necesitás aplicar el esquema a mano, ejecutá los archivos de `db/migration/`
 > **en orden de versión** (V1, V2, V3…), no el DDL viejo. Ver

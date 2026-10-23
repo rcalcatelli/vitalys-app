@@ -60,6 +60,14 @@ Los PU-13 a PU-30 son pruebas de la interfaz de pagos (Sprint 5); el cálculo de
 | PU-29 | Doble clic en "Registrar" | Bloquea el envío mientras el pago está en curso | `PagosPage.test.tsx` |
 | PU-30 | Sesión de consultorio de una persona | Carga los turnos de la persona y no ofrece cuota si no es socia | `PagosPage.test.tsx` |
 
+### Operar como, próxima agenda y cuota de Personas (PU-31 a PU-33)
+
+| ID    | Caso de prueba | Resultado esperado | Archivo |
+|-------|----------------|--------------------|---------|
+| PU-31 | Credencial de "Operar como" (RF-39, RN-26) | `sub` = socio, `act` = ADMIN y `jti` = sesión; 30 minutos exactos como máximo (una credencial más larga que la configurada se rechaza); vencida se rechaza; un `act` malformado se rechaza en vez de leerse como token común del socio; un token común no trae actor ni sesión; firma ajena y token sin `sub` se rechazan | `OperarComoTokenTest` (`pu31_claimsDeLaCredencial`, `pu31_tokenNormal_sinActorNiSesion`, `pu31_vencida_seRechaza`, `pu31_masLargaQueLaConfigurada_seRechaza`, `pu31_actorMalformado_seRechazaEnVezDeLeerseComoTokenDelSocio`) |
+| PU-32 | Próxima agenda de un profesional (RF-41) | Primer día con libres y cuántos hay, descontando turnos tomados; el mismo día descuenta los slots que ya pasaron | `TurnoServiceTest` (`pu32_proximaAgenda_primerDiaConLibresYCuantosHay`, `pu32_proximaAgenda_hoyDescuentaLosSlotsQueYaPasaron`) |
+| PU-33 | Chip de cuota en Personas (RF-43) | Muestra los impagos sobre el umbral ("1 de 6 impagos") | `PersonasTable.test.tsx` (`PU-33: muestra los impagos sobre el umbral`) |
+
 ### TurnoServiceTest
 
 | ID    | Caso de prueba                                                                 | Entrada                                              | Resultado esperado                          |
@@ -306,6 +314,77 @@ Además, `personaInexistente_da404` verifica que registrar un pago para una pers
 
 > **Mercado Pago** queda fuera del alcance (RFC-001): los pagos se cargan a mano. `medio_pago` está diseñado para sumar `MERCADO_PAGO` más adelante con su propia migración.
 
+### Cambio `ui-pixel-perfect` (PI-112 a PI-139)
+
+Los PI de este bloque son contiguos y todos tienen al menos un test que los ejecuta; la columna "Cubierto por" nombra los métodos reales. Los ITs corren solo en CI contra Postgres real (Testcontainers). Las fechas de reserva de gimnasio se calculan con `DiasDeReserva.diaHabil(n)`: solo mira los próximos 6 días, devuelve el n-ésimo día hábil no feriado (si no entra en la ventana de 7 días de RN-18, el último que sí entra) y lo verifica con una aserción, para que el escenario no se rompa según la fecha en que corra el CI.
+
+#### Operar como (RF-39, RN-26, RN-27, CA-10-1 a CA-10-8)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-112 | El ADMIN inicia "Operar como" sobre un socio activo con ficha | 200 con credencial de 30 minutos (actor = ADMIN, sujeto = socio) y fila `INICIO` en `auditoria_operar_como` | `OperarComoIT.pi112_adminIniciaSobreUnSocio_credencialDeTreintaMinutosAuditada`; `OperarComoServiceTest.pi112_adminIniciaSobreUnSocio_emiteYAuditaLaMismaSesion` |
+| PI-113 | Un SOCIO_PACIENTE o un PROFESIONAL intenta iniciarlo | 403, sin credencial | `OperarComoIT.pi113_socioOProfesionalNoInician`; `OperarComoServiceTest.pi113_unRolNoAdminNoInicia` |
+| PI-114 | El sujeto es un ADMIN o un PROFESIONAL (o el propio ADMIN) | 403, sin credencial | `OperarComoIT.pi114_sujetoAdminOProfesional_403`; `OperarComoServiceTest.pi114_sujetoAdminOProfesional_403`, `sobreSuPropiaFicha_403` |
+| PI-115 | Sujeto inexistente, dado de baja o con usuario deshabilitado | 404 / 422, sin credencial | `OperarComoIT.pi115_inexistenteDadoDeBajaODeshabilitado`; `OperarComoServiceTest.pi115_inexistenteDadoDeBajaODeshabilitado` |
+| PI-116 | Iniciar otra suplantación desde una sesión de "Operar como" | 403 y la sesión actual no cambia (RN-26) | `OperarComoIT.pi116_desdeOperarComoNoSeAnidaNiSeRenueva`; `OperarComoServiceTest.pi116_desdeUnaSesionDeOperarComo_noSeAnidaNiSeRenueva` |
+| PI-117 | Con la credencial, llamar a **cada** endpoint exclusivo de ADMIN (el IT enumera los endpoints reales desde el mapping) | 403 y sin cambios | `OperarComoIT.pi117_pi119_conLaCredencialTodoLoQueNoEsDelSocioDa403`; unitario del filtro en `OperarComoInterceptorTest` (escrituras fuera de la lista blanca) |
+| PI-118 | Con la credencial, reservar y cancelar | Se procesa con las reglas del socio (RN-01, RN-02, RN-16 a RN-18) y `reservado_por` / `cancelado_por` guardan al ADMIN real | `OperarComoIT.pi118_conLaCredencialRigenLasReglasDelSocio`, `pi118_pi121_pi122_reservaYCancelacionAuditadasConElAdminRealYLaMarcaParaElSocio`; `TurnoServiceTest.pi118_operarComo_reservaConLasReglasDelSocioYGuardaAlAdminComoQuienReservo` |
+| PI-119 | Con la credencial, leer o escribir datos de otro socio | 403 | `OperarComoIT.pi117_pi119_conLaCredencialTodoLoQueNoEsDelSocioDa403` |
+| PI-120 | Credencial vencida; actor deshabilitado o degradado; sujeto deshabilitado o dado de baja; credencial forjada sin `INICIO` auditado | 401 en todos los casos | `OperarComoIT.pi120_credencialVencida_401`, `pi120_actorDeshabilitadoODegradado_401`, `pi120_sujetoDeshabilitadoODadoDeBaja_401`, `credencialForjadaSinSesionAuditada_401`, `actorQueNoEsAdmin_401AunqueLaSesionExista`; unitarios en `OperarComoAutenticadorTest` y `JwtAuthenticationFilterTest`; vigencia en PU-31 |
+| PI-121 | Reserva suplantada (gimnasio o consultorio); y la auditoría falla | Existe el turno y una fila de auditoría con ADMIN, socio y turno; si la fila no se puede guardar, **no queda el turno** | `OperarComoIT.pi118_pi121_pi122_reservaYCancelacionAuditadasConElAdminRealYLaMarcaParaElSocio`, `pi121_siLaAuditoriaFalla_noQuedaElTurno`; `TurnoServiceTest.pi121_operarComo_reservaDeConsultorioAuditada`, `siLaAuditoriaFalla_laReservaFallaYNoSeConfirma`; `AuditoriaOperarComoServiceTest` |
+| PI-122 | El socio abre sus turnos tras una reserva de Recepción | Ve `reservadoPorRecepcion` / `canceladoPorRecepcion` y nada que identifique al ADMIN; si reserva por sí mismo, no hay marca | `OperarComoIT.pi118_pi121_pi122_…`; `TurnoServiceTest.pi122_porSiMismo_sinMarcaDeRecepcion`, `pi122_reservaYCancelacionDeRecepcionSinOperarComo_tambienLlevanLaMarca`, `turnoResponse_canceladoPorProfesional_noEsCancelacionDeRecepcion`; frontend en `AuthContext.operarComo.test.tsx` y `OperarComoBanner.test.tsx` |
+| PI-123 | Terminar la sesión (`POST /api/operar-como/fin`) | 204, fila `FIN`, la credencial deja de autenticar en el servidor aunque no haya vencido y el ADMIN sigue con su sesión | `OperarComoIT.pi123_terminar_auditaElFinRevocaLaCredencialYElAdminSigue`; `OperarComoServiceTest.pi123_terminar_auditaElFinDeLaSesionEnCurso`, `terminar_sinSesionDeOperarComo_422`; frontend (`volverARecepcion`, banner, vencimiento) en `AuthContext.operarComo.test.tsx` |
+
+#### Check-in, hora de ingreso e Ingreso (RN-28, CA-09-5, CA-09-6)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-124 | Marcar `COMPLETADO` un turno dentro de la ventana de check-in | Estado `COMPLETADO` y `completadoEn` = ahora (Clock inyectado); el listado del ADMIN trae el DNI y el socio no lo ve | `TurnoServiceTest.pi124_marcarCompletado_guardaElMomentoDelCheckIn`, `turnoResponse_dniSoloEnLaVistaDelAdmin`, `listar_comoAdminIncluyeElDniDeLaPersona`; `TurnoTest.completar_dejaElEstadoYElMomentoDelCheckIn`; `TurnoGymIT.pi124_checkInGuardaCompletadoEnYElListadoDelAdminTraeElDni` |
+| PI-125 | Turno completado antes de V16 / turno no completado | `completadoEn` nulo; la base no admite `completado_en` fuera de `COMPLETADO` (`chk_turno_completado_en`); la UI muestra solo "Ingresó" | `TurnoServiceTest.completadoEn_esNuloEnTurnosAunNoCompletados`; `TurnoGymIT.completadoEn_soloEnTurnosCompletadosLoGarantizaLaBase`; `SeedIT.completadoEnSoloPuedeEstarEnTurnosCompletadosYElSeedNoLoInventa`; `TurnoTest.marcarAusente_noInventaUnMomentoDeCheckIn`; `IngresoLista.test.tsx` ("PI-125 un ingreso anterior a V16…") |
+| PI-126 | Franja en curso con 14 turnos, 9 completados | "9 de 14 ingresaron", barra de progreso, 5 pendientes primero y 9 con "Ingreso HH:MM"; sin franja, estado vacío | `IngresoPage.test.tsx` ("PI-126 muestra la franja en curso…"); `FranjaEnCursoCard.test.tsx` ("PI-126 muestra el horario…") |
+
+#### Próxima agenda por profesional (RF-41, CA-02-6)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-127 | Profesional con franjas y turnos libres | El primer día con libres y la cantidad de libres; el socio lo consulta filtrando por especialidad | `TurnoConsultorioIT.pi127_pi129_proximaAgendaDelProfesionalYSusRoles`; `TurnoServiceTest.pu32_*` y `proximaAgenda_filtraPorEspecialidad` |
+| PI-128 | Profesional sin franjas activas o todo ocupado en 21 días | Sin fecha ("Sin agenda próxima") | `TurnoConsultorioIT.pi128_proximaAgenda_sinFranjasActivasNoTieneFecha`; `TurnoServiceTest.pi128_proximaAgenda_sinFranjasOTodoOcupado_devuelveSinFecha` |
+| PI-129 | Un PROFESIONAL consulta la próxima agenda | 403 | `TurnoConsultorioIT.pi127_pi129_…`; `TurnoServiceTest.pi129_proximaAgenda_unProfesionalNoPuede` |
+
+#### Identidad en `/auth/me` (RF-40, CA-01-8)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-130 | `GET /api/auth/me` de un socio, un profesional o el ADMIN del seed ("Laura Benítez") | `nombre` y `apellido` de la ficha; durante "Operar como", el socio sujeto más `operadoPor` | `AuthMeIT.me_deUnProfesional_traeNombreYApellidoDeSuFicha`; `AuthServiceTest.me_deUnaPersona_traeNombreYApellidoDeLaFicha`, `me_deUnProfesional_traeNombreYApellidoDelProfesional`, `me_enOperarComo_traeAlSocioYAlAdminQueOpera`, `me_enOperarComo_operadorSinFicha_soloElId`, `me_fueraDeOperarComo_sinOperador`, `meResponse_idaYVueltaPorJson`; `SeedIT.lauraBenitezEsLaPersonaDelAdminYNoEntraEnElListadoDeSocios` |
+| PI-131 | Usuario sin ficha | `nombre` y `apellido` nulos (el shell muestra el email); sin token, 401 | `AuthMeIT.me_conJwtValido_devuelve200SinPasswordHash`, `me_sinToken_devuelve401`; `AuthServiceTest.me_sinFicha_nombreYApellidoNulos` |
+
+#### Personas: cuota, servicios y filtro de deuda (RF-43, CA-04-10)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-132 | Listado con un socio al día, uno suspendido, uno con excepción vigente y uno sin gimnasio | `cuota` con `periodosImpagos`, `umbral`, `suspendido` y `excepcionHasta` según `MorosidadService`; `cuota` nula si no es socio de gimnasio; `especialidades` y `tieneUsuarioSocio` | `PersonaIT.pi132_pi133_listadoConCuotaServiciosYFiltroDeDeuda`, `especialidades_derivanDeLosTurnosDeConsultorioNoCancelados`, `listado_noIncluyeLaFichaDelAdminPeroSiSePuedeObtenerPorId`; `PersonaServiceTest.pi132_listar_incluyeLaCuotaDeMorosidadServiceYSoloLaDeSociosGym`, `listar_especialidadesAtendidasEnUnaSolaConsulta`, `tieneUsuarioSocio_falsoSiElUsuarioNoEsSocioODeshabilitado`; `MorosidadServiceTest.veredictos_*` (el lote equivale al veredicto individual) |
+| PI-133 | Filtro `conDeuda=true` | Solo quienes tienen al menos un período impago | `PersonaIT.pi132_pi133_…`; `PersonaServiceTest.pi133_conDeuda_listaSoloALosQueTienenAlMenosUnPeriodoImpago` |
+| PI-134 | Un SOCIO_PACIENTE pide el listado con `conDeuda` | 403 (autorización en el servicio, RNF-03) | `PersonaIT.pi134_listadoConDeudaEsSoloDelAdmin` |
+
+#### Estado de cuenta, excepción y panel Hoy
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-135 | Estado de cuenta con una sesión pagada de un turno con profesional | `sesiones[].profesional` y `especialidad` informados, resueltos en una sola consulta (sin N+1) | `PagoControllerIT.pi101_sesionPagadaApareceEnSesionesYSumaEnTotales`; `PagoServiceTest.estadoCuenta_sesionesTraenProfesionalYEspecialidadEnUnaSolaConsulta`, `estadoCuenta_sesionSinTurnoConocido_sinProfesional`, `estadoCuenta_excepcionTraeQuienLaAutorizo`, `estadoCuenta_excepcionDeAutorSinFicha_diceRecepcion` |
+| PI-136 | El ADMIN autoriza una excepción a un socio suspendido desde Pagos (RN-09, CA-08-8) | 201, toast, estado de cuenta con "Excepción vigente" y "Autorizada por X el DD/MM · motivo"; el socio puede reservar gimnasio | `PagosPage.test.tsx` ("PI-136 se ofrece a una persona suspendida…"); `ExcepcionDialog.test.tsx`; `EstadoCuentaView.test.tsx` ("PI-136 excepción vigente (admin)…"); el endpoint, en `TurnoGymIT.pi10_pi51_pi52_suspendidoNecesitaExcepcionYLaDeUnSoloUsoSeAgota` |
+| PI-137 | Socio con deuda por debajo del umbral | La acción "Autorizar excepción" no se ofrece. **Solo la interfaz lo hace cumplir**: el endpoint `POST /api/excepciones-morosidad` hoy no rechaza una excepción para un socio no suspendido (queda como limitación conocida; RN-09 la define como innecesaria, no como prohibida) | `PagosPage.test.tsx` ("PI-137 no se ofrece si tiene deuda pero no está suspendida") |
+| PI-138 | Panel Hoy con 2 socios con impagos y 1 suspendido | KPI "Socios con impagos" = 2 (cuenta personas, no períodos) y "1 con reserva suspendida"; nombres como "Nombre Apellido"; una sola consulta de deuda para todos los socios | `PanelHoy.test.tsx` ("PI-138: el cuarto indicador cuenta personas…"); `ResumenHoyServiceTest` (`veredictos` una vez, `veredicto` nunca); `ResumenHoyIT` (`nombrePila` y `apellido`) |
+
+#### Anticipación de la reserva de gimnasio (RN-18, CA-08-5)
+
+| ID | Caso | Resultado esperado | Cubierto por |
+|----|------|--------------------|--------------|
+| PI-139 | Reservar gimnasio con menos de 1 hora o con más de 7 días de anticipación | 422 ("se cierran 1 hora antes" / "hasta 7 días antes"); exactamente 1 hora y exactamente 7 días se aceptan | `TurnoServiceTest.pi139_reservaConMenosDeUnaHoraDeAnticipacion_lanza422`, `pi139_reservaConExactamenteUnaHoraDeAnticipacion_sePermite`, `pi139_reservaConMasDeSieteDiasDeAnticipacion_lanza422`, `pi139_reservaConExactamenteSieteDiasDeAnticipacion_sePermite`; `TurnoGymIT.pi139_anticipacionDeRn18_menosDeUnaHoraOMasDeSieteDias_da422` |
+
+> **Por qué antes no estaba cubierto RN-18.** Hasta este cambio la regla estaba declarada en los requerimientos y mostrada por la interfaz, pero el servicio no la hacía cumplir: se podía reservar cualquier fecha futura llamando a la API. El diseño visual ya la mostraba ("se cierran 1 hora antes"), y una regla que solo vive en la UI contradice RNF-03. Se agregó `validateAnticipacionGym` en `TurnoService.reservarGym`, y los ITs que reservan gimnasio pasaron a reservar dentro de la ventana (`diaHabil(n)` con n de 1 a 7).
+
+> **Frontend de este cambio.** Además de los PU/PI numerados, cada pantalla nueva tiene su prueba de componente (Vitest + Testing Library): `ShellLayout`, `ThemeProvider`, `ToastProvider`, `useMediaQuery`, `navConfig`, `IngresoPage`, `InicioPage`, `PersonasPage`, `AuthContext.operarComo`, `http` (precedencia del token de "Operar como") y `OperarComoBanner`. La comparación visual contra el prototipo se hizo con capturas (escritorio y móvil, claro y oscuro) y no es un test automatizado.
+
 ---
 
 ## Nivel 3 — Smoke test en producción (manual, previo a cada entrega)
@@ -324,6 +403,9 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 □ Cancelación antes del inicio libera el slot (en tiempo o tarde); con el turno ya iniciado lo mantiene bloqueado (RN-02)
 □ Socio suspendido (Juan García) reserva gym gracias a su excepción vigente; el admin la revisa en su historial
 □ Socio suspendido sin excepción vigente intenta reservar gym → recibe 422 por morosidad
+□ Admin usa "Operar como" sobre un socio, reserva un turno, el banner persiste al recargar y "Volver a Recepción" regresa a Personas; el socio ve "Reservado por Recepción" (RN-27)
+□ Reserva de gimnasio con menos de 1 h o más de 7 días de anticipación → 422 (RN-18)
+□ Los datos de demo están al día: el seed es relativo a la fecha de carga, así que un entorno cargado hace semanas hay que resembrarlo (ver `entorno-local-docker.md`)
 ```
 
 **Frecuencia:** antes de cada entrega de cátedra y de la defensa oral.

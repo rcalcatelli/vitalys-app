@@ -189,11 +189,34 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 
 ---
 
+## Cambio `ui-pixel-perfect` — interfaz al diseño y Operar como (PR #33)
+
+Pedido en la devolución del 22/10: la interfaz divergía del prototipo `Vitalys.dc.html` (sin shell común, sin inicio del socio, sin pantalla de Ingreso, modo oscuro inalcanzable, reserva de consultorio plana) y faltaba que Recepción pudiera atender a un socio en el mostrador. Se hizo en siete tandas, una por commit, con el backend como autoridad de las reglas (RNF-03).
+
+| Tanda | Contenido | Commit |
+|-------|-----------|--------|
+| S0 | Base tipográfica de 14 px, animación `vtIn`, escala de controles y primitivas (Chip, Tabla, PageHeader, KpiCard) | `0ba88ea` |
+| S1 | AppShell (sidebar, tab bar móvil), tema persistente y toasts; `/socio/inicio` y `/admin/ingreso` | `57769d5` |
+| S2a | V16 `completado_en` (RN-28), DTOs enriquecidos, próxima agenda (RF-41), nombre en `/auth/me` (RF-40), cuota en Personas (RF-43) | `2058aed` |
+| S2b | V17 `auditoria_operar_como`, credencial acotada, filtro, interceptor y auditoría (RF-39, RN-26, RN-27) | `219e8df` |
+| S3 | Hoy, Ingreso, Personas con "Operar como", Profesionales, Pagos y excepción (RN-09) | `6ea6e2a` |
+| S4 | Inicio del socio, reserva por profesional, Mis turnos y Estado de cuenta | `6ac5f6e` |
+| S5 | Agenda del profesional con huecos y turno en curso | `221f88e` |
+| S6 | Copy de morosidad (RN-01), modales, móvil y modo oscuro; y, aparte, validación de RN-18 en el backend (`e0fc129`) | `0a15417` |
+| S7 | Esta documentación: RF-39 a RF-43, RN-26 a RN-28, HU-10 y HU-11, PI-112 a PI-139, V16 y V17, desvíos respecto del diseño | este commit |
+
+**Estado real:** completado. Los PI-112 a PI-139 y los PU-31 a PU-33 están en [`definicion-pruebas.md`](definicion-pruebas.md), cada uno con el método que lo cubre. El CI del PR #33 está en verde: **415 tests unitarios y 199 de integración** en el backend y **662 tests** en el frontend (99,5 % de cobertura de líneas), ambos con el gate del 90 %. Los desvíos deliberados respecto del prototipo, con su razón, están en [`wireframes.md`](../02-diseno/wireframes.md).
+
+**Antes de una demo:** el seed calcula todas sus fechas contra el día de la carga, así que un entorno cargado hace semanas muestra datos viejos (y el proyecto gratuito de Supabase se pausa tras ~7 días sin actividad, RG-02). Hay que reactivarlo y **resembrar** la base; el procedimiento está en [`entorno-local-docker.md`](../03-despliegue/entorno-local-docker.md).
+
+---
+
 ## Cierre (09/11 – 14/11)
 
 | Tarea                                                                  | Responsable | Estimación |
 |------------------------------------------------------------------------|-------------|------------|
-| Smoke test completo en producción (todos los flujos por rol)           | Ambos       | 4 h |
+| Smoke test completo en producción (todos los flujos por rol, incluido "Operar como") | Ambos       | 4 h |
+| Resembrar la base de producción con `seed.sql` y reactivar Supabase antes de la demo | Ambos       | 1 h |
 | Revisión y compleción del informe final                                | Ambos       | 8 h |
 | Grabación del video de presentación (demo de los 6 módulos)           | Ambos       | 3 h |
 | Activación de Supabase y Render antes de la entrega                   | R. Calcatelli | 1 h |

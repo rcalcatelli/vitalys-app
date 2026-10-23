@@ -12,6 +12,7 @@
 | # | Módulo | Descripción breve |
 |---|--------|-------------------|
 | 1 | Autenticación y Roles | Registro, login y control de acceso por rol |
+| 1b | Operar como | El ADMIN opera en nombre de un socio con una credencial acotada y auditada |
 | 2 | Gestión de Personas | Alta, baja lógica, modificación y consulta de socios/pacientes |
 | 3 | Gestión de Profesionales | ABM de profesionales y su disponibilidad horaria |
 | 4 | Agenda de Turnos | Reserva, consulta y cancelación de turnos de consultorio y de gimnasio, con reglas de negocio propias de cada uno |
@@ -55,11 +56,48 @@ Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener cla
 | POST | `/api/auth/registro` | Registro de nuevo usuario. El rol se fuerza siempre a `SOCIO_PACIENTE`; no es un input del cliente. Si el body incluye `rol`, responde 400 antes de crear el usuario (RF-01) | Público |
 | POST | `/api/auth/login` | Login; body `{identificador, contrasena}`. `identificador` acepta email o DNI (RF-36) — DNI solo resuelve si la persona ya tiene ficha en `personas`; retorna token JWT | Público |
 | POST | `/api/auth/logout` | Invalida sesión | Autenticado |
-| GET  | `/api/auth/me` | Datos del usuario autenticado | Autenticado |
+| GET  | `/api/auth/me` | Datos del usuario autenticado: `id`, `email`, `rol`, `nombre` y `apellido` (de su ficha de persona o de profesional; nulos si no la tiene) y, solo durante "Operar como", `operadoPor {usuarioId, nombre, apellido}` y `operarComoExpiraEn`. Durante "Operar como" identifica al socio sujeto (RF-40) | Autenticado |
 
 **Entidades involucradas:** `usuarios`
 
 > **Nota:** `GET /api/health` no pertenece a este módulo de negocio — es un endpoint técnico de infraestructura (usado por el `HEALTHCHECK` de Docker, ver `docs/03-despliegue/entorno-local-docker.md`) que no depende de la base de datos ni requiere autenticación.
+
+---
+
+## Módulo 1b — Operar como
+
+**Descripción:** Recepción (ADMIN) atiende a un socio en el mostrador reservando o cancelando **en su nombre**, sin conocer su contraseña. Cubre RF-39, RN-26 y RN-27. La sesión es acotada (30 minutos, sin renovación), está auditada y es visible para el propio socio.
+
+**Endpoints principales:**
+
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| POST   | `/api/admin/operar-como` | Inicia la suplantación. Body `{personaId}`; responde `{token, expiraEn, persona {id, nombre, apellido}}`. Solo sobre un `SOCIO_PACIENTE` habilitado con ficha activa; un ADMIN, un PROFESIONAL, uno mismo, un socio dado de baja o inexistente se rechazan (403 / 404 / 422). Audita `INICIO` | ADMIN con sesión normal |
+| POST   | `/api/operar-como/fin` | Termina la suplantación: audita `FIN` y la credencial deja de autenticar en el servidor aunque no haya vencido. Responde 204 | Credencial de "Operar como" |
+
+**Qué es la credencial.** Un JWT firmado con la misma clave que las sesiones comunes, pero con `sub` = email del **socio**, `rol` = `SOCIO_PACIENTE`, `act` = `{sub, usuarioId}` del ADMIN (RFC 8693), `jti` = id de la sesión y `exp` = emisión + 30 minutos (`vitalys.jwt.operar-como-expiration-ms`). No hay refresh.
+
+**Qué hace el sistema con ella.** `JwtAuthenticationFilter` construye un `OperarComoAuthentication` cuyo principal es el **socio** y deja al ADMIN aparte (`getOperador()`), expuesto a los servicios con el bean `ActorActual`. Como el principal es un `SOCIO_PACIENTE`, todos los controles de rol que ya existían siguen funcionando sin tocarlos.
+
+**Consideraciones de seguridad:**
+
+| Amenaza | Defensa |
+|---------|---------|
+| Escalada de privilegios: usar la credencial para tareas de ADMIN | El principal no tiene `ROLE_ADMIN`: `/api/admin/**` da 403 en el filtro y los servicios (personas, pagos, excepciones, check-in, resumen Hoy) dan `AccesoDenegado` (RNF-03). `OperarComoIT.pi117_pi119_…` recorre **todos** los endpoints reales |
+| Escrituras no previstas (perfil, contraseña, futuros endpoints de socio) | `OperarComoInterceptor` rechaza (403 "No disponible mientras operás como socio") toda escritura fuera de una lista blanca: `POST /api/turnos/gym`, `POST /api/turnos`, `PATCH /api/turnos/{id}/cancelar` y `POST /api/operar-como/fin` |
+| Suplantación anidada o renovación | El endpoint de inicio es exclusivo de ADMIN, y el principal de una sesión suplantada es un socio; además `OperarComoService.iniciar` rechaza explícitamente al actor que ya viene de una sesión de "Operar como" (PI-116) |
+| Confusión de tokens: un `act` malformado leído como token común de un socio | `JwtService.verificar` rechaza un `act` inválido en lugar de degradarlo (PU-31) |
+| Credencial forjada, firmada con la clave correcta pero sin sesión real | El filtro exige en cada request que la sesión (`jti`) tenga fila `INICIO` y ninguna `FIN` en `auditoria_operar_como`: una credencial sin `INICIO` auditado no autentica |
+| Credencial robada o sesión ya terminada | `FIN` la revoca en el servidor, pese a que el JWT es *stateless*; y vence sola a los 30 minutos. El `exp` se acota además al TTL configurado (una credencial con vigencia mayor se rechaza) |
+| Actor o sujeto cambian de estado durante la sesión | En cada request se recarga de la base: el actor sigue habilitado y sigue siendo ADMIN, el sujeto sigue habilitado y sigue siendo `SOCIO_PACIENTE`. Si no, 401 (PI-120) |
+| Operar sin dejar rastro | La fila de auditoría se inserta en la misma transacción que el turno, con `Propagation.MANDATORY`: si falla, el turno no se confirma (PI-121). `reservado_por_usuario_id` / `cancelado_por_usuario` guardan al ADMIN real |
+| Exponer la identidad del ADMIN al socio | El turno solo trae los booleanos `reservadoPorRecepcion` / `canceladoPorRecepcion`; el nombre del operador lo ve únicamente el propio ADMIN, en el banner |
+
+**Del lado del cliente.** La credencial vive en `sessionStorage` (`vitalys_token_operar_como`), **por pestaña**, con precedencia sobre el token del ADMIN en `localStorage`: otras pestañas mantienen la sesión normal. Cualquier 401 mientras se suplanta descarta la credencial, restaura la sesión del ADMIN y avisa con un toast; "Volver a Recepción" llama a `/api/operar-como/fin`, descarta la credencial y vuelve a `/admin/personas`; cerrar sesión borra ambas. Un banner persistente (también tras recargar) indica "Recepción operando en nombre de X. Todo lo que hagas queda registrado".
+
+**Limitaciones conocidas:** no hay pantalla para consultar la auditoría (la tabla se consulta por SQL); una reserva hecha por un ADMIN sin suplantar también muestra "Reservado por Recepción" al socio, porque la marca se deduce de quién guardó la reserva y no de la sesión.
+
+**Entidades involucradas:** `auditoria_operar_como`, `usuarios`, `personas`, `turnos`
 
 ---
 
@@ -73,13 +111,17 @@ Dos prefijos que no pertenecen a ningún módulo de negocio y conviene tener cla
 
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| GET    | `/api/personas` | Listar personas (filtros: `estado`, `q` sobre nombre, apellido o DNI, `soloGym`) | ADMIN |
+| GET    | `/api/personas` | Listar personas cuyo usuario es `SOCIO_PACIENTE` (filtros: `estado`, `q` sobre nombre, apellido o DNI, `soloGym`, `conDeuda`). Cada persona trae `cuota {periodosImpagos, umbral, suspendido, excepcionHasta}` (nula si no es socia de gimnasio), `especialidades[]` (de sus turnos de consultorio no cancelados) y `tieneUsuarioSocio`. `conDeuda=true` deja a quienes tienen al menos un período impago (RF-43) | ADMIN |
 | POST   | `/api/personas` | Crear nueva persona (alta presencial: usuario + persona en una operación, RF-05) | ADMIN |
 | POST   | `/api/personas/vincular` | Vincular una persona nueva a un `usuario` existente, buscándolo por email; sin contraseña (RF-31) | ADMIN |
 | GET    | `/api/personas/{id}` | Obtener datos de una persona | ADMIN, propia persona |
 | PUT    | `/api/personas/{id}` | Actualizar datos | ADMIN |
 | PATCH  | `/api/personas/{id}/baja` | Baja lógica (estado → INACTIVO) | ADMIN |
 | PATCH  | `/api/personas/{id}/reactivar` | Reactivar persona inactiva | ADMIN |
+
+**Cuota y deuda en el listado (RF-43).** Los datos de deuda no se recalculan en `PersonaService`: salen de `MorosidadService.veredictos(personas)`, la variante en lote de `veredicto` (3 consultas para todo el listado: umbral, pagos y excepciones). El panel Hoy usa el mismo método. Hay una sola fuente de la regla RN-01.
+
+**El ADMIN no aparece en el listado.** El seed de desarrollo le da una ficha a `admin@vitalys.com` ("Laura Benítez") para que el shell muestre su nombre; el listado filtra por rol del usuario para que Recepción no pueda dar de baja ni suplantar su propia ficha.
 
 **Entidades involucradas:** `personas`, `usuarios`
 
@@ -167,18 +209,23 @@ Esta diferencia no es un accidente de implementación: es consecuencia directa d
 |--------|------|-------------|-------|
 | GET    | `/api/turnos/disponibles` | Slots libres de consultorio por profesional y fecha | Autenticado |
 | GET    | `/api/turnos/gym/cupo` | Cupo disponible de gimnasio por franja y fecha (total, ocupados, disponibles) | Autenticado |
+| GET    | `/api/turnos/consultorio/proxima-agenda` | Para cada profesional activo (opcional: `?especialidad=`), su próximo día con turnos libres dentro de los próximos 21 días y cuántos libres tiene: `[{profesionalId, nombre, apellido, especialidad, duracionTurnoMinutos, fecha, libres}]`; `fecha` nula si no tiene agenda. Descuenta los turnos que ocupan lugar (RN-03) y los slots pasados. PROFESIONAL recibe 403 (RF-41) | SOCIO_PACIENTE, ADMIN |
 | GET    | `/api/turnos/gym/estado` | Membresía y morosidad de una persona de cara al gimnasio, con el mismo veredicto que la reserva (ver detalle abajo) | SOCIO_PACIENTE (el propio), ADMIN |
-| GET    | `/api/turnos` | Listar turnos (filtros: persona, profesional, tipo, estado, fecha) | ADMIN |
+| GET    | `/api/turnos` | Listar turnos (filtros: persona, profesional, tipo, estado, fecha). Es el único listado que incluye `personaDni` (lo usan Ingreso y Pagos, RN-28) | ADMIN |
 | GET    | `/api/turnos/mis-turnos` | Turnos propios del usuario autenticado (consultorio y gym) | SOCIO_PACIENTE |
 | GET    | `/api/turnos/mi-agenda` | Agenda del profesional autenticado (solo turnos de CONSULTORIO). Devuelve `TurnoAgendaResponse`: incluye el `pacienteDni`, que ningún otro endpoint de turnos expone. Parámetros opcionales `desde` y `hasta` (por defecto, de hoy a siete días) | PROFESIONAL |
 | POST   | `/api/turnos` | Reservar turno de consultorio | SOCIO_PACIENTE, ADMIN |
-| POST   | `/api/turnos/gym` | Reservar turno de gimnasio | SOCIO_PACIENTE, ADMIN |
+| POST   | `/api/turnos/gym` | Reservar turno de gimnasio. Hasta 7 días antes y con 1 hora como mínimo (RN-18): fuera de esa ventana, 422 | SOCIO_PACIENTE, ADMIN |
 | PATCH  | `/api/turnos/{id}/cancelar` | Cancelar turno (24h en consultorio, 2h en gym) | SOCIO_PACIENTE, ADMIN |
 | PATCH  | `/api/turnos/{id}/completado` | Marcar turno como completado (consultorio: PROFESIONAL propio; gym: check-in por ADMIN) | PROFESIONAL (propio, consultorio), ADMIN |
 | PATCH  | `/api/turnos/{id}/ausente` | Marcar turno como ausente | PROFESIONAL (propio, consultorio), ADMIN |
 | GET    | `/api/turnos/{id}` | Detalle de un turno | ADMIN, partes involucradas |
 | GET    | `/api/feriados` | Días en que el gimnasio no abre, por año. Lo consume la pantalla de reserva para no ofrecer franjas en un día cerrado (RN-14) | Autenticado |
 | POST   | `/api/admin/feriados/sincronizar` | Forzar la sincronización con el dataset oficial del Ministerio del Interior. Devuelve `207` si algún año no se pudo leer (RF-38) | ADMIN |
+
+**Campos de `TurnoResponse` agregados por `ui-pixel-perfect`.** `personaNombre` y `personaApellido`; `completadoEn` (RN-28, nulo salvo en turnos completados desde V16); `personaDni` (solo en el listado del ADMIN, a través de `TurnoResponse.paraAdmin`; nulo y omitido del JSON en los demás); `reservadoPorRecepcion` (el turno lo reservó alguien distinto del usuario de la persona) y `canceladoPorRecepcion` (idem para las cancelaciones en tiempo o tarde), para mostrar "Reservado por Recepción" / "Cancelado por Recepción" (RN-27).
+
+**Ventana de Atendido / Ausente.** `PATCH .../completado` se acepta desde 15 minutos antes del inicio (`MINUTOS_CHECKIN_ANTICIPADO`) y `PATCH .../ausente` desde el inicio, para los dos tipos de turno. Al completar se guarda `completado_en` (RN-28).
 
 **`GET /api/turnos/gym/estado`.** Existe para que la pantalla de reserva de gimnasio sepa, *antes* de mostrar franjas, si la persona puede reservar, y para que lo diga con el mismo criterio que después aplica `POST /api/turnos/gym` (RN-01, RN-09): lo calcula el mismo servicio, no una copia de la regla en el frontend.
 
@@ -238,7 +285,7 @@ El cálculo de RN-01 y la evaluación de vigencia se resuelven en la capa de ser
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | POST   | `/api/pagos` | Registrar un pago. Body: `{personaId, concepto, monto, medio, periodo?, turnoId?}` (`periodo` solo para `CUOTA_MENSUAL`, día 1; `turnoId` solo para `SESION_CONSULTORIO`). Responde 201 con el pago | ADMIN |
-| GET    | `/api/pagos/persona/{id}/estado-cuenta` | Estado de cuenta: períodos `PAGADO` / `IMPAGO` / `PENDIENTE` (con el pago y su medio), sesiones abonadas, totales, `periodosImpagos`, `umbral`, `suspendido` y la excepción vigente (`{validaHasta, motivo}` o `null`) | ADMIN (cualquiera), SOCIO_PACIENTE (solo la propia) |
+| GET    | `/api/pagos/persona/{id}/estado-cuenta` | Estado de cuenta: períodos `PAGADO` / `IMPAGO` / `PENDIENTE` (con el pago y su medio), sesiones abonadas (cada una con `profesional` y `especialidad`, resueltos en lote, PI-135), totales, `periodosImpagos`, `umbral`, `suspendido` y la excepción vigente (`{validaHasta, motivo, autorizadaPor, otorgadaEl}` o `null`) | ADMIN (cualquiera), SOCIO_PACIENTE (solo la propia) |
 | GET    | `/api/pagos/mi-estado-cuenta` | Lo mismo, para la persona vinculada al usuario autenticado (422 si el usuario no tiene ficha) | SOCIO_PACIENTE |
 
 El estado de cuenta y la reserva de gimnasio comparten la misma regla de morosidad (`MorosidadService`, RN-01): lo que el socio ve como "suspendido" es exactamente lo que le rechaza la reserva.
@@ -280,7 +327,7 @@ Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET    | `/api/notificaciones/persona/{id}` | Historial de notificaciones de una persona | ADMIN |
-| GET    | `/api/admin/resumen-hoy` | Panel "Hoy en el centro": ocupación del gimnasio por franja, turnos de gimnasio y consultas del día, quién está en el gimnasio ahora y socios con períodos impagos (con su estado de suspensión y excepción). Reutiliza `TurnoService.cupoGym` y `MorosidadService.veredicto` | ADMIN |
+| GET    | `/api/admin/resumen-hoy` | Panel "Hoy en el centro": ocupación del gimnasio por franja, turnos de gimnasio y consultas del día, quién está en el gimnasio ahora y socios con períodos impagos (con su estado de suspensión y excepción). Reutiliza `TurnoService.cupoGym` y `MorosidadService.veredictos` (en lote, una sola pasada por todos los socios; antes era una consulta de deuda por socio). Cada socio trae `nombrePila` y `apellido` | ADMIN |
 | GET    | `/api/admin/notificaciones?fallidas=true` | Alerta de avisos que no llegaron: los `DEFINITIVA` (2 intentos fallidos) y los `HUERFANA` (en curso sin resolver). Es el único listado del endpoint | ADMIN |
 
 **Reglas de los avisos de turnos (RF-26 a RF-28, `AvisosTurnoService`):**

@@ -273,7 +273,7 @@ El historial por persona ya sale dentro del estado de cuenta, así que estos tre
 | Nuevo período mensual impago, por debajo del umbral | `AVISO_DEUDA` | Socio de gym |
 | Se alcanza el umbral de tolerancia y el socio queda suspendido | `AVISO_SUSPENSION` | Socio de gym |
 
-Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno (`turno_id` queda en `NULL`): notifican estado de cuenta, no un evento de agenda. Su disparador es el cálculo de RN-01, no una acción del usuario.
+Los dos últimos cubren RF-37 y son los únicos que **no** se asocian a un turno (`turno_id` queda en `NULL`): notifican estado de cuenta, no un evento de agenda. Su disparador es el cálculo de RN-01, no una acción del usuario: un job diario (`JobAvisosDeuda`) toma el período impago más reciente de cada socio activo del gimnasio y, si todavía no se avisó, manda `AVISO_DEUDA` (con cuántos períodos faltan para la suspensión) o `AVISO_SUSPENSION` si ya se alcanzó el umbral. El período avisado queda en `notificaciones.periodo` y `uq_aviso_deuda_periodo` impide un segundo aviso para el mismo período (V15). Un socio con varios meses atrasados recibe un solo aviso, el del último.
 
 **Endpoints principales:**
 

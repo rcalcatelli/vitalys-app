@@ -15,7 +15,7 @@
 | Sprint 2 | 14/09 – 27/09/2026 | Autenticación y roles (JWT)                  | P. Basualdo Arcati      | ✅ Completado |
 | Sprint 3 | 28/09 – 11/10/2026 | Módulo Personas + Módulo Profesionales       | Ambos                   | ✅ Completado (T3-11 cerrada en el Sprint 5) |
 | Sprint 4 | 12/10 – 25/10/2026 | Módulo Turnos                                | Ambos                   | ✅ Completado |
-| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | ✅ Completado (Pagos y Notificaciones de turnos; los avisos de deuda de RF-37 quedan diferidos) |
+| Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | ✅ Completado (Pagos, avisos de turnos y avisos de deuda) |
 | Cierre   | 09/11 – 14/11/2026 | Estabilización · Informe · Video · Defensa   | Ambos                   | ⏳ Pendiente |
 
 > **Estado verificado el 22/10/2026** contra `main` (PR #24) y el CI en verde. Las fechas de los
@@ -184,7 +184,8 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T5-8 | ✅ | `JobRecordatorios`, cada hora: un recordatorio por turno, marcado por la fila de `notificaciones` para no duplicar |
 | T5-9 | ✅ | Entidad `Notificacion`, reintento y alertas en "Hoy en el centro" (PR #20) |
 | Panel ADMIN | ✅ | Fuera del plan original, pedido en la devolución del 22/10: "Hoy en el centro" pasa a ser la pantalla de inicio del ADMIN, con `GET /api/admin/resumen-hoy` (indicadores, ocupación del gimnasio, socios con impagos; PI-108) |
-| T5-10 | 🟡 Parcial | `PagoControllerIT` (PI-76 a PI-80 y PI-91 a PI-104) cubre unicidad de cuota, pago por turno, medio de pago y estado de cuenta; `AvisosTurnoIT` (PI-105 a PI-107) y `AvisosTurnoServiceTest` cubren el disparo de los avisos de turnos. Quedan diferidos los emails de morosidad (RF-37) |
+| T5-10 | ✅ | `PagoControllerIT` (PI-76 a PI-80 y PI-91 a PI-104) cubre unicidad de cuota, pago por turno, medio de pago y estado de cuenta; `AvisosTurnoIT` (PI-105 a PI-107) y `AvisosDeudaIT` (PI-109 a PI-111), con sus unitarios, cubren el disparo de los avisos |
+| RF-37 | ✅ | Avisos de deuda y de suspensión: `AvisosDeudaService` y `JobAvisosDeuda` (diario), un aviso por período impago marcado en `notificaciones.periodo` (V15) |
 
 ---
 

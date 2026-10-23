@@ -25,4 +25,7 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
             """)
     List<Notificacion> buscarFallidas(
             @Param("maxIntentos") int maxIntentos, @Param("limite") OffsetDateTime limite);
+
+    /** Si ya hay un aviso de deuda o de suspensión para ese período (RF-37, V15). */
+    boolean existsByPersonaIdAndPeriodo(Long personaId, java.time.LocalDate periodo);
 }

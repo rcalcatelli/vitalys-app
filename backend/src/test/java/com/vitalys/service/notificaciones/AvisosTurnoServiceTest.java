@@ -96,7 +96,7 @@ class AvisosTurnoServiceTest {
         assertThat(n.getEmailDestino()).isEqualTo("maria@mail.com");
         NotificacionPorEnviar e = eventoPublicado();
         assertThat(e.asunto()).isEqualTo("Turno confirmado: consulta con Valentina Méndez, 28/10/2026 a las 09:00");
-        assertThat(e.contenidoHtml()).contains("Hola María").contains("24 horas");
+        assertThat(e.contenidoHtml()).contains("Hola Mar&iacute;a").contains("24 horas");
     }
 
     @Test

@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useAhora } from "../hooks/useAhora";
 import { useFallidas } from "../hooks/useFallidas";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useServiciosSocio } from "../hooks/useServiciosSocio";
 import { useTheme } from "../hooks/useTheme";
 import type { Usuario } from "../types/auth";
 import { etiquetaAhora } from "../utils/formato";
@@ -17,8 +18,11 @@ function nombreCompleto(usuario: Usuario): string {
   return [usuario.nombre, usuario.apellido].filter(Boolean).join(" ");
 }
 
-/** Nombre completo si el backend lo informa; si no, el email (sin ficha o antes de RF-40). */
-function usuarioVista(usuario: Usuario): UsuarioVista {
+/**
+ * Nombre completo si el backend lo informa; si no, el email (sin ficha o antes de RF-40). En el
+ * socio la segunda línea son sus servicios ("Gimnasio + Nutrición") cuando se pueden resolver.
+ */
+function usuarioVista(usuario: Usuario, servicios: string | null): UsuarioVista {
   const completo = nombreCompleto(usuario);
   const nombre = completo || usuario.email;
   const iniciales = completo
@@ -30,7 +34,7 @@ function usuarioVista(usuario: Usuario): UsuarioVista {
     : usuario.email.slice(0, 2);
   return {
     nombre,
-    detalle: ETIQUETAS_ROL[usuario.rol].corta,
+    detalle: servicios ?? ETIQUETAS_ROL[usuario.rol].corta,
     iniciales: iniciales.toUpperCase(),
   };
 }
@@ -56,6 +60,7 @@ export function ShellLayout() {
   const { pathname } = useLocation();
   const esAdmin = usuario?.rol === "ADMIN";
   const fallidas = useFallidas(!esAdmin);
+  const servicios = useServiciosSocio(usuario?.rol !== "SOCIO_PACIENTE");
 
   const contexto = useMemo(
     () => ({
@@ -91,7 +96,7 @@ export function ShellLayout() {
     <AppShell
       rolLabel={ETIQUETAS_ROL[usuario.rol].encabezado}
       items={items}
-      usuario={usuarioVista(usuario)}
+      usuario={usuarioVista(usuario, servicios)}
       theme={theme}
       onToggleTheme={toggleTheme}
       onLogout={logout}

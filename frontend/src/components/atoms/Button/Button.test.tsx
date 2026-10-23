@@ -99,6 +99,8 @@ describe("Button", () => {
     ["ok", "bg-ok"],
     ["tonal-ok", "bg-ok-soft"],
     ["tonal-bad", "bg-bad-soft"],
+    ["outline-bad", "text-bad-ink"],
+    ["ghost-bad", "text-bad-ink"],
   ] as const)("variant %s aplica su tono", (variant, clase) => {
     render(
       <Button type="button" variant={variant}>
@@ -116,8 +118,10 @@ describe("Button", () => {
         <Button size="md">C</Button>
         <Button size="modal">D</Button>
         <Button size="lg">E</Button>
+        <Button size="tabla">F</Button>
       </>,
     );
+    expect(screen.getByText("F")).toHaveClass("h-10");
     expect(screen.getByText("A")).toHaveClass("h-[38px]");
     expect(screen.getByText("B")).toHaveClass("h-[42px]");
     expect(screen.getByText("C")).toHaveClass("h-11");

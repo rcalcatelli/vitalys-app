@@ -141,6 +141,43 @@ describe("ShellLayout", () => {
     expect(notificacionesApi.listarFallidas).not.toHaveBeenCalled();
   });
 
+  it("el socio ve sus servicios en la tarjeta de usuario", async () => {
+    setToken("jwt");
+    const respuestas: Record<string, unknown> = {
+      "/api/auth/me": {
+        id: 5,
+        email: "maria@mail.com",
+        rol: "SOCIO_PACIENTE",
+        nombre: "María",
+        apellido: "Pérez",
+      },
+      "/api/turnos/gym/estado": {
+        esSocioGym: true,
+        suspendido: false,
+        periodosImpagos: 0,
+        umbral: 6,
+        excepcionVigente: false,
+      },
+      "/api/turnos/mis-turnos": [
+        { tipoTurno: "CONSULTORIO", profesionalId: 1, estado: "RESERVADO" },
+      ],
+      "/api/profesionales": [{ id: 1, especialidad: "NUTRICION" }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(respuestas[new URL(url, "http://x").pathname]),
+        } as Response),
+      ),
+    );
+    montar("/socio/inicio");
+
+    expect(await screen.findByText("Gimnasio + Nutrición")).toBeInTheDocument();
+  });
+
   it("desktop muestra el chip de fecha y hora en la cabecera", async () => {
     sesion({ id: 1, email: "admin@vitalys.com", rol: "ADMIN" });
     montar();
@@ -202,7 +239,11 @@ describe("ShellLayout", () => {
       const cola = [...cuerpos];
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockImplementation(() => {
+        vi.fn().mockImplementation((url: string) => {
+          // Los servicios del socio (tarjeta del shell) se piden aparte y no consumen la cola.
+          if (/\/api\/(turnos|profesionales)/.test(String(url))) {
+            return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+          }
           const cuerpo = cola.shift();
           return Promise.resolve({
             ok: true,

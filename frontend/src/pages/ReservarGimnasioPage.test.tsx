@@ -159,8 +159,15 @@ describe("ReservarGimnasioPage", () => {
   it("el domingo dice Cerrado y no hay franjas", async () => {
     montar();
     await userEvent.click(await screen.findByRole("button", { name: "Dom 1, Cerrado" }));
-    expect(screen.getByText("Cerrado. El gimnasio no abre los domingos.")).toBeInTheDocument();
+    expect(screen.getByText("Los domingos el gimnasio está cerrado.")).toBeInTheDocument();
     expect(screen.queryByText(/lugares libres/)).not.toBeInTheDocument();
+  });
+
+  it("muestra las cuatro reglas, el cupo y el horario del día salidos de la grilla", async () => {
+    montar();
+    expect(await screen.findByText("Franjas de 60 min · cupo 20")).toBeInTheDocument();
+    expect(screen.getByText("Hasta 7 días antes y 1 h antes")).toBeInTheDocument();
+    expect(screen.getByText("11:00 – 13:00")).toBeInTheDocument();
   });
 
   it("un día sin franjas lo informa", async () => {

@@ -12,6 +12,8 @@ export interface EstadoChipProps {
 export function EstadoChip({ estado, vistaProfesional = false }: EstadoChipProps) {
   const tono = tonoEstado(estado);
   return (
-    <Chip tone={tono === "neu" ? "neutral" : tono}>{etiquetaEstado(estado, vistaProfesional)}</Chip>
+    <Chip tone={tono === "neu" ? "neutral" : tono} dot>
+      {etiquetaEstado(estado, vistaProfesional)}
+    </Chip>
   );
 }

@@ -10,9 +10,11 @@ export type ButtonVariant =
   | "tonal-bad"
   | "outline"
   | "neutral"
+  | "outline-bad"
+  | "ghost-bad"
   | "ghost";
 
-export type ButtonSize = "sm" | "cta" | "md" | "modal" | "lg";
+export type ButtonSize = "sm" | "tabla" | "cta" | "md" | "modal" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**
@@ -22,7 +24,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    */
   variant?: ButtonVariant;
   /**
-   * Altura del mockup: `sm` 38px (acciones de tabla), `cta` 42px (acciones de las tarjetas de
+   * Altura del mockup: `sm` 38px (acciones de tabla), `tabla` 40px (Cancelar / Atendido en filas), `cta` 42px (acciones de las tarjetas de
    * Pagos), `md` 44px, `modal` 46px (botones de los diálogos), `lg` 48px (auth, 15px). Por defecto `outline` es `sm` y el resto `md`.
    */
   size?: ButtonSize;
@@ -43,7 +45,7 @@ const baseClasses =
 // Calco de los botones del mockup: sólidos `font-semibold` (14px; el 15px es del tamaño `lg`) con `hover:brightness-110`
 // (`style-hover="filter:brightness(1.08)"`), tonales con borde del color del estado.
 const SOLIDO = "px-[18px] font-semibold hover:brightness-110";
-const TONAL = "border px-3 text-[13px] font-semibold";
+const TONAL = "border-[1.5px] px-3.5 text-[13px] font-semibold";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: `${SOLIDO} bg-clin text-on-clin`,
@@ -62,11 +64,17 @@ const variantClasses: Record<ButtonVariant, string> = {
   // Acción secundaria de las tarjetas ("Operar como", "Ir a Pagos", "Cambiar persona"): borde
   // `border-2` y texto pleno. El tamaño del texto lo define quien lo usa (13px en tablas).
   neutral: "border border-border-2 bg-transparent px-4 font-medium text-ink hover:bg-surface-2",
+  // "Cancelar" de las tablas del socio: borde `border-2` y texto rojo, sin fondo.
+  "outline-bad":
+    "border border-border-2 bg-transparent px-3.5 text-[13px] font-medium text-bad-ink hover:border-bad",
+  // "Cancelar turno" de Inicio: texto rojo sin borde ni fondo.
+  "ghost-bad": "bg-transparent px-4 font-medium text-bad-ink hover:bg-bad-soft",
   ghost: "min-h-11 min-w-11 bg-transparent px-2 py-1 text-lg text-ink-2 hover:text-ink",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "h-[38px]",
+  tabla: "h-10",
   cta: "h-[42px]",
   md: "h-11",
   modal: "h-[46px]",

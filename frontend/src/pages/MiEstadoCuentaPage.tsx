@@ -5,6 +5,7 @@ import { Button } from "../components/atoms/Button";
 import { Aviso } from "../components/molecules/Aviso";
 import { EstadoCuentaView } from "../components/organisms/EstadoCuentaView";
 import { PageHeader } from "../components/molecules/PageHeader";
+import { useAuth } from "../context/AuthContext";
 import type { EstadoCuenta } from "../types/pago";
 
 interface ErrorUi {
@@ -29,6 +30,8 @@ function errorUi(err: unknown): ErrorUi {
 
 /** W-04 — Estado de cuenta del socio: cuota mensual, períodos y sesiones pagadas. Contenedor. */
 export function MiEstadoCuentaPage() {
+  const { usuario } = useAuth();
+  const nombre = [usuario?.nombre, usuario?.apellido].filter(Boolean).join(" ");
   const [estado, setEstado] = useState<EstadoCuenta | null>(null);
   const [error, setError] = useState<ErrorUi | null>(null);
   const [recarga, setRecarga] = useState(0);
@@ -51,11 +54,7 @@ export function MiEstadoCuentaPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Socio"
-        titulo="Mi estado de cuenta"
-        subtitulo="Tu cuota del gimnasio y tus sesiones de consultorio."
-      />
+      <PageHeader eyebrow={nombre || "Socio"} titulo="Mi estado de cuenta" />
       <div className="flex flex-col gap-4">
         {error && (
           <>

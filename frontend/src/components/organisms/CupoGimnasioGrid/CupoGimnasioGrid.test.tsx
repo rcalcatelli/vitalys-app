@@ -23,7 +23,7 @@ describe("CupoGimnasioGrid", () => {
     const onElegir = vi.fn();
     render(
       <CupoGimnasioGrid
-        franjas={[franja(10, 19), franja(11, 5)]}
+        franjas={[franja(12, 19), franja(13, 5)]}
         ahora={AHORA}
         tuTurno={null}
         seleccionada={null}
@@ -31,8 +31,8 @@ describe("CupoGimnasioGrid", () => {
       />,
     );
     expect(screen.getByText("1 lugar libre")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /11:00 – 12:00/ }));
-    expect(onElegir).toHaveBeenCalledWith("2026-10-26T11:00:00-03:00");
+    await userEvent.click(screen.getByRole("button", { name: /13:00 – 14:00/ }));
+    expect(onElegir).toHaveBeenCalledWith("2026-10-26T13:00:00-03:00");
   });
 
   it("bloquea las franjas pasadas y las del día con turno propio", () => {
@@ -56,7 +56,7 @@ describe("CupoGimnasioGrid", () => {
   it("sin turno propio, la franja sin cupo dice Cupo completo y no es clickeable", () => {
     render(
       <CupoGimnasioGrid
-        franjas={[franja(10, 20)]}
+        franjas={[franja(12, 20)]}
         ahora={AHORA}
         tuTurno={null}
         seleccionada={null}
@@ -64,22 +64,39 @@ describe("CupoGimnasioGrid", () => {
       />,
     );
     expect(screen.getByText("Cupo completo")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /10:00 – 11:00/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /12:00 – 13:00/ })).toBeDisabled();
   });
 
   it("marca la franja seleccionada", () => {
     render(
       <CupoGimnasioGrid
-        franjas={[franja(10, 2)]}
+        franjas={[franja(12, 2)]}
         ahora={AHORA}
         tuTurno={null}
-        seleccionada="2026-10-26T10:00:00-03:00"
+        seleccionada="2026-10-26T12:00:00-03:00"
         onElegir={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: /10:00 – 11:00/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /12:00 – 13:00/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+  });
+
+  it("muestra ocupados/cupo y cierra la franja a menos de 1 h de su inicio", () => {
+    render(
+      <CupoGimnasioGrid
+        franjas={[franja(10, 7), franja(11, 4)]}
+        ahora={AHORA}
+        tuTurno={null}
+        seleccionada={null}
+        onElegir={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("7/20")).toBeInTheDocument();
+    // 09:30: la de 10:00 cierra a las 09:00; la de 11:00 sigue abierta.
+    expect(screen.getByText("Cierra 1 h antes")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /10:00 – 11:00/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /11:00 – 12:00/ })).toBeEnabled();
   });
 });

@@ -2,6 +2,7 @@ import { http } from "./http";
 import type {
   EstadoGym,
   FranjaGym,
+  ProximaAgenda,
   SlotConsultorio,
   TipoTurno,
   Turno,
@@ -28,6 +29,11 @@ export function slotsDisponibles(profesionalId: number, fecha: string): Promise<
   return http.get<SlotConsultorio[]>(
     `/api/turnos/disponibles?profesionalId=${profesionalId}&fecha=${fecha}`,
   );
+}
+
+/** GET /api/turnos/consultorio/proxima-agenda: próximo día con turnos libres de cada profesional activo. */
+export function proximaAgenda(): Promise<ProximaAgenda[]> {
+  return http.get<ProximaAgenda[]>("/api/turnos/consultorio/proxima-agenda");
 }
 
 /** POST /api/turnos: reserva un slot de consultorio. */

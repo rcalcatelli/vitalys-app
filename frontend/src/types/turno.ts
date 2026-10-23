@@ -1,3 +1,5 @@
+import type { Especialidad } from "./profesional";
+
 // Contrato real del Módulo 4 (turnos). Espeja los DTOs del backend; los instantes llegan como
 // ISO-8601 con offset de Buenos Aires (`2026-10-26T10:00:00-03:00`).
 export type TipoTurno = "CONSULTORIO" | "GYM";
@@ -60,6 +62,21 @@ export interface SlotConsultorio {
   inicio: string;
   fin: string;
   libre: boolean;
+}
+
+/**
+ * ProximaAgendaResponse (RF-41): el primer día con turnos libres de un profesional en los próximos
+ * 21 días. Sin agenda, `fecha` es `null` y `libres` 0.
+ */
+export interface ProximaAgenda {
+  profesionalId: number;
+  nombre: string;
+  apellido: string;
+  especialidad: Especialidad;
+  duracionTurnoMinutos: number;
+  /** `YYYY-MM-DD`; `null` si no tiene agenda en el horizonte. */
+  fecha: string | null;
+  libres: number;
 }
 
 /** EstadoGymResponse: mismo veredicto de morosidad que usa la reserva (RN-01, RN-09). */

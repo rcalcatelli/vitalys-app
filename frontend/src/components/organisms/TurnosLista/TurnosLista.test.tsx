@@ -32,9 +32,10 @@ describe("TurnosLista", () => {
     ).toBeInTheDocument();
     const proximos = seccion("Próximos");
     expect(proximos.getAllByRole("listitem")).toHaveLength(2);
-    expect(proximos.getByText("Consulta de Nutrición")).toBeInTheDocument();
+    expect(proximos.getByText("Nutrición")).toBeInTheDocument();
     expect(proximos.getByText("Lic. Valentina Méndez")).toBeInTheDocument();
     expect(proximos.getByText("Gimnasio")).toBeInTheDocument();
+    expect(proximos.getByText("Sala de entrenamiento · 60 min")).toBeInTheDocument();
     expect(seccion("Historial").getByText("Completado")).toBeInTheDocument();
     expect(seccion("Historial").queryByRole("button")).not.toBeInTheDocument();
 
@@ -55,8 +56,8 @@ describe("TurnosLista", () => {
       />,
     );
     const items = seccion("Próximos").getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("Mié 28/10");
-    expect(items[1]).toHaveTextContent("Vie 30/10");
+    expect(items[0]).toHaveTextContent("Mié 28 oct");
+    expect(items[1]).toHaveTextContent("Vie 30 oct");
   });
 
   it("un turno reservado que ya empezó va al historial", () => {
@@ -71,7 +72,7 @@ describe("TurnosLista", () => {
       />,
     );
     expect(seccion("Historial").getByText("Reservado")).toBeInTheDocument();
-    expect(screen.getByText("No tenés turnos próximos.")).toBeInTheDocument();
+    expect(seccion("Próximos").getByText("No hay turnos.")).toBeInTheDocument();
   });
 
   it("cancelado por el centro muestra el motivo; sin motivo no", () => {
@@ -105,6 +106,28 @@ describe("TurnosLista", () => {
       />,
     );
     expect(screen.getByText("Profesional no disponible")).toBeInTheDocument();
-    expect(screen.getByText("Todavía no tenés turnos en el historial.")).toBeInTheDocument();
+    expect(seccion("Historial").getByText("No hay turnos.")).toBeInTheDocument();
+  });
+
+  it("marca los turnos que operó Recepción", () => {
+    render(
+      <TurnosLista
+        turnos={[
+          unTurno({ id: 1, reservadoPorRecepcion: true }),
+          unTurno({
+            id: 2,
+            inicio: "2026-10-20T10:00:00-03:00",
+            estado: "CANCELADO_EN_TIEMPO",
+            reservadoPorRecepcion: true,
+            canceladoPorRecepcion: true,
+          }),
+        ]}
+        profesionales={[unProfesional()]}
+        ahora={AHORA}
+        onCancelar={vi.fn()}
+      />,
+    );
+    expect(seccion("Próximos").getByText("Reservado por Recepción")).toBeInTheDocument();
+    expect(seccion("Historial").getByText("Cancelado por Recepción")).toBeInTheDocument();
   });
 });

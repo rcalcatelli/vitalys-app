@@ -21,6 +21,7 @@ describe("turnosApi", () => {
       "/api/turnos/disponibles?profesionalId=3&fecha=2026-10-28",
     ],
     ["misTurnos", () => api.misTurnos(), "GET", "/api/turnos/mis-turnos"],
+    ["proximaAgenda", () => api.proximaAgenda(), "GET", "/api/turnos/consultorio/proxima-agenda"],
     ["miAgenda sin rango", () => api.miAgenda(), "GET", "/api/turnos/mi-agenda"],
     [
       "miAgenda con rango",

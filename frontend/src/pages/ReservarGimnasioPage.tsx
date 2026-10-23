@@ -114,6 +114,12 @@ export function ReservarGimnasioPage() {
   });
 
   const franjas = cupo?.fecha === fecha ? cupo.franjas : null;
+  // Cupo y horario del día salen de la grilla del backend, no de constantes de la pantalla.
+  const cupoPorFranja = franjas?.[0]?.cupo ?? null;
+  const horario =
+    franjas && franjas.length > 0
+      ? `${horaBA(franjas[0].inicio)} – ${horaBA(franjas[franjas.length - 1].fin)}`
+      : null;
   const franjaElegida = franjas?.find((f) => f.inicio === seleccion) ?? null;
 
   function elegirDia(f: string) {
@@ -165,7 +171,7 @@ export function ReservarGimnasioPage() {
         )}
         {estado?.esSocioGym && estado.excepcionVigente && (
           <Aviso tono="warn" titulo="Excepción autorizada por Recepción.">
-            Podés reservar aunque tu cuota esté vencida.
+            Podés reservar aunque tengas períodos impagos.
           </Aviso>
         )}
 
@@ -174,7 +180,12 @@ export function ReservarGimnasioPage() {
         {estado && !bloqueado && (
           <>
             <ul className="flex flex-wrap gap-1.5 text-xs text-ink-2">
-              {["Lun a vie 07–22 · Sáb 09–13", "Franjas de 60 min", "1 turno por día"].map((r) => (
+              {[
+                "Lun a vie 07–22 · Sáb 09–13",
+                `Franjas de 60 min${cupoPorFranja ? ` · cupo ${cupoPorFranja}` : ""}`,
+                "1 turno por día",
+                "Hasta 7 días antes y 1 h antes",
+              ].map((r) => (
                 <li key={r} className="rounded-full border border-border bg-surface px-2.5 py-1">
                   {r}
                 </li>
@@ -183,16 +194,25 @@ export function ReservarGimnasioPage() {
 
             <SelectorDias dias={dias} activa={fecha} onElegir={elegirDia} tono="gym" />
 
-            <h2 className="font-heading text-lg font-semibold text-ink">
-              {fechaLargaDe(fecha)}
-              {fecha === hoy ? " · hoy" : ""}
-            </h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-1.5">
+              <h2 className="font-heading text-lg font-semibold text-ink">
+                {fechaLargaDe(fecha)}
+                {fecha === hoy ? " · hoy" : ""}
+              </h2>
+              {(cerrada || horario) && (
+                <span className="font-mono text-caption text-ink-3">
+                  {cerrada ? "Cerrado" : horario}
+                </span>
+              )}
+            </div>
 
             {feriadoCierra && feriado && (
-              <Aviso tono="warn">{`Feriado: ${feriado.descripcion}. El gimnasio está cerrado.`}</Aviso>
+              <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">{`Feriado: ${feriado.descripcion}. El gimnasio está cerrado.`}</div>
             )}
             {!feriadoCierra && domingo && (
-              <p className="text-sm text-ink-2">Cerrado. El gimnasio no abre los domingos.</p>
+              <div className="rounded-xl border border-dashed border-border-2 px-5 py-9 text-center text-ink-2">
+                Los domingos el gimnasio está cerrado.
+              </div>
             )}
             {errorCupo && !cerrada && <Aviso tono="bad">{errorCupo}</Aviso>}
             {puedeVerCupo && franjas === null && !errorCupo && (
@@ -212,7 +232,7 @@ export function ReservarGimnasioPage() {
             )}
 
             {franjaElegida && (
-              <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-gym bg-surface p-4 shadow-lg">
+              <div className="sticky bottom-[76px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border-[1.5px] border-gym bg-surface px-4 py-3.5 shadow-[0_8px_28px_rgba(0,0,0,0.14)] shell:bottom-5">
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-xs font-semibold tracking-wider text-gym-ink uppercase">
                     Gimnasio
@@ -220,18 +240,28 @@ export function ReservarGimnasioPage() {
                   <span className="font-semibold text-ink">
                     {`${fechaLargaDe(fecha)} · ${horaBA(franjaElegida.inicio)} – ${horaBA(franjaElegida.fin)}`}
                   </span>
-                  <span className="text-xs text-ink-3">Cancelás en término hasta 2 h antes.</span>
+                  <span className="text-[12.5px] text-ink-3">
+                    Cancelás en término hasta 2 h antes.
+                  </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-[1_0_auto] justify-end gap-2">
                   <Button
-                    size="md"
+                    size="modal"
                     type="button"
-                    variant="outline"
+                    variant="neutral"
+                    className="px-3.5! font-normal!"
                     onClick={() => setSeleccion(null)}
                   >
                     Cambiar
                   </Button>
-                  <Button variant="gym" type="button" disabled={enviando} onClick={confirmar}>
+                  <Button
+                    variant="gym"
+                    size="modal"
+                    className="px-5!"
+                    type="button"
+                    disabled={enviando}
+                    onClick={confirmar}
+                  >
                     Confirmar reserva
                   </Button>
                 </div>

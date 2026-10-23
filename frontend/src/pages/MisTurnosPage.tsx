@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { listarProfesionales } from "../api/profesionalesApi";
-import { cancelarTurno, misTurnos } from "../api/turnosApi";
+import { misTurnos } from "../api/turnosApi";
 import { Aviso, type TonoAviso } from "../components/molecules/Aviso";
-import { Modal } from "../components/molecules/Modal";
-import { CancelarTurnoDialog } from "../components/organisms/CancelarTurnoDialog";
+import { CancelarTurnoModal } from "../components/organisms/CancelarTurnoModal";
 import { TurnosLista } from "../components/organisms/TurnosLista";
 import { PageHeader } from "../components/molecules/PageHeader";
+import { useAuth } from "../context/AuthContext";
 import { useAhora } from "../hooks/useAhora";
 import type { Profesional } from "../types/profesional";
 import type { Turno } from "../types/turno";
 import { mensajeDeError } from "../utils/errores";
-import { fechaLarga } from "../utils/formato";
 
 interface MensajeUi {
   tono: TonoAviso;
@@ -24,12 +23,13 @@ interface MensajeUi {
  */
 export function MisTurnosPage() {
   const ahora = useAhora();
+  const { usuario } = useAuth();
+  const nombre = [usuario?.nombre, usuario?.apellido].filter(Boolean).join(" ");
 
   const [turnos, setTurnos] = useState<Turno[] | null>(null);
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [aCancelar, setACancelar] = useState<Turno | null>(null);
-  const [cancelando, setCancelando] = useState(false);
   const [mensaje, setMensaje] = useState<MensajeUi | null>(null);
   const [recarga, setRecarga] = useState(0);
 
@@ -61,24 +61,9 @@ export function MisTurnosPage() {
     };
   }, [recarga]);
 
-  async function confirmarCancelacion(motivo: string) {
-    if (!aCancelar) return;
-    setCancelando(true);
-    try {
-      await cancelarTurno(aCancelar.id, motivo);
-      setMensaje({ tono: "ok", texto: "Turno cancelado." });
-    } catch (err) {
-      setMensaje({ tono: "bad", texto: mensajeDeError(err) });
-    } finally {
-      setACancelar(null);
-      setCancelando(false);
-      setRecarga((r) => r + 1);
-    }
-  }
-
   return (
     <>
-      <PageHeader eyebrow="Socio" titulo="Mis turnos" subtitulo={fechaLarga(ahora.toISOString())} />
+      <PageHeader eyebrow={nombre || "Socio"} titulo="Mis turnos" />
       <div className="flex flex-col gap-4">
         {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
         {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
@@ -93,16 +78,16 @@ export function MisTurnosPage() {
         )}
 
         {aCancelar && (
-          <Modal titulo="Cancelar turno" onClose={() => setACancelar(null)}>
-            <CancelarTurnoDialog
-              turno={aCancelar}
-              profesionales={profesionales}
-              ahora={ahora}
-              cargando={cancelando}
-              onConfirmar={confirmarCancelacion}
-              onVolver={() => setACancelar(null)}
-            />
-          </Modal>
+          <CancelarTurnoModal
+            turno={aCancelar}
+            profesionales={profesionales}
+            ahora={ahora}
+            onCerrar={() => setACancelar(null)}
+            onResultado={(r) => {
+              setMensaje({ tono: r.ok ? "ok" : "bad", texto: r.texto });
+              setRecarga((n) => n + 1);
+            }}
+          />
         )}
       </div>
     </>

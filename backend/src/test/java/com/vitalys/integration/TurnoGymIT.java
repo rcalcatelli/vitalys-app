@@ -75,21 +75,11 @@ class TurnoGymIT extends IntegrationTestBase {
     }
 
     /**
-     * El {@code n}-ésimo día hábil no feriado a partir de mañana. RN-18 deja reservar gimnasio hasta
-     * 7 días antes, así que los tests no pueden irse semanas al futuro.
+     * El {@code n}-ésimo día hábil no feriado a partir de mañana, siempre dentro de la ventana de RN-18
+     * (hasta 7 días de anticipación); ver {@link DiasDeReserva}.
      */
     private LocalDate diaHabil(int n) {
-        LocalDate d = LocalDate.now(ZONA);
-        int hallados = 0;
-        while (hallados < n) {
-            d = d.plusDays(1);
-            if (d.getDayOfWeek() != DayOfWeek.SATURDAY
-                    && d.getDayOfWeek() != DayOfWeek.SUNDAY
-                    && jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feriados WHERE fecha = ?", Integer.class, d) == 0) {
-                hallados++;
-            }
-        }
-        return d;
+        return DiasDeReserva.diaHabil(jdbcTemplate, n);
     }
 
     /**

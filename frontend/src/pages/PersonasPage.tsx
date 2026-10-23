@@ -159,13 +159,13 @@ export function PersonasPage() {
           onChange={setTexto}
           className="min-w-0 flex-[1_1_240px]"
         />
-        <Button type="button" className="sm:w-auto" onClick={() => abrir({ modo: "alta" })}>
+        <Button type="button" onClick={() => abrir({ modo: "alta" })}>
           + Nueva persona
         </Button>
         <Button
+          size="md"
           type="button"
           variant="outline"
-          className="h-12"
           onClick={() => abrir({ modo: "vinculo" })}
         >
           Vincular usuario existente
@@ -231,9 +231,9 @@ export function PersonasPage() {
             />
             {sinUsuario && (
               <Button
+                size="md"
                 type="button"
                 variant="outline"
-                className="h-11"
                 onClick={() => abrir({ modo: "alta" })}
               >
                 Crear con credenciales nuevas →

@@ -196,7 +196,7 @@ export function ProfesionalesPage() {
           onChange={setTexto}
           className="min-w-0 flex-[1_1_240px]"
         />
-        <Button type="button" className="sm:w-auto" onClick={() => abrir({ modo: "alta" })}>
+        <Button type="button" onClick={() => abrir({ modo: "alta" })}>
           + Nuevo profesional
         </Button>
       </div>

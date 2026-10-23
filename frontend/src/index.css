@@ -8,9 +8,8 @@
  *
  * Mecanismo de tema: `:root`/`[data-theme="light"]` son los valores por
  * default (no hace falta el atributo para que se vea bien), y
- * `[data-theme="dark"]` los pisa. La app todavía no tiene un switch de tema
- * (fuera de alcance de este batch), pero el mecanismo ya está listo para
- * cuando lo haya — es cuestión de setear `data-theme` en `<html>`.
+ * `[data-theme="dark"]` los pisa. El `ThemeProvider` setea `data-theme` en
+ * `<html>` y lo persiste en localStorage (`vitalys_theme`).
  */
 :root,
 [data-theme="light"] {
@@ -134,6 +133,39 @@
   --radius-lg: 12px;
   --radius-xl: 14px;
   --radius-full: 999px;
+
+  /*
+   * Escala tipográfica puntual del mockup (11.5/12.5/13px) que Tailwind no
+   * trae: `text-micro` (cabeceras de tabla, rol), `text-caption` (eyebrows,
+   * subtítulos de tarjeta) y `text-small` (controles chicos, 13px).
+   */
+  --text-micro: 11.5px;
+  --text-caption: 12.5px;
+  --text-small: 13px;
+
+  /* Sombra de tarjeta del mockup (`var(--shadow)`); en oscuro es `none`. */
+  --shadow-card: var(--shadow);
+
+  /*
+   * Corte entre layout móvil y escritorio del mockup (`width < 760`). Genera
+   * el variante `shell:` (>= 760px). Se declara acá aunque el shell decida su
+   * layout con `useMediaQuery`, para que las pages puedan alinear su CSS.
+   */
+  --breakpoint-shell: 760px;
+
+  /* Entrada de pantallas del mockup: fade + 8px hacia arriba, 0.3s. */
+  --animate-vt-in: vtIn 0.3s ease both;
+
+  @keyframes vtIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /*
@@ -145,6 +177,12 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  /*
+   * 14px / 1.45 en `body` y NO en `html`: el espaciado de Tailwind es rem; si
+   * se achicara la raíz, todos los paddings y gaps encogerían.
+   */
+  font-size: 14px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 

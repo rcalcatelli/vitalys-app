@@ -268,10 +268,10 @@ export function RegistrarPagoDialog({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" className="h-12" onClick={onCancelar}>
+        <Button type="button" variant="outline" size="lg" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button type="button" className="w-auto" disabled={enviando} onClick={confirmar}>
+        <Button type="button" size="lg" disabled={enviando} onClick={confirmar}>
           {enviando ? "Registrando…" : "Registrar pago"}
         </Button>
       </div>

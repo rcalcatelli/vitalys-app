@@ -184,10 +184,10 @@ export function PersonaForm({
       {mensaje && <FieldError>{mensaje}</FieldError>}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" className="h-11" onClick={onCancel}>
+        <Button type="button" variant="outline" size="md" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={cargando} className="sm:w-auto">
+        <Button type="submit" disabled={cargando}>
           {cargando
             ? "Guardando…"
             : esVinculo

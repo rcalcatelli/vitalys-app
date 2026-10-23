@@ -1,14 +1,13 @@
 import type { ResumenHoy, SocioConDeuda } from "../../../types/resumen";
 import { horaCorta } from "../../../utils/formato";
+import { Chip } from "../../atoms/Chip";
+import { KpiCard, type KpiTone } from "../../molecules/KpiCard";
 
 export interface PanelHoyProps {
   resumen: ResumenHoy;
   /** Momento actual, para distinguir franjas pasadas, en curso y por venir. */
   ahora: Date;
 }
-
-const chip =
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
 
 /** `2026-11-20` → `20/11/2026`, sin pasar por Date para no correr el día por zona horaria. */
 function fechaCorta(iso: string): string {
@@ -25,11 +24,9 @@ function detalle(s: SocioConDeuda): string {
 }
 
 function ChipDeuda({ socio }: { socio: SocioConDeuda }) {
-  if (socio.excepcionHasta)
-    return <span className={`${chip} bg-warn-soft text-warn-ink`}>Excepción</span>;
-  if (socio.suspendido)
-    return <span className={`${chip} bg-bad-soft text-bad-ink`}>Suspendido</span>;
-  return <span className={`${chip} bg-warn-soft text-warn-ink`}>Impagos</span>;
+  if (socio.excepcionHasta) return <Chip tone="warn">Excepción</Chip>;
+  if (socio.suspendido) return <Chip tone="bad">Suspendido</Chip>;
+  return <Chip tone="warn">Impagos</Chip>;
 }
 
 /**
@@ -45,7 +42,7 @@ export function PanelHoy({ resumen, ahora }: PanelHoyProps) {
       etiqueta: "En el gimnasio ahora",
       valor: resumen.enGimnasioAhora,
       detalle: "con ingreso registrado",
-      punto: "bg-gym",
+      punto: "gym" as KpiTone,
     },
     {
       etiqueta: "Turnos de gimnasio hoy",
@@ -53,38 +50,38 @@ export function PanelHoy({ resumen, ahora }: PanelHoyProps) {
       detalle: resumen.franjasGym.length
         ? `${resumen.franjasGym.length} franjas · ${porcentaje}% ocupado`
         : "Hoy el gimnasio no abre",
-      punto: "bg-gym",
+      punto: "gym" as KpiTone,
     },
     {
       etiqueta: "Consultas hoy",
       valor: resumen.consultasHoy,
       detalle: "en consultorio",
-      punto: "bg-clin",
+      punto: "clin" as KpiTone,
     },
     {
       etiqueta: "Socios con impagos",
       valor: resumen.conDeuda,
       detalle: `${resumen.suspendidos} con reserva suspendida`,
-      punto: "bg-bad",
+      punto: "bad" as KpiTone,
     },
   ];
   const maximo = Math.max(1, ...resumen.franjasGym.map((f) => f.cupo));
 
   return (
     <div className="flex flex-col gap-4">
-      <section aria-label="Indicadores del día" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section
+        aria-label="Indicadores del día"
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,150px),1fr))] gap-2.5"
+      >
         {kpis.map((k) => (
-          <div
+          <KpiCard
             key={k.etiqueta}
-            className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4"
-          >
-            <span className="flex items-center gap-2 text-xs font-semibold text-ink-3">
-              <span className={`h-2 w-2 rounded-full ${k.punto}`} />
-              {k.etiqueta}
-            </span>
-            <span className="font-heading text-3xl font-semibold text-ink">{k.valor}</span>
-            <span className="text-xs text-ink-3">{k.detalle}</span>
-          </div>
+            etiqueta={k.etiqueta}
+            valor={k.valor}
+            detalle={k.detalle}
+            tono={k.punto}
+            valorTonal={k.punto === "bad"}
+          />
         ))}
       </section>
 

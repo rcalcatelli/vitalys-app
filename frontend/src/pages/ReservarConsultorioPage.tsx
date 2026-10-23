@@ -269,12 +269,7 @@ export function ReservarConsultorioPage() {
             </span>
           </div>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11"
-              onClick={() => setSeleccion(null)}
-            >
+            <Button size="md" type="button" variant="outline" onClick={() => setSeleccion(null)}>
               Cancelar
             </Button>
             <Button type="button" disabled={enviando} onClick={confirmar}>

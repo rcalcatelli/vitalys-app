@@ -229,19 +229,14 @@ export function ReservarGimnasioPage() {
               </div>
               <div className="flex gap-2">
                 <Button
+                  size="md"
                   type="button"
                   variant="outline"
-                  className="h-11"
                   onClick={() => setSeleccion(null)}
                 >
                   Cambiar
                 </Button>
-                <Button
-                  type="button"
-                  className="h-11 w-auto bg-gym text-on-gym"
-                  disabled={enviando}
-                  onClick={confirmar}
-                >
+                <Button variant="gym" type="button" disabled={enviando} onClick={confirmar}>
                   Confirmar reserva
                 </Button>
               </div>

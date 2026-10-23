@@ -106,7 +106,7 @@ export function LoginForm({
           onChange={setContrasena}
         />
 
-        <Button type="submit" disabled={cargando}>
+        <Button type="submit" size="lg" fullWidth disabled={cargando}>
           {cargando ? "Ingresando…" : "Ingresar"}
         </Button>
 

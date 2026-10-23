@@ -125,20 +125,15 @@ export function FranjasEditor({
 
       <div className="flex justify-end gap-2 pt-1">
         <Button
+          size="md"
           type="button"
           variant="outline"
-          className="h-11"
           disabled={!hayCambios || guardando}
           onClick={onDescartar}
         >
           Descartar
         </Button>
-        <Button
-          type="button"
-          className="w-auto"
-          disabled={!hayCambios || hayErrores || guardando}
-          onClick={onGuardar}
-        >
+        <Button type="button" disabled={!hayCambios || hayErrores || guardando} onClick={onGuardar}>
           {guardando ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>

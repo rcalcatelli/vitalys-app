@@ -62,21 +62,19 @@ function Fila({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="tonal-ok"
                 disabled={!atendidoOk || ocupado}
                 aria-label={`Atendido: ${turno.persona}`}
                 onClick={() => onAtendido(turno)}
-                className="border-ok bg-ok-soft text-ok-ink"
               >
                 Atendido
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="tonal-bad"
                 disabled={!ausenteOk || ocupado}
                 aria-label={`Ausente: ${turno.persona}`}
                 onClick={() => onAusente(turno)}
-                className="border-bad bg-bad-soft text-bad-ink"
               >
                 Ausente
               </Button>

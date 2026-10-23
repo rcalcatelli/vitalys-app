@@ -39,16 +39,10 @@ export function ConfirmarImpactoDialog({
       <TurnosAfectadosList turnos={impacto.turnos} />
       {error && <FieldError>{error}</FieldError>}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" className="h-11" onClick={onVolver}>
+        <Button type="button" variant="outline" size="md" onClick={onVolver}>
           Volver
         </Button>
-        <Button
-          type="button"
-          variant="danger"
-          className="sm:w-auto"
-          disabled={cargando}
-          onClick={onConfirmar}
-        >
+        <Button type="button" variant="bad" disabled={cargando} onClick={onConfirmar}>
           {cargando ? "Guardando…" : "Cancelar turnos y guardar"}
         </Button>
       </div>

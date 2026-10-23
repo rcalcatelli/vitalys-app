@@ -206,15 +206,10 @@ export function PagosPage() {
               </span>
             </div>
             <div className="ml-auto flex flex-wrap gap-2">
-              <Button type="button" variant="outline" className="h-11" onClick={cambiarPersona}>
+              <Button type="button" variant="outline" size="md" onClick={cambiarPersona}>
                 Cambiar persona
               </Button>
-              <Button
-                type="button"
-                className="h-11 w-auto"
-                disabled={!estado}
-                onClick={abrirDialogo}
-              >
+              <Button type="button" disabled={!estado} onClick={abrirDialogo}>
                 Registrar pago
               </Button>
             </div>

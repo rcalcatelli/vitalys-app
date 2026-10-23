@@ -183,6 +183,7 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 | T5-7 | ✅ | `AvisosTurnoService`: confirmación al reservar (gimnasio y consultorio) y aviso al cancelar, además del aviso de la cascada (RN-24) |
 | T5-8 | ✅ | `JobRecordatorios`, cada hora: un recordatorio por turno, marcado por la fila de `notificaciones` para no duplicar |
 | T5-9 | ✅ | Entidad `Notificacion`, reintento y alertas en "Hoy en el centro" (PR #20) |
+| Panel ADMIN | ✅ | Fuera del plan original, pedido en la devolución del 22/10: "Hoy en el centro" pasa a ser la pantalla de inicio del ADMIN, con `GET /api/admin/resumen-hoy` (indicadores, ocupación del gimnasio, socios con impagos; PI-108) |
 | T5-10 | 🟡 Parcial | `PagoControllerIT` (PI-76 a PI-80 y PI-91 a PI-104) cubre unicidad de cuota, pago por turno, medio de pago y estado de cuenta; `AvisosTurnoIT` (PI-105 a PI-107) y `AvisosTurnoServiceTest` cubren el disparo de los avisos de turnos. Quedan diferidos los emails de morosidad (RF-37) |
 
 ---

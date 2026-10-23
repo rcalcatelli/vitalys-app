@@ -90,6 +90,28 @@ public interface TurnoRepository extends JpaRepository<Turno, Long>, JpaSpecific
             @Param("desde") OffsetDateTime desde,
             @Param("hasta") OffsetDateTime hasta);
 
+    /**
+     * Turnos reservados que empiezan entre {@code desde} y {@code hasta} y todavía no tienen
+     * recordatorio registrado (RF-28). La fila de {@code notificaciones} hace de marca: un turno
+     * nunca recibe dos recordatorios, aunque el job corra de nuevo o el servicio se reinicie.
+     */
+    @Query("""
+            select t from Turno t
+            join fetch t.persona p
+            join fetch p.usuario
+            where t.estado = :estado
+              and t.inicio > :desde
+              and t.inicio <= :hasta
+              and not exists (
+                  select n.id from Notificacion n where n.turno = t and n.tipo = :tipo)
+            order by t.inicio
+            """)
+    List<Turno> buscarSinRecordatorio(
+            @Param("estado") EstadoTurno estado,
+            @Param("tipo") com.vitalys.domain.TipoNotificacion tipo,
+            @Param("desde") OffsetDateTime desde,
+            @Param("hasta") OffsetDateTime hasta);
+
     /** Usuario del profesional a cargo, para saber si quien marca el turno es el propio. */
     @Query(value = "SELECT usuario_id FROM profesionales WHERE id = :profesionalId", nativeQuery = true)
     Long usuarioDelProfesional(@Param("profesionalId") Long profesionalId);

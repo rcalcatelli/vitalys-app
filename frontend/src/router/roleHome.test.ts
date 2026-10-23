@@ -4,7 +4,7 @@ import { homePathForRol } from "./roleHome";
 
 describe("homePathForRol", () => {
   it.each<[RolUsuario, string]>([
-    ["ADMIN", "/admin/personas"],
+    ["ADMIN", "/admin/hoy"],
     ["PROFESIONAL", "/profesional/agenda"],
     ["SOCIO_PACIENTE", "/socio/turnos"],
   ])("mapea %s a %s", (rol, path) => {

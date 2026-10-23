@@ -78,7 +78,7 @@ la convención del proyecto y aplica a cada componente nuevo.
   nunca la corrigen. Si te encontrás escribiendo `md:` para deshacer algo del
   estado base, la base estaba pensada para escritorio y hay que darla vuelta.
 - Nada de `max-w-*` fijo sin un ancho fluido debajo. Los formularios (y
-  `AuthLayout`, `PlaceholderHomePage`) ocupan el ancho disponible en mobile
+  `AuthLayout`) ocupan el ancho disponible en mobile
   (`w-full`) y recién a partir de `sm:` (o `md:`) se limitan con `max-w-*` y
   se centran con `mx-auto`.
 - Áreas táctiles: botones y controles interactivos con altura mínima de 44px

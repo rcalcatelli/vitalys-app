@@ -4,7 +4,7 @@ import type { RolUsuario } from "../types/auth";
 export function homePathForRol(rol: RolUsuario): string {
   switch (rol) {
     case "ADMIN":
-      return "/admin/personas";
+      return "/admin/hoy";
     case "PROFESIONAL":
       return "/profesional/agenda";
     case "SOCIO_PACIENTE":

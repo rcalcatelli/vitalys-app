@@ -7,7 +7,6 @@ import { MiEstadoCuentaPage } from "../pages/MiEstadoCuentaPage";
 import { MisTurnosPage } from "../pages/MisTurnosPage";
 import { PagosPage } from "../pages/PagosPage";
 import { PersonasPage } from "../pages/PersonasPage";
-import { PlaceholderHomePage } from "../pages/PlaceholderHomePage";
 import { ProfesionalesPage } from "../pages/ProfesionalesPage";
 import { RecuperarContrasenaPage } from "../pages/RecuperarContrasenaPage";
 import { RegistroPage } from "../pages/RegistroPage";
@@ -16,9 +15,9 @@ import { ReservarGimnasioPage } from "../pages/ReservarGimnasioPage";
 import { RoleGuard } from "./RoleGuard";
 
 /**
- * Rutas de la app (T2-7). Las homes por rol son placeholders (ver
- * PlaceholderHomePage) — las pantallas reales de cada módulo de negocio están
- * fuera de alcance de esta change.
+ * Rutas de la app, protegidas por rol con RoleGuard. La home de cada rol la define
+ * `homePathForRol`: el ADMIN entra a "Hoy en el centro"; `/admin/dashboard` se conserva como
+ * alias para no romper enlaces viejos.
  */
 export function AppRoutes() {
   return (
@@ -27,14 +26,7 @@ export function AppRoutes() {
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/recuperar-contrasena" element={<RecuperarContrasenaPage />} />
 
-      <Route
-        path="/admin/dashboard"
-        element={
-          <RoleGuard allowedRoles={["ADMIN"]}>
-            <PlaceholderHomePage title="Panel ADMIN" />
-          </RoleGuard>
-        }
-      />
+      <Route path="/admin/dashboard" element={<Navigate to="/admin/hoy" replace />} />
 
       <Route
         path="/admin/hoy"

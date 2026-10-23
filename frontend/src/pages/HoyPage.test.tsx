@@ -1,15 +1,37 @@
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as notificacionesApi from "../api/notificacionesApi";
+import * as resumenApi from "../api/resumenApi";
+import { unResumen } from "../test/resumenFixture";
 import { unaNotificacion } from "../test/notificacionFixture";
 import { renderWithRouter } from "../test/renderWithRouter";
 import { HoyPage } from "./HoyPage";
 
 vi.mock("../api/notificacionesApi", () => ({ listarFallidas: vi.fn() }));
+vi.mock("../api/resumenApi", () => ({ obtenerResumenHoy: vi.fn() }));
 
 describe("HoyPage", () => {
   beforeEach(() => {
     vi.mocked(notificacionesApi.listarFallidas).mockReset();
+    vi.mocked(resumenApi.obtenerResumenHoy).mockReset();
+    vi.mocked(resumenApi.obtenerResumenHoy).mockResolvedValue(unResumen());
+  });
+
+  it("es el panel de inicio: muestra los indicadores y quién requiere atención", async () => {
+    vi.mocked(notificacionesApi.listarFallidas).mockResolvedValue([]);
+    renderWithRouter(<HoyPage />);
+
+    expect(await screen.findByText("Turnos de gimnasio hoy")).toBeInTheDocument();
+    expect(screen.getByText("García, Juan")).toBeInTheDocument();
+  });
+
+  it("si el resumen falla, igual muestra las notificaciones", async () => {
+    vi.mocked(resumenApi.obtenerResumenHoy).mockRejectedValue(new Error("boom"));
+    vi.mocked(notificacionesApi.listarFallidas).mockResolvedValue([]);
+    renderWithRouter(<HoyPage />);
+
+    expect(await screen.findByText(/No se pudo cargar el resumen del día/)).toBeInTheDocument();
+    expect(await screen.findByText("No hay notificaciones fallidas.")).toBeInTheDocument();
   });
 
   it("muestra 'Hoy en el centro' con las notificaciones fallidas y el badge del menú", async () => {

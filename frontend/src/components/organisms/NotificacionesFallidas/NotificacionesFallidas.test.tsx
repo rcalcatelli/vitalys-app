@@ -13,7 +13,9 @@ describe("NotificacionesFallidas", () => {
 
     expect(screen.getByRole("heading", { name: "Notificaciones fallidas" })).toBeInTheDocument();
     expect(
-      screen.getByText("Los turnos ya están cancelados; lo que falló es el aviso al paciente."),
+      screen.getByText(
+        "La reserva o la cancelación ya quedó registrada; lo que falló es el aviso al socio.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(2);
     expect(

@@ -15,6 +15,7 @@ import { fechaDiaMes, fechaLargaDe, fechaRelativa } from "../utils/diasUi";
 import { mensajeDeError } from "../utils/errores";
 import { fechaBA, horaBA, hoyBA } from "../utils/fechaBA";
 import { etiquetaEspecialidad, nombreProfesional } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 /**
  * Turno de consultorio (W-02, RF-41): paso 1 elige un profesional entre las tarjetas (cada una con
@@ -93,6 +94,9 @@ export function ReservarConsultorioPage() {
     }
   }
 
+  // Primera carga: pantalla completa, sin cabecera ni datos todavía.
+  if (agendas.datos === null && !agendas.error) return <Cargando variante="pantalla" />;
+
   return (
     <>
       <PageHeader
@@ -116,9 +120,6 @@ export function ReservarConsultorioPage() {
           <Button type="button" variant="outline" className="self-start" onClick={agendas.recargar}>
             Reintentar
           </Button>
-        )}
-        {agendas.datos === null && !agendas.error && (
-          <p className="text-sm text-ink-3">Cargando…</p>
         )}
 
         {agendas.datos !== null && agendas.datos.length === 0 && (
@@ -162,9 +163,7 @@ export function ReservarConsultorioPage() {
               </span>
             </div>
             {errorSlots && <Aviso tono="bad">{errorSlots}</Aviso>}
-            {lista === null && !errorSlots && (
-              <p className="text-sm text-ink-3">Cargando horarios…</p>
-            )}
+            {lista === null && !errorSlots && <Cargando texto="Cargando horarios…" />}
             {lista !== null && lista.length === 0 && (
               <p className="text-sm text-ink-2">
                 Este profesional no tiene horarios para este día.
@@ -212,7 +211,8 @@ export function ReservarConsultorioPage() {
                 type="button"
                 size="modal"
                 className="px-5!"
-                disabled={enviando}
+                cargando={enviando}
+                textoCargando="Reservando…"
                 onClick={() => void confirmar()}
               >
                 Confirmar turno

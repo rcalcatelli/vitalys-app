@@ -11,6 +11,7 @@ import type { EstadoGym, FranjaGym, Turno } from "../types/turno";
 import { abreviaturaDia, fechaCorta, fechaLargaDe, numeroDia } from "../utils/diasUi";
 import { mensajeDeError } from "../utils/errores";
 import { diaSemana, fechaBA, horaBA, hoyBA, sumarDias } from "../utils/fechaBA";
+import { Cargando } from "../components/molecules/Cargando";
 
 const DIAS_VISIBLES = 7;
 
@@ -149,6 +150,9 @@ export function ReservarGimnasioPage() {
     }
   }
 
+  // Primera carga: pantalla completa, sin cabecera ni datos todavía.
+  if (estado === null && !errorEstado) return <Cargando variante="pantalla" />;
+
   return (
     <>
       <PageHeader
@@ -158,7 +162,6 @@ export function ReservarGimnasioPage() {
       />
       <div className="flex flex-col gap-4">
         {errorEstado && <Aviso tono="bad">{errorEstado}</Aviso>}
-        {estado === null && !errorEstado && <p className="text-sm text-ink-3">Cargando…</p>}
 
         {estado && !estado.esSocioGym && (
           <Aviso tono="bad" titulo="No tenés el servicio de gimnasio activo">
@@ -218,7 +221,7 @@ export function ReservarGimnasioPage() {
             )}
             {errorCupo && !cerrada && <Aviso tono="bad">{errorCupo}</Aviso>}
             {puedeVerCupo && franjas === null && !errorCupo && (
-              <p className="text-sm text-ink-3">Cargando franjas…</p>
+              <Cargando texto="Cargando horarios…" altoMin={220} />
             )}
             {puedeVerCupo && franjas !== null && franjas.length === 0 && (
               <p className="text-sm text-ink-2">No hay franjas para este día.</p>
@@ -262,7 +265,8 @@ export function ReservarGimnasioPage() {
                     size="modal"
                     className="px-5!"
                     type="button"
-                    disabled={enviando}
+                    cargando={enviando}
+                    textoCargando="Reservando…"
                     onClick={confirmar}
                   >
                     Confirmar reserva

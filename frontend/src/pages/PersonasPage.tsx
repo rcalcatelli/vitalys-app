@@ -14,6 +14,7 @@ import { PersonasTable } from "../components/organisms/PersonasTable";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import type { FiltroPersonas, Persona } from "../types/persona";
+import { PersonasTableSkeleton } from "../components/organisms/PersonasTableSkeleton";
 
 const FILTROS = [
   ["TODOS", "Todos"],
@@ -201,7 +202,7 @@ export function PersonasPage() {
         >
           {errorLista && <FieldError>{errorLista}</FieldError>}
           {cargandoLista && personas.length === 0 ? (
-            <p className="text-sm text-ink-3">Cargando personas…</p>
+            <PersonasTableSkeleton />
           ) : (
             <PersonasTable
               personas={visibles}

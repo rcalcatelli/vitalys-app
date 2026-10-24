@@ -108,8 +108,8 @@ export function LoginForm({
           onChange={setContrasena}
         />
 
-        <Button type="submit" size="lg" fullWidth disabled={cargando}>
-          {cargando ? "Ingresando…" : "Ingresar"}
+        <Button type="submit" size="lg" fullWidth cargando={cargando} textoCargando="Ingresando…">
+          Ingresar
         </Button>
 
         <div className="flex flex-wrap justify-between gap-2 text-[13px]">

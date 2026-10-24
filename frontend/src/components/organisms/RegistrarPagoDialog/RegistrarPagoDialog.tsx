@@ -15,6 +15,7 @@ import {
 import { Button } from "../../atoms/Button";
 import { Label } from "../../atoms/Label";
 import { Select } from "../../atoms/Select";
+import { Cargando } from "../../molecules/Cargando";
 
 /** Meses futuros que se ofrecen después del último período: el backend permite el pago adelantado. */
 const MESES_ADELANTO = 2;
@@ -218,7 +219,7 @@ export function RegistrarPagoDialog({
       ) : (
         <div className="flex flex-col gap-1.5">
           {turnos === null && !errorTurnos && (
-            <span className="text-sm text-ink-3">Cargando turnos…</span>
+            <Cargando variante="linea" texto="Cargando turnos…" />
           )}
           {errorTurnos && (
             <div
@@ -320,8 +321,15 @@ export function RegistrarPagoDialog({
         <Button type="button" variant="neutral" size="modal" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button type="button" size="modal" disabled={invalido || enviando} onClick={confirmar}>
-          {enviando ? "Guardando…" : "Registrar pago"}
+        <Button
+          type="button"
+          size="modal"
+          disabled={invalido}
+          cargando={enviando}
+          textoCargando="Registrando pago…"
+          onClick={confirmar}
+        >
+          Registrar pago
         </Button>
       </div>
     </>

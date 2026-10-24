@@ -10,6 +10,7 @@ import { huecosLibres } from "../utils/agendaUi";
 import { mensajeDeError } from "../utils/errores";
 import { fechaBA, hoyBA, sumarDias } from "../utils/fechaBA";
 import { etiquetaEspecialidad, fechaLarga } from "../utils/formato";
+import { Cargando } from "../components/molecules/Cargando";
 
 const DIAS_ADELANTE = 7;
 
@@ -71,9 +72,7 @@ export function AgendaPage() {
       <div className="flex flex-col gap-4">
         {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
         {agenda.error && <Aviso tono="bad">{agenda.error}</Aviso>}
-        {agenda.datos === null && !agenda.error && (
-          <p className="text-sm text-ink-3">Cargando agenda…</p>
-        )}
+        {agenda.datos === null && !agenda.error && <Cargando texto="Cargando agenda…" />}
         {agenda.datos && (
           <AgendaDia
             turnos={agenda.datos}

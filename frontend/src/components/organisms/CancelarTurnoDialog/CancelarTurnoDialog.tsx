@@ -92,7 +92,14 @@ export function CancelarTurnoDialog({
         <Button type="button" variant="outline" size="modal" onClick={onVolver}>
           Volver
         </Button>
-        <Button type="button" variant="bad" size="modal" disabled={cargando} onClick={confirmar}>
+        <Button
+          type="button"
+          variant="bad"
+          size="modal"
+          cargando={cargando}
+          textoCargando="Cancelando…"
+          onClick={confirmar}
+        >
           Confirmar cancelación
         </Button>
       </div>

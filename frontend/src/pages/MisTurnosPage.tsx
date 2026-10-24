@@ -10,6 +10,7 @@ import { useAhora } from "../hooks/useAhora";
 import type { Profesional } from "../types/profesional";
 import type { Turno } from "../types/turno";
 import { mensajeDeError } from "../utils/errores";
+import { TurnosListaSkeleton } from "../components/organisms/TurnosListaSkeleton";
 
 interface MensajeUi {
   tono: TonoAviso;
@@ -67,7 +68,7 @@ export function MisTurnosPage() {
       <div className="flex flex-col gap-4">
         {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
         {errorCarga && <Aviso tono="bad">{errorCarga}</Aviso>}
-        {turnos === null && !errorCarga && <p className="text-sm text-ink-3">Cargando turnos…</p>}
+        {turnos === null && !errorCarga && <TurnosListaSkeleton />}
         {turnos && (
           <TurnosLista
             turnos={turnos}

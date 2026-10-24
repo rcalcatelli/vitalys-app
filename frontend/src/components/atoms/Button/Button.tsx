@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import { Spinner } from "../Spinner";
 
 export type ButtonVariant =
   | "primary"
@@ -32,6 +33,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   esquinas?: "md" | "lg";
   /** Ocupa todo el ancho del contenedor (login, registro). Por defecto el botón mide lo que su texto. */
   fullWidth?: boolean;
+  /**
+   * Acción en curso: el botón queda deshabilitado (`aria-busy`) y muestra el spinner sm a la
+   * izquierda de `textoCargando` ("Guardando…"). No cambia de ancho: reserva el lugar del más
+   * largo de los dos textos. Sin `textoCargando`, el spinner acompaña al texto de siempre.
+   */
+  cargando?: boolean;
+  /** Texto mientras `cargando` (p.ej. "Registrando pago…"). Pasarlo siempre fija el ancho. */
+  textoCargando?: string;
 }
 
 // Sin `font-weight` ni `height` en la base: cada variant/size define los suyos, para no competir
@@ -40,7 +49,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const baseClasses =
   "inline-flex items-center justify-center transition-colors " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clin-soft " +
-  "disabled:cursor-not-allowed disabled:opacity-45";
+  "disabled:cursor-not-allowed disabled:opacity-45 aria-busy:disabled:opacity-100!";
 
 // Calco de los botones del mockup: sólidos `font-semibold` (14px; el 15px es del tamaño `lg`) con `hover:brightness-110`
 // (`style-hover="filter:brightness(1.08)"`), tonales con borde del color del estado.
@@ -88,7 +97,11 @@ export function Button({
   size,
   esquinas = "md",
   fullWidth = false,
+  cargando = false,
+  textoCargando,
   className,
+  children,
+  disabled,
   ...props
 }: ButtonProps) {
   const tamano =
@@ -103,5 +116,37 @@ export function Button({
   ]
     .filter(Boolean)
     .join(" ");
-  return <button {...props} className={classes} />;
+  // Botones de fondo transparente o con borde: el spinner es teal sobre aro gris; en el resto
+  // (sólidos y tonales) toma el color del texto.
+  const sobreColor = variant !== "outline" && variant !== "neutral" && variant !== "ghost";
+  const conTexto = cargando || textoCargando !== undefined;
+  return (
+    <button
+      {...props}
+      disabled={disabled || cargando}
+      aria-busy={cargando || undefined}
+      className={classes}
+    >
+      {conTexto ? (
+        // Grilla de una celda: los dos textos ocupan el mismo lugar y el botón mide el más largo.
+        <span className="inline-grid items-center justify-items-center">
+          <span
+            aria-hidden={cargando || undefined}
+            className={`col-start-1 row-start-1 ${cargando ? "invisible" : ""}`}
+          >
+            {children}
+          </span>
+          <span
+            aria-hidden={!cargando || undefined}
+            className={`col-start-1 row-start-1 inline-flex items-center gap-2 ${cargando ? "" : "invisible"}`}
+          >
+            <Spinner tamano="sm" sobreColor={sobreColor} />
+            {textoCargando ?? children}
+          </span>
+        </span>
+      ) : (
+        children
+      )}
+    </button>
+  );
 }

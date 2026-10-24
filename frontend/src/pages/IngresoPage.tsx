@@ -17,6 +17,7 @@ import {
   ordenarIngresos,
   turnosDeFranja,
 } from "../utils/ingresoUi";
+import { Cargando } from "../components/molecules/Cargando";
 
 interface Datos {
   franjas: FranjaGym[];
@@ -85,7 +86,7 @@ export function IngresoPage() {
       <PageHeader eyebrow="Recepción" titulo="Ingreso al gimnasio" />
       <div className="flex flex-col gap-3.5">
         {error && <FieldError>{error}</FieldError>}
-        {datos === null && !error && <p className="text-sm text-ink-3">Cargando la franja…</p>}
+        {datos === null && !error && <Cargando texto="Cargando la franja…" />}
         {datos && !franja && (
           <div className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-ink-2">
             No hay una franja de gimnasio en curso. Cuando abra la próxima, vas a poder registrar

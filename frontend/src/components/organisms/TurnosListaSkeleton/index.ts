@@ -1,0 +1,1 @@
+export { TurnosListaSkeleton } from "./TurnosListaSkeleton";

@@ -146,3 +146,75 @@ describe("Button", () => {
     expect(screen.getByText("Nueva")).not.toHaveClass("rounded-md");
   });
 });
+
+describe("Button cargando", () => {
+  it("deshabilita, marca aria-busy y muestra el texto de carga como nombre accesible", () => {
+    render(
+      <Button type="button" cargando textoCargando="Guardando…">
+        Guardar cambios
+      </Button>,
+    );
+    const boton = screen.getByRole("button", { name: "Guardando…" });
+    expect(boton).toBeDisabled();
+    expect(boton).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("spinner")).toHaveClass("size-4");
+  });
+
+  it("reserva el lugar del texto de reposo (el ancho no cambia): ambos están en el DOM", () => {
+    render(
+      <Button type="button" cargando textoCargando="Guardando…">
+        Guardar cambios
+      </Button>,
+    );
+    expect(screen.getByText("Guardar cambios")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Guardar cambios")).toHaveClass("invisible");
+  });
+
+  it("en reposo oculta el texto de carga y no está ocupado", () => {
+    render(
+      <Button type="button" textoCargando="Guardando…">
+        Guardar cambios
+      </Button>,
+    );
+    const boton = screen.getByRole("button", { name: "Guardar cambios" });
+    expect(boton).toBeEnabled();
+    expect(boton).not.toHaveAttribute("aria-busy");
+    expect(screen.getByText("Guardando…")).toHaveClass("invisible");
+  });
+
+  it("sin textoCargando, el spinner acompaña al texto de siempre", () => {
+    render(
+      <Button type="button" cargando>
+        Enviar
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeDisabled();
+  });
+
+  it("el spinner toma el color del texto en botones sólidos y es teal en los de borde", () => {
+    const { rerender } = render(
+      <Button type="button" cargando textoCargando="Guardando…">
+        Guardar
+      </Button>,
+    );
+    expect(screen.getByTestId("spinner")).toHaveClass("border-t-current");
+    rerender(
+      <Button type="button" variant="neutral" cargando textoCargando="Guardando…">
+        Guardar
+      </Button>,
+    );
+    expect(screen.getByTestId("spinner")).toHaveClass("border-t-clin");
+  });
+
+  it("no dispara onClick mientras está en curso", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <Button type="button" cargando textoCargando="Guardando…" onClick={onClick}>
+        Guardar
+      </Button>,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+});

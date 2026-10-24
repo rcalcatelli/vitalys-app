@@ -138,10 +138,12 @@ export function FranjasEditor({
         <Button
           type="button"
           className="disabled:opacity-45!"
-          disabled={!hayCambios || hayErrores || guardando}
+          disabled={!hayCambios || hayErrores}
+          cargando={guardando}
+          textoCargando="Guardando…"
           onClick={onGuardar}
         >
-          {guardando ? "Guardando…" : "Guardar cambios"}
+          Guardar cambios
         </Button>
       </div>
     </section>

@@ -410,6 +410,13 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 
 **Frecuencia:** antes de cada entrega de cátedra y de la defensa oral.
 
+**Última ejecución: 27/10/2026**, contra Render (`/api/health` → `8469be0`; lo que falta desplegar de `main` es solo `seed.sql` y frontend) y Vercel, con los tres roles. Todo el checklist pasó, salvo dos ítems que no se pueden comprobar con el seed actual:
+
+- Marcar `COMPLETADO` un turno futuro devuelve 422 ("el turno no empezó"), como corresponde. Se verifica el día del turno.
+- Ningún socio está suspendido sin excepción vigente: Juan García es el único suspendido y tiene excepción. El caso del 422 por morosidad lo cubren los tests de integración.
+
+La reserva de consultorio (Valentina Méndez, cancelada con menos de 24 h → `CANCELADO_TARDE` y slot liberado), la cuota registrada (Ana Fernández pasó de 2 a 1 período impago), "Operar como" (403 en rutas de ADMIN, "Reservado por Recepción", token revocado al terminar) y RN-18 se probaron sobre los datos de demo. Los turnos creados se cancelaron y la persona de prueba se dio de baja, pero **conviene resembrar la base antes de la corrección**.
+
 ---
 
 ## Cobertura mínima esperada

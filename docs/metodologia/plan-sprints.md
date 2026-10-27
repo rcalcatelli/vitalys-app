@@ -18,7 +18,7 @@
 | Sprint 5 | 26/10 – 08/11/2026 | Módulo Pagos + Módulo Notificaciones         | Ambos                   | ✅ Completado (Pagos, avisos de turnos y avisos de deuda) |
 | Cierre   | 09/11 – 14/11/2026 | Estabilización · Informe · Video · Defensa   | Ambos                   | ⏳ Pendiente |
 
-> **Estado verificado el 22/10/2026** contra `main` (PR #24) y el CI en verde. Las fechas de los
+> **Estado verificado el 27/10/2026** contra `main` (PR #37, `b23985c`) y el CI en verde. Las fechas de los
 > sprints no cambian; la columna Estado y las tablas "Estado real" de cada sprint reflejan lo que
 > efectivamente está mergeado. El detalle por tarea está debajo de cada sprint.
 
@@ -172,7 +172,7 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 
 **Criterio de cierre:** ADMIN registra cuota y sesión; el sistema detecta morosidad; se envían emails de confirmación y cancelación.
 
-**Estado real (verificado 22/10/2026):** el sprint no empezó formalmente, pero el Módulo de Pagos ya está implementado y parte de las notificaciones se adelantó en los sprints 3 y 4. Mercado Pago queda fuera del alcance (RFC-001): los cobros se cargan a mano con su medio, y `medio_pago` admite sumar `MERCADO_PAGO` con una migración propia.
+**Estado real (verificado 27/10/2026):** completado. El Módulo de Pagos se implementó antes del inicio formal del sprint (26/10) y parte de las notificaciones se adelantó en los sprints 3 y 4; los avisos de turnos y de deuda cerraron con los PR #30 y #31. Mercado Pago queda fuera del alcance (RFC-001): los cobros se cargan a mano con su medio, y `medio_pago` admite sumar `MERCADO_PAGO` con una migración propia.
 
 | ID | Estado | Evidencia |
 |----|--------|-----------|
@@ -190,6 +190,8 @@ Además del alcance original se incorporó el envío de emails por Brevo (API HT
 ---
 
 ## Cambio `ui-pixel-perfect` — interfaz al diseño y Operar como (PR #33)
+
+> "Operar como" (RF-39) es un cambio de alcance: está registrado como Decisión 12 del [RFC-001](../01-propuesta/propuesta-proyecto-rfc.md#decisiones-de-dominio-propuestas), con su fundamento y sus límites.
 
 Pedido en la devolución del 22/10: la interfaz divergía del prototipo `Vitalys.dc.html` (sin shell común, sin inicio del socio, sin pantalla de Ingreso, modo oscuro inalcanzable, reserva de consultorio plana) y faltaba que Recepción pudiera atender a un socio en el mostrador. Se hizo en siete tandas, una por commit, con el backend como autoridad de las reglas (RNF-03).
 

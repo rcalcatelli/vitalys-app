@@ -48,7 +48,8 @@ INSERT INTO usuarios (email, password_hash, rol) VALUES
   ('lucia.rojas@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
   ('carlos.soto@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
   ('ana.fernandez@example.com',  '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
-  ('pedro.gomez@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE');
+  ('pedro.gomez@example.com',    '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE'),
+  ('roberto.luna@example.com',   '$2a$10$Fh8mw/F8THWCUvqdJCxQBOwm6ad.bdInfxizLUCkK1AZDNIoBCsli', 'SOCIO_PACIENTE');
   -- password para todos: Admin1234!
 
 -- ---------------------------------------------------------------------------
@@ -125,7 +126,7 @@ FROM h;
 
 -- ---------------------------------------------------------------------------
 -- 3. PERSONAS
---    Los cuatro socios de gimnasio cubren los cuatro caminos de RN-01 con el
+--    Los cinco socios de gimnasio cubren los cinco caminos de RN-01 con el
 --    umbral por defecto de 6 períodos (configuracion_gym.meses_tolerancia_morosidad).
 --    Las membresías y las cuotas se cuentan desde el mes de la carga (mes), así
 --    que cada caso da siempre el mismo resultado, sin importar el día:
@@ -144,6 +145,10 @@ FROM h;
 --                      últimos. 6 impagos: alcanza el umbral y queda bloqueado
 --                      para gym. Es el único con una excepción de morosidad
 --                      vigente (sección 8), que le permite reservar igual.
+--    - Roberto Luna:   SUSPENDIDO SIN EXCEPCIÓN — socio desde hace 8 meses, pagó
+--                      solo el mes pasado. 7 impagos: supera el umbral y ninguna
+--                      excepción lo habilita. Es el caso para mostrar en vivo el
+--                      bloqueo por deuda: su reserva de gym da 422.
 --
 --    - Carlos Soto:    SOLO paciente de consultorio (es_socio_gym = false)
 --    - Pedro Gómez:    dado de BAJA LÓGICA
@@ -172,6 +177,9 @@ INSERT INTO personas (usuario_id, nombre, apellido, dni, telefono, fecha_nacimie
 
   ((SELECT id FROM usuarios WHERE email = 'pedro.gomez@example.com'),
    'Pedro', 'Gómez', '38100006', '11-2006-0006', '1988-12-01', 'INACTIVO', false, '2023-01-10', NULL, '2025-08-15'),
+
+  ((SELECT id FROM usuarios WHERE email = 'roberto.luna@example.com'),
+   'Roberto', 'Luna', '38100007', '11-2008-0008', '1992-06-08', 'ACTIVO', true,  '2024-08-05', (SELECT (mes - INTERVAL '8 months')::date FROM seed_ref), NULL),
 
   -- Laura Benítez: la persona de recepción (admin@vitalys.com). Es la ficha del ADMIN: da nombre
   -- a la sesión (/api/auth/me) y es quien figura en "Autorizada por ..." de las excepciones. No es
@@ -245,6 +253,12 @@ INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario,
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '1 months')::date FROM seed_ref),
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO'),
   ((SELECT id FROM personas WHERE dni = '38100005'), 'CUOTA_MENSUAL', 15000.00, (SELECT mes FROM seed_ref),
+   (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO');
+
+-- Roberto Luna: socio desde mes - 8, pagó solo mes - 1. Impagos: mes - 8 a mes - 2
+-- = 7. Supera el umbral (6) → SUSPENDIDO para gym, y sin excepción que lo habilite.
+INSERT INTO pagos (persona_id, concepto, monto, periodo, registrado_por_usuario, medio) VALUES
+  ((SELECT id FROM personas WHERE dni = '38100007'), 'CUOTA_MENSUAL', 15000.00, (SELECT (mes - INTERVAL '1 months')::date FROM seed_ref),
    (SELECT id FROM usuarios WHERE email = 'admin@vitalys.com'), 'EFECTIVO');
 
 -- ---------------------------------------------------------------------------
@@ -402,9 +416,9 @@ INSERT INTO pagos (persona_id, concepto, monto, turno_id, registrado_por_usuario
 --    (RN-01). Vence a los 30 días de la carga, así que siempre está vigente. La excepción es el mecanismo por el que el ADMIN levanta esa
 --    suspensión sin desactivar la regla (RN-09).
 --
---    Ningún otro socio tiene excepción, y ninguno la necesita: María y Lucía no
---    tienen deuda computable, y Ana tiene deuda pero por debajo del umbral, así
---    que nunca estuvo bloqueada.
+--    Ningún otro socio tiene excepción: María y Lucía no tienen deuda computable,
+--    Ana tiene deuda pero por debajo del umbral, así que nunca estuvo bloqueada, y
+--    Roberto está suspendido y no la tiene a propósito: es quien muestra el bloqueo.
 --
 --    Es POR PERÍODO (un_solo_uso = FALSE, el valor por defecto): vale para
 --    cualquier turno de gimnasio hasta valida_hasta. La alternativa sería

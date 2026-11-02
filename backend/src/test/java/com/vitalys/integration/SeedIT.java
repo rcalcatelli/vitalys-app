@@ -22,7 +22,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /**
  * Los comentarios de {@code db/dml/seed.sql} prometen un caso de prueba por persona (al día,
- * socia nueva, deuda por debajo del umbral, suspendido con excepción). Este test los convierte en
+ * socia nueva, deuda por debajo del umbral, suspendido con y sin excepción). Este test los convierte en
  * aserciones: carga el seed en una base propia, recién migrada, y verifica que cada persona dé el
  * resultado que su comentario dice, con la fecha real del día en que corre el CI.
  *
@@ -127,6 +127,15 @@ class SeedIT {
     }
 
     @Test
+    void robertoEstaSuspendidoYSinExcepcion() {
+        assertThat(impagos("38100007")).isEqualTo(7).isGreaterThan(umbral());
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM excepciones_morosidad e JOIN personas p ON p.id = e.persona_id WHERE p.dni = '38100007'",
+                        Integer.class))
+                .isZero();
+    }
+
+    @Test
     void losReservadosQuedanEnElFuturoYLosCerradosEnElPasado() {
         Integer inconsistentes = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM turnos WHERE (estado = 'RESERVADO') <> (inicio > NOW())", Integer.class);
@@ -148,11 +157,11 @@ class SeedIT {
                                 + "WHERE u.email = 'admin@vitalys.com' AND u.rol = 'ADMIN'",
                         String.class))
                 .isEqualTo("Laura Benítez");
-        // El listado de Personas filtra por usuario SOCIO_PACIENTE: los 6 socios del seed, sin Laura
+        // El listado de Personas filtra por usuario SOCIO_PACIENTE: los 7 socios del seed, sin Laura
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM personas p JOIN usuarios u ON u.id = p.usuario_id WHERE u.rol = 'SOCIO_PACIENTE'",
                         Integer.class))
-                .isEqualTo(6);
+                .isEqualTo(7);
     }
 
     @Test

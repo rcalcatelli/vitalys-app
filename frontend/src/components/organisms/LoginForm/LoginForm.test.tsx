@@ -62,6 +62,7 @@ describe("LoginForm", () => {
     expect(screen.getByText("Cuentas de demostración")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /María Pérez/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Juan García/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Roberto Luna/ })).toBeInTheDocument();
   });
 
   it("al hacer clic en una cuenta de demostración, autocompleta el formulario sin enviarlo", async () => {

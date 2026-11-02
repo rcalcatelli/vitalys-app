@@ -15,14 +15,15 @@ export interface DemoAccount {
  * inventadas: cada `identificador`/`contrasena` corresponde a un usuario real
  * del seed (contraseña única para todos: `Admin1234!`, ver seed).
  *
- * Se muestran 5 cuentas, en el mismo orden y con el mismo copy que el diseño, que cubren
- * distintos roles y casos de negocio:
+ * Se muestran 6 cuentas, las 5 del diseño en el mismo orden y con el mismo copy más Roberto Luna,
+ * que cubren distintos roles y casos de negocio:
  * - Admin y Profesional (Nutrición) se identifican por EMAIL porque el seed no
  *   les asigna DNI (solo las `personas` —socios/pacientes— tienen `dni`).
- * - Los 3 socios/pacientes se identifican por DNI a propósito, para mostrar
+ * - Los 4 socios/pacientes se identifican por DNI a propósito, para mostrar
  *   que el campo "DNI o email" realmente acepta ambos formatos.
- * - Juan García (suspendido por períodos impagos, RN-01) y Carlos Soto (paciente sin gym,
- *   `es_socio_gym=false`) muestran los dos casos de negocio no triviales del dominio.
+ * - Juan García (suspendido por períodos impagos, RN-01, con excepción), Roberto Luna (suspendido
+ *   sin excepción: su reserva de gym queda bloqueada) y Carlos Soto (paciente sin gym,
+ *   `es_socio_gym=false`) muestran los casos de negocio no triviales del dominio.
  * - La cuenta de recepción es la ADMIN con ficha de persona "Laura Benítez" (seed).
  */
 export const demoAccounts: DemoAccount[] = [
@@ -42,6 +43,15 @@ export const demoAccounts: DemoAccount[] = [
     description: "Socio · 6 períodos impagos · con excepción",
     tono: "bad",
     identificador: "38100002",
+    contrasena: "Admin1234!",
+  },
+  {
+    id: "socio-suspendido",
+    initials: "RL",
+    name: "Roberto Luna",
+    description: "Socio · 7 períodos impagos · sin excepción",
+    tono: "bad",
+    identificador: "38100007",
     contrasena: "Admin1234!",
   },
   {

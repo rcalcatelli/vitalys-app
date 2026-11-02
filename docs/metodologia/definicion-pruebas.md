@@ -402,7 +402,7 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 □ Admin registra cuota mensual para el socio → estado de cuenta actualizado
 □ Cancelación antes del inicio libera el slot (en tiempo o tarde); con el turno ya iniciado lo mantiene bloqueado (RN-02)
 □ Socio suspendido (Juan García) reserva gym gracias a su excepción vigente; el admin la revisa en su historial
-□ Socio suspendido sin excepción vigente intenta reservar gym → recibe 422 por morosidad
+□ Socio suspendido sin excepción vigente (Roberto Luna) intenta reservar gym → recibe 422 por morosidad
 □ Admin usa "Operar como" sobre un socio, reserva un turno, el banner persiste al recargar y "Volver a Recepción" regresa a Personas; el socio ve "Reservado por Recepción" (RN-27)
 □ Reserva de gimnasio con menos de 1 h o más de 7 días de anticipación → 422 (RN-18)
 □ Los datos de demo están al día: el seed es relativo a la fecha de carga, así que un entorno cargado hace semanas hay que resembrarlo (ver `entorno-local-docker.md`)
@@ -413,7 +413,7 @@ Checklist de verificación manual sobre el entorno de Render + Vercel + Supabase
 **Última ejecución: 27/10/2026**, contra Render (`/api/health` → `8469be0`; lo que falta desplegar de `main` es solo `seed.sql` y frontend) y Vercel, con los tres roles. Todo el checklist pasó, salvo dos ítems que no se pueden comprobar con el seed actual:
 
 - Marcar `COMPLETADO` un turno futuro devuelve 422 ("el turno no empezó"), como corresponde. Se verifica el día del turno.
-- Ningún socio está suspendido sin excepción vigente: Juan García es el único suspendido y tiene excepción. El caso del 422 por morosidad lo cubren los tests de integración.
+- Ningún socio está suspendido sin excepción vigente: Juan García es el único suspendido y tiene excepción. El caso del 422 por morosidad lo cubren los tests de integración. Después de esta ejecución el seed sumó a Roberto Luna, suspendido sin excepción, para probarlo en vivo una vez resembrada la base.
 
 La reserva de consultorio (Valentina Méndez, cancelada con menos de 24 h → `CANCELADO_TARDE` y slot liberado), la cuota registrada (Ana Fernández pasó de 2 a 1 período impago), "Operar como" (403 en rutas de ADMIN, "Reservado por Recepción", token revocado al terminar) y RN-18 se probaron sobre los datos de demo. Los turnos creados se cancelaron y la persona de prueba se dio de baja, pero **conviene resembrar la base antes de la corrección**.
 

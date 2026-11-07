@@ -30,7 +30,7 @@ Los centros de salud híbridos gestionan socios de gimnasio y pacientes de consu
 5. 💳 **Registro de pagos** — cuotas de gimnasio y sesiones de consultorio
 6. 📧 **Notificaciones** — confirmaciones y recordatorios por email
 
-Además, la interfaz sigue el prototipo de diseño con un **shell común** (sidebar en escritorio, tab bar en móvil, modo oscuro persistente y avisos), un **inicio para el socio**, la pantalla de **Ingreso al gimnasio** con la hora real del check-in y **"Operar como"**: Recepción puede atender a un socio en el mostrador con una credencial de 30 minutos, auditada y visible para el socio (RF-39, RN-26, RN-27). Los desvíos deliberados respecto del prototipo están en [`docs/02-diseno/wireframes.md`](docs/02-diseno/wireframes.md).
+Además, la interfaz sigue el prototipo de diseño con un **shell común** (sidebar en escritorio, tab bar en móvil, modo oscuro persistente y avisos), un **inicio para el socio**, la pantalla de **Ingreso al gimnasio** con la hora real del check-in y **"Operar como"**: Recepción puede atender a un socio en el mostrador con una credencial de 30 minutos, auditada y visible para el socio (RF-39, RN-26, RN-27). Mientras cargan, las pantallas muestran spinner o skeletons y los botones quedan "en curso" hasta que responde el servidor. El login ofrece **cuentas de demostración** con los casos del seed, entre ellas un socio suspendido con excepción y otro sin ella, que muestra en vivo el bloqueo por deuda. Los desvíos deliberados respecto del prototipo están en [`docs/02-diseno/wireframes.md`](docs/02-diseno/wireframes.md).
 
 ### Fuera de alcance (versión futura)
 
@@ -63,7 +63,7 @@ vitalys-app/
 │   ├── ddl/
 │   │   └── vitalys_ddl.sql       → Esquema inicial HISTÓRICO (= V1). No es el esquema vigente
 │   ├── dml/
-│   │   └── seed.sql              → Datos de prueba
+│   │   └── seed.sql              → Datos de prueba, con fechas relativas al día de la carga
 │   └── migration/                → Migraciones versionadas de Flyway (V1, V2, V3…)
 ├── docker-compose.yml     → Entorno local: Postgres + backend con un solo comando
 ├── .github/workflows/     → CI (build + tests + JaCoCo del backend, build del frontend)
@@ -73,9 +73,13 @@ vitalys-app/
     │   └── relevamiento/               → Relevamiento de usuarios (perfiles, necesidades detectadas)
     ├── 02-diseno/
     │   ├── diagrama-er.mermaid         → Diagrama entidad-relación (2.ª entrega)
+    │   ├── diagramas.md                → Casos de uso, estados, secuencia, clases y arquitectura
     │   ├── diccionario-datos.md        → Diccionario de datos
     │   ├── requerimientos.md           → Catálogo de requerimientos funcionales y no funcionales
-    │   └── modulos.md                  → Listado de módulos y endpoints (2.ª entrega)
+    │   ├── modulos.md                  → Listado de módulos y endpoints (2.ª entrega)
+    │   ├── wireframes.md               → Pantallas y desvíos documentados respecto del diseño
+    │   ├── rfc-002-motor-base-de-datos.md → Elección del motor de base de datos
+    │   └── design-system/              → Prototipo de diseño y sistema de diseño
     ├── 03-despliegue/
     │   ├── runbook-deploy.md               → Guía de despliegue (Supabase + Render + Vercel)
     │   ├── entorno-local-docker.md         → Cómo levantar el backend local con Docker y Flyway
@@ -176,6 +180,8 @@ Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-dep
 Las desviaciones deliberadas respecto del mockup de diseño están documentadas, con el requerimiento que las motiva, en [`docs/02-diseno/design-system/README.md`](docs/02-diseno/design-system/README.md).
 
 **Avance real (no altera las fechas de arriba):**
+
+- **Cierre para la entrega final (PR #34 a #39).** Estados de carga en todas las pantallas (#37), y la app ya no queda en blanco si el backend responde sin los campos nuevos (#34). `GET /api/health` informa el commit desplegado, para saber qué versión corre en Render (#35). En el seed, los emails de prueba pasaron a `example.com` para que Brevo no le escriba a casillas reales (#36), y se sumó **Roberto Luna**, socio suspendido sin excepción, para mostrar el bloqueo por deuda en la defensa (#39). En el CI, Testcontainers pasó a 1.21.4 porque la 1.20.6 no funciona con Docker 29, que es el que usan ahora los runners de GitHub (#39). "Operar como" quedó registrado en el RFC-001 como Decisión 12 (#38). El smoke test del 27/10 sobre Render y Vercel pasó y está en [`docs/metodologia/definicion-pruebas.md`](docs/metodologia/definicion-pruebas.md). Estado en el CI de `main` tras el PR #39: **426 tests unitarios y 201 de integración** en el backend y **704 tests** en el frontend (**99,46 % de cobertura de líneas**), ambos con el gate del 90 %.
 
 - **Interfaz al diseño y "Operar como" (PR #33).** Shell común, inicio del socio, Ingreso al gimnasio, reserva de consultorio por profesional, Personas con cuota y filtro de deuda, y modo oscuro; en el backend, `turnos.completado_en` (V16), la auditoría de "Operar como" (V17), la próxima agenda por profesional, el nombre en `/api/auth/me` y la validación de RN-18 (7 días / 1 hora) también en el servidor. Estado en el CI del PR #33: **415 tests unitarios y 199 de integración** en el backend y **662 tests** en el frontend (**99,5 % de cobertura de líneas**), ambos con el gate del 90 %. Nuevos: RF-39 a RF-43, RN-26 a RN-28, HU-10 y HU-11, PI-112 a PI-139. **Antes de una demo hay que resembrar la base** (`seed.sql` usa fechas relativas al día de la carga y el Supabase gratuito se pausa tras ~7 días sin actividad): ver [`docs/03-despliegue/entorno-local-docker.md`](docs/03-despliegue/entorno-local-docker.md).
 - **Sprint 5 — Pagos (#7) implementado.** El ADMIN registra cuotas mensuales y sesiones de consultorio con su **medio de pago** (efectivo, transferencia, débito o crédito; V14), el socio consulta su estado de cuenta (`PAGADO` / `IMPAGO` / `PENDIENTE`, con 10 días de gracia) y el ADMIN el de cualquier persona. El estado de cuenta y la reserva de gimnasio comparten la misma regla de morosidad (`MorosidadService`, RN-01). Un pago de sesión se rechaza si el turno está cancelado (RN-02). Mercado Pago queda fuera del alcance (RFC-001), pero `medio_pago` está diseñado para sumarlo después con su propia migración. Estado en el PR #29: **315 tests unitarios y 157 de integración** en el backend y **416 tests** en el frontend (**98 % de cobertura de líneas**). Los listados `GET /api/pagos` y `GET /api/pagos/{id}` quedan diferidos.

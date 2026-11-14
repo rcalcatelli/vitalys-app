@@ -13,7 +13,17 @@ Aplicación web para la gestión integral de un centro de salud híbrido que com
 | Renzo Calcatelli      | _100960_ | [@rcalcatelli](https://github.com/rcalcatelli)         |
 | Pablo Basualdo Arcati | _100153_ | [@pbasualdoarcati](https://github.com/pbasualdoarcati) |
 
-**Tutora:** Sofía Raia
+**Tutora:** Sofía Raia · **Grupo:** 181
+
+---
+
+## 📦 Entrega final
+
+| Entregable | Enlace |
+| ---------- | ------ |
+| 🎬 Video final | [youtu.be/LeFzBQFSr7M](https://youtu.be/LeFzBQFSr7M) |
+| 📄 Informe final (PDF) | [`docs/04-informe-final/Informe-Final-Vitalys.pdf`](docs/04-informe-final/Informe-Final-Vitalys.pdf) |
+| 🌐 Aplicación desplegada | [vitalys-app-ayk2.vercel.app](https://vitalys-app-ayk2.vercel.app) (ver [Despliegue](#-despliegue)) |
 
 ---
 
@@ -84,7 +94,9 @@ vitalys-app/
     │   ├── runbook-deploy.md               → Guía de despliegue (Supabase + Render + Vercel)
     │   ├── entorno-local-docker.md         → Cómo levantar el backend local con Docker y Flyway
     │   └── setup-wsl-testcontainers.md     → Tests de integración con Testcontainers en Windows/WSL
-    └── metodologia/  → Planificación Scrum, riesgos y pruebas
+    ├── metodologia/  → Planificación Scrum, riesgos y pruebas
+    ├── 04-informe-final/  → Informe final (PDF y DOCX editable) y su fuente
+    └── 05-presentacion/   → Guion del video (ES/EN) y guía de estudio para el coloquio
 ```
 
 ---
@@ -157,7 +169,7 @@ Guía paso a paso (Supabase + Render + Vercel): [`docs/03-despliegue/runbook-dep
 - [x] Conformación del equipo y elección de tutora
 - [x] **1.ª entrega** — Propuesta y repositorio (30/08)
 - [x] **2.ª entrega** — Esquema de BD y módulos (27/09): aprobada por la tutora tras resolver las 12 observaciones de la primera devolución (detalle abajo) y los 4 puntos de cierre (Decisiones 1 y 2 del RFC-001, CA-06-4, datos de la entrevista de relevamiento y ruta de PI-06).
-- [ ] **Entrega final** — Informe, video y despliegue (14/11)
+- [x] **Entrega final** — Informe, video y despliegue (14/11): [informe](docs/04-informe-final/Informe-Final-Vitalys.pdf) · [video](https://youtu.be/LeFzBQFSr7M)
 - [ ] Defensa oral
 
 ### Devolución de la 2.ª entrega — estado de las 12 observaciones

@@ -1,0 +1,85 @@
+erDiagram
+    usuarios ||--o| personas : "tiene ficha"
+    usuarios ||--o| profesionales : "tiene ficha"
+    profesionales ||--o{ disponibilidad_profesional : "define franjas"
+    personas ||--o{ turnos : "reserva"
+    profesionales |o--o{ turnos : "atiende (NULL en GYM)"
+    personas ||--o{ pagos : "realiza"
+    turnos ||--o| pagos : "sesión pagada"
+    personas ||--o{ excepciones_morosidad : "beneficia"
+    personas ||--o{ notificaciones : "recibe"
+    turnos |o--o{ notificaciones : "origina"
+    usuarios ||--o{ auditoria_operar_como : "opera / es operado"
+    turnos |o--o{ auditoria_operar_como : "afectado por"
+
+    usuarios {
+        bigint id PK
+        varchar email UK
+        varchar password_hash
+        enum rol
+        boolean activo
+    }
+    personas {
+        bigint id PK
+        bigint usuario_id FK
+        varchar dni UK
+        enum estado
+        boolean es_socio_gym
+        date fecha_inicio_membresia
+        date fecha_baja
+    }
+    profesionales {
+        bigint id PK
+        bigint usuario_id FK
+        enum especialidad
+        int duracion_turno_minutos
+        boolean activo
+    }
+    disponibilidad_profesional {
+        bigint id PK
+        bigint profesional_id FK
+        smallint dia_semana
+        time hora_inicio
+        time hora_fin
+    }
+    turnos {
+        bigint id PK
+        bigint persona_id FK
+        bigint profesional_id FK
+        enum tipo_turno
+        timestamptz inicio
+        timestamptz fin
+        enum estado
+        timestamptz cancelado_en
+        timestamptz completado_en
+    }
+    pagos {
+        bigint id PK
+        bigint persona_id FK
+        enum concepto
+        numeric monto
+        enum medio
+        date periodo
+        bigint turno_id FK
+    }
+    excepciones_morosidad {
+        bigint id PK
+        bigint persona_id FK
+        bigint autorizado_por FK
+        date valida_hasta
+        bigint turno_id FK
+    }
+    notificaciones {
+        bigint id PK
+        bigint persona_id FK
+        enum tipo
+        boolean exitoso
+        date periodo
+    }
+    auditoria_operar_como {
+        bigint id PK
+        uuid sesion_id
+        bigint operador_usuario_id FK
+        bigint sujeto_usuario_id FK
+        enum accion
+    }

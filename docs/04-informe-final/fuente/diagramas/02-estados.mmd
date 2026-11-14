@@ -1,0 +1,14 @@
+%%{init: {"theme": "default", "themeVariables": {"fontFamily": "arial", "fontSize": "15px"}}}%%
+flowchart TD
+    I(( )) -->|"Reserva exitosa<br/>(persona / admin)"| R["RESERVADO<br/>Estado inicial · ocupa el<br/>lugar"]
+    R -->|"Atención o check-in<br/>(profesional / admin)<br/>guarda completado_en<br/>(RN-28)"| C["COMPLETADO<br/>Ocupa el lugar: la franja<br/>ya transcurrió (RN-08)"]
+    R -->|"No se presentó<br/>(profesional / admin / job)"| A["AUSENTE<br/>Ocupa el lugar: la franja<br/>ya transcurrió (RN-08)"]
+    R -->|"Aviso ≥ 24 h consultorio<br/>/ ≥ 2 h gym (persona /<br/>admin)"| T["CANCELADO_EN_TIEMPO<br/>Libera el lugar si se canceló<br/>antes del inicio (RN-02)"]
+    R -->|"Aviso con menos<br/>anticipación (persona /<br/>admin)"| D["CANCELADO_TARDE<br/>Registra la poca<br/>anticipación;<br/>también libera si fue antes<br/>del inicio"]
+    R -->|"El profesional redujo<br/>su disponibilidad (RN-24)"| P["CANCELADO_POR_PROFESIONAL<br/>No computa como cancelación<br/>del paciente"]
+    C --> F["Fin del ciclo de vida<br/>(estado terminal: no<br/>cambia más)"]
+    A --> F
+    T --> F
+    D --> F
+    P --> F
+    style I fill:#000,stroke:#000

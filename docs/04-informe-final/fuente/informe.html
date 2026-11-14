@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Informe Final — Vitalys App</title>
+<style>
+  /* Formato de la plantilla de la cátedra: carta, Calibri 11, texto negro, encabezado con logo UTN */
+  @page { size: letter; margin: 38.8mm 25.4mm 25.4mm 25.4mm;
+    @top-center { content: ""; background: url("img/logo-utn-header.png") center bottom 3mm / auto 16mm no-repeat; border-bottom: 0.75pt solid #7F7F7F; margin: 8mm 0 7mm; }
+    @bottom-right { content: counter(page); font: 11pt Calibri, Carlito, Arial, sans-serif; color: #000; } }
+  @page :first { margin: 25.4mm; @top-center { content: none; border: none; } @bottom-right { content: none; } }
+  html { counter-reset: page -1; font-family: Calibri, Carlito, Arial, sans-serif; font-size: 11pt; color: #000; line-height: 1.1; }
+  body { margin: 0; }
+  h1 { font-size: 14pt; font-weight: bold; margin: 15pt 0 8pt; break-after: avoid; }
+  h2 { font-size: 12pt; font-weight: bold; margin: 11pt 0 5pt; break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: bold; margin: 8pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 6pt; text-align: justify; }
+  ul, ol { margin: 0 0 6pt; padding-left: 36pt; }
+  li { margin-bottom: 3pt; text-align: justify; padding-left: 4pt; }
+  /* Bordes separados (no collapse): con collapse, el fondo del encabezado tapa la línea y algunas
+     desaparecen al hacer zoom en el visor de PDF. Cada celda dibuja solo su borde derecho e inferior. */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 4pt 0 10pt; font-size: 9pt; break-inside: auto;
+          border-left: 0.75pt solid #000; }
+  tr { break-inside: avoid; }
+  table:not(:has(thead)) tr:first-child td { border-top: 0.75pt solid #000; }
+  thead { display: table-header-group; break-after: avoid; }
+  tbody tr:first-child { break-before: avoid; }
+  th { background: #F2F2F2; background-clip: padding-box; color: #000; text-align: center; padding: 3pt 4pt; font-weight: bold; border-top: 0.75pt solid #000; border-right: 0.75pt solid #000; border-bottom: 0.75pt solid #000; }
+  td { border-right: 0.75pt solid #000; border-bottom: 0.75pt solid #000; padding: 3pt 4pt; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+  figure { margin: 6pt 0 8pt; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figure img.cap { max-height: 95mm; width: auto; max-width: 100%; border: 0.5pt solid #BFBFBF; }
+  figcaption { font-size: 9pt; margin-top: 4pt; font-style: italic; }
+  .nota { margin: 6pt 0 10pt; text-align: justify; }
+  .pendiente { background: #FFFF00; }
+  a { color: #000; text-decoration: none; }
+  /* Carátula, igual a la plantilla */
+  .portada { text-align: center; }
+  .portada .logo { margin-top: 35mm; }
+  .portada .logo img { width: 100.5mm; }
+  .portada .inst { font-size: 20pt; margin: 3.5mm 0 16mm; }
+  .portada .titulo { font-size: 18pt; font-weight: bold; margin-bottom: 2mm; }
+  .portada .subtitulo { font-size: 13pt; font-weight: bold; margin-bottom: 10.5mm; }
+  .portada .dato { font-size: 12pt; font-weight: bold; margin-bottom: 1mm; }
+  .portada .espacio { height: 4mm; }
+  .indice { break-before: page; }
+  .indice .titulo-indice { font-size: 14pt; font-weight: bold; margin: 0 0 6pt; }
+  .indice p { margin: 0 0 3pt 6.35mm; text-align: left; }
+</style>
+</head>
+<body>
+
+<!-- ============================ PORTADA ============================ -->
+<section class="portada">
+  <div class="logo"><img src="img/logo-utn.png" alt="UTN"></div>
+  <div class="inst">Universidad Tecnológica Nacional</div>
+  <div class="titulo">Proyecto Final — Vitalys App</div>
+  <div class="subtitulo">Gestión integral de un centro de salud híbrido:<br>gimnasio y consultorios de Nutrición, Psicología y Kinesiología</div>
+  <div class="dato">Carrera: Tecnicatura Universitaria en Programación a Distancia</div>
+  <div class="dato">Materia: Proyecto Final</div>
+  <div class="espacio"></div>
+  <div class="dato">Proyecto: Vitalys App</div>
+  <div class="dato">Grupo N.º: 181</div>
+  <div class="dato">Integrante: Basualdo Arcati, Pablo Gabriel Ramón</div>
+  <div class="dato">Integrante: Calcatelli, Renzo</div>
+  <div class="dato">Tutora: Sofía Raia</div>
+  <div class="dato">Año: 2026</div>
+</section>
+
+<!-- ============================ ÍNDICE ============================ -->
+<section class="indice">
+<div class="titulo-indice">Índice</div>
+<p>Resumen y enlaces del proyecto</p>
+<p>1. Problema y contexto</p>
+<p>2. Objetivos y alcance</p>
+<p>3. Análisis y modelo del dominio</p>
+<p>4. Arquitectura y tecnologías</p>
+<p>5. Implementación</p>
+<p>6. Pruebas y validación</p>
+<p>7. Resultados y conclusiones</p>
+<p>Anexo. Documentación de referencia en el repositorio</p>
+</section>
+
+<!-- ============================ RESUMEN ============================ -->
+<h1 id="s0">Resumen y enlaces del proyecto</h1>
+<p><b>Vitalys App</b> es una aplicación web responsive para gestionar un centro que combina un <b>gimnasio</b> con <b>consultorios</b> de Nutrición, Psicología y Kinesiología. Unifica en una sola plataforma la identidad de socios y pacientes, la agenda de turnos de ambos servicios, el registro de pagos con control de morosidad y las notificaciones por correo electrónico. Está construida con una API REST en Spring Boot (Java 17), un frontend en React con TypeScript y una base de datos PostgreSQL, desplegados en la nube sobre Render, Vercel y Supabase.</p>
+<p>El sistema implementa los seis módulos comprometidos en la propuesta (RFC-001) y agrega, como cambios de alcance registrados, el panel de inicio del administrador ("Hoy en el centro"), los avisos de deuda y la función "Operar como", que permite a Recepción atender a un socio en el mostrador con una sesión acotada y auditada. Las reglas críticas del dominio (no superposición de turnos, cupo del gimnasio, morosidad, unicidad de pagos) se garantizan en la base de datos y en la capa de servicio, y están cubiertas por pruebas automatizadas que se ejecutan en integración continua con un umbral mínimo de cobertura del 90 %.</p>
+<table>
+  <thead><tr><th style="width:28%">Recurso</th><th>Enlace</th></tr></thead><tbody>
+  <tr><td>Aplicación (frontend)</td><td><a href="https://vitalys-app-ayk2.vercel.app">https://vitalys-app-ayk2.vercel.app</a></td></tr>
+  <tr><td>API (backend)</td><td><a href="https://vitalys-backend-039u.onrender.com/api/health">https://vitalys-backend-039u.onrender.com</a></td></tr>
+  <tr><td>Documentación de la API (Swagger UI)</td><td><a href="https://vitalys-backend-039u.onrender.com/swagger-ui/index.html">https://vitalys-backend-039u.onrender.com/swagger-ui/index.html</a></td></tr>
+  <tr><td>Repositorio</td><td><a href="https://github.com/rcalcatelli/vitalys-app">https://github.com/rcalcatelli/vitalys-app</a></td></tr>
+  <tr><td>Video final</td><td><a href="https://youtu.be/LeFzBQFSr7M">https://youtu.be/LeFzBQFSr7M</a></td></tr>
+</tbody></table>
+<div class="nota"><b>Acceso para la corrección.</b> La pantalla de ingreso muestra las cuentas de demostración de los tres roles (administración, profesional y socio/paciente); las contraseñas de prueba están documentadas en <code>db/dml/seed.sql</code>. El plan gratuito de Render suspende el backend tras un período sin tráfico, por lo que la primera solicitud puede demorar cerca de un minuto mientras el servicio arranca.</div>
+
+<!-- ============================ 1. PROBLEMA ============================ -->
+<h1 id="s1">1. Problema y contexto</h1>
+
+<h2>1.1. Situación que dio origen al proyecto</h2>
+<p>Los centros que combinan actividad deportiva con prestaciones de salud tienen dos servicios bajo el mismo techo cuyos datos, en general, no se comunican. En los establecimientos chicos esto toma la forma de herramientas desconectadas: planillas de socios, agendas en papel o por WhatsApp para cada profesional y cobros anotados en un cuaderno o en Excel. En los establecimientos grandes, que sí cuentan con un sistema propio, el problema no desaparece sino que cambia de forma: el gimnasio y la prestación de salud conviven en la misma plataforma, pero sus datos no se cruzan.</p>
+<p>Las consecuencias son concretas: personas registradas dos veces (como socio y como paciente) con datos inconsistentes, turnos superpuestos o perdidos, pagos sin trazabilidad, deudas que nadie detecta a tiempo y una recepción saturada de tareas manuales y consultas telefónicas. Para el negocio esto se traduce en ingresos no cobrados y en decisiones tomadas sin información confiable.</p>
+
+<h2>1.2. Usuarios y actores involucrados</h2>
+<table>
+  <thead><tr><th style="width:20%">Actor</th><th style="width:40%">Rol en el proceso actual</th><th>Necesidad principal</th></tr></thead><tbody>
+  <tr><td>Socio / paciente</td><td>Asiste al gimnasio, a consultorios o a ambos; muchas veces figura como dos personas distintas.</td><td>Reservar y cancelar turnos sin depender del horario de recepción y conocer su estado de cuenta.</td></tr>
+  <tr><td>Profesional (Nutrición, Psicología, Kinesiología)</td><td>Administra su agenda de forma aislada.</td><td>Ver su agenda del día, cargar su disponibilidad y registrar asistencia sin superposiciones.</td></tr>
+  <tr><td>Recepción / administración</td><td>Centraliza cobros, turnos y consultas; es el cuello de botella operativo.</td><td>Reducir tareas repetitivas y errores de registro; atender en el mostrador a quien no usa la aplicación.</td></tr>
+  <tr><td>Dueño / encargado</td><td>Supervisa ingresos y actividad.</td><td>Información consolidada del día y de los socios con deuda. En el MVP opera con el rol de administración.</td></tr>
+</tbody></table>
+
+<h2>1.3. Evidencia utilizada para validar el problema</h2>
+<p>A pedido de la tutora en la revisión de la primera entrega, el equipo trabajó con dos fuentes de evidencia complementarias, con distinto peso metodológico:</p>
+<ol>
+  <li><b>Relevamiento de campo en un establecimiento real.</b> El 28/09/2026 se realizó una entrevista presencial a la persona encargada de la coordinación del <b>Centro Deportivo Jerárquicos</b>, siguiendo una guía de entrevista escrita de antemano. El registro completo, que distingue lo efectivamente respondido de lo que quedó pendiente, está en <code>docs/01-propuesta/relevamiento/entrevista-jerarquicos.md</code>. El establecimiento autorizó verbalmente que se lo nombre.</li>
+  <li><b>Perfiles de usuario sintéticos.</b> Doce perfiles elaborados por el equipo (cuatro por rol) para contrastar el catálogo de requerimientos contra necesidades concretas y detectar huecos funcionales. Están rotulados explícitamente como sintéticos (<code>perfiles-usuario.json</code>) y no se presentan como testimonio de personas reales.</li>
+</ol>
+<p>El relevamiento mostró que el establecimiento usa un sistema desarrollado a medida, con acceso web y móvil, en el que el socio reserva el gimnasio y, con la misma cuenta, pide turnos de consultorio. Aun así, lo que el propio centro señala como pendiente es <b>integrar los datos del gimnasio con los de la prestación de salud</b>. Este hallazgo es relevante porque indica que el problema no se resuelve solo con tener software: persiste incluso en un establecimiento con sistema propio.</p>
+<p>Más allá de confirmar el problema, el relevamiento obligó a cambiar reglas que el equipo había definido sin evidencia. Los hallazgos más importantes y su efecto sobre el diseño fueron:</p>
+<table>
+  <thead><tr><th style="width:4%">#</th><th style="width:44%">Hallazgo</th><th>Efecto en Vitalys</th></tr></thead><tbody>
+  <tr><td>7</td><td>El centro tolera hasta <b>6 meses de deuda</b> antes de suspender; mientras tanto el socio sigue ingresando y recibe avisos.</td><td>Se reescribió la regla de morosidad (RN-01) con un umbral configurable y un estado intermedio "con deuda" que no bloquea (migración V6).</td></tr>
+  <tr><td>11</td><td>Cancelar <b>libera el lugar</b> para otra persona; solo lo retiene cancelar con la franja ya iniciada.</td><td>RN-02 y RN-03 pasaron a definir la ocupación por el momento de la cancelación, con una única función compartida por los controles de la base (V8).</td></tr>
+  <tr><td>10 / 5</td><td>El profesional informa ausencias por un período; no estaba definido qué pasa con los turnos ya tomados.</td><td>Cancelación en cascada con vista previa del impacto, confirmación y aviso a cada paciente (RN-24).</td></tr>
+  <tr><td>4</td><td>Faltaba la fecha de inicio de la membresía: un socio nuevo podía aparecer como moroso desde el primer día.</td><td>Columna <code>fecha_inicio_membresia</code> (V4).</td></tr>
+  <tr><td>2 / 3</td><td>No se podía consultar el cupo de una franja de gimnasio ni estaba definido quién registra la asistencia.</td><td>Grilla horaria con cupo por franja y check-in a cargo de Recepción (Decisión de dominio 11).</td></tr>
+  <tr><td>8 / 9</td><td>El cobro real es por débito automático y el turno de gimnasio incluye la actividad.</td><td>Registrados como divergencias conscientes respecto del alcance del MVP (ver sección 2.4).</td></tr>
+</tbody></table>
+<p>El relevamiento también confirmó decisiones previas: la identidad única socio-paciente sobre una sola cuenta, que la suspensión por deuda del gimnasio <b>no alcance a la prestación de salud</b>, que el profesional se limite a registrar la asistencia sobre su agenda y que el aviso de deuda deba preceder al bloqueo.</p>
+
+<h2>1.4. Necesidad concreta que se buscó resolver</h2>
+<p>Contar con una única plataforma, diseñada para el modelo híbrido, en la que cada persona exista una sola vez con su historial de turnos y pagos; en la que el sistema, y no la memoria de un operador, impida las superposiciones y condicione la reserva del gimnasio al estado de cuenta; y en la que el socio pueda autogestionar sus turnos las 24 horas, descomprimiendo a la recepción sin reemplazarla.</p>
+
+<!-- ============================ 2. OBJETIVOS ============================ -->
+<h1 id="s2">2. Objetivos y alcance</h1>
+
+<h2>2.1. Objetivo general</h2>
+<p>Desarrollar y desplegar en la nube una aplicación web que centralice la gestión de personas, profesionales, turnos de gimnasio y de consultorio, pagos y notificaciones de un centro de salud híbrido, haciendo cumplir de forma automática las reglas de negocio del dominio.</p>
+
+<h2>2.2. Objetivos específicos</h2>
+<ul>
+  <li>Modelar una identidad única socio-paciente con baja lógica y trazabilidad de cada operación.</li>
+  <li>Garantizar, a nivel de base de datos, que no existan turnos superpuestos ni franjas de gimnasio por encima de su cupo, incluso ante reservas simultáneas.</li>
+  <li>Calcular la morosidad del gimnasio de forma acumulativa y con umbral de tolerancia, y aplicarla a la reserva sin afectar los turnos de consultorio.</li>
+  <li>Registrar pagos de cuotas y sesiones con su medio de pago, y exponer el estado de cuenta al socio y a la administración.</li>
+  <li>Notificar por correo las reservas, cancelaciones, recordatorios y deudas, sin que una falla del proveedor afecte la operación.</li>
+  <li>Sostener el desarrollo con un proceso verificable: ramas y Pull Requests revisados, integración continua y un umbral de cobertura de pruebas.</li>
+</ul>
+
+<h2>2.3. Alcance finalmente implementado</h2>
+<table>
+  <thead><tr><th style="width:24%">Módulo</th><th>Funcionalidad implementada</th><th style="width:10%">Estado</th></tr></thead><tbody>
+  <tr><td>1. Autenticación y roles</td><td>Registro público con rol forzado a socio/paciente; login por email o DNI; JWT; tres roles (ADMIN, PROFESIONAL, SOCIO_PACIENTE) con control de acceso en la capa de servicio.</td><td>Completo</td></tr>
+  <tr><td>1b. Operar como</td><td>Recepción opera en nombre de un socio con una credencial de 30 minutos, auditada y visible para el socio.</td><td>Completo (cambio de alcance)</td></tr>
+  <tr><td>2. Personas</td><td>Alta, modificación, baja lógica y reactivación; vínculo de la ficha con un usuario ya registrado; DNI único; columna de cuota y filtro de deuda.</td><td>Completo</td></tr>
+  <tr><td>3. Profesionales y disponibilidad</td><td>ABM con baja lógica en dos pasos; franjas semanales sin solapamiento; cancelación en cascada con vista previa del impacto al reducir la disponibilidad.</td><td>Completo</td></tr>
+  <tr><td>4. Agenda de turnos</td><td>Gimnasio: grilla, cupo por franja, un turno por día, feriados oficiales, anticipación de 1 hora a 7 días, check-in y ausentes automáticos. Consultorio: turnos según la disponibilidad del profesional y agenda del día. Cancelación con estado según la anticipación. Excepciones de morosidad autorizadas por el ADMIN.</td><td>Completo</td></tr>
+  <tr><td>5. Pagos</td><td>Cuotas mensuales y sesiones de consultorio con medio de pago; estado de cuenta (pagado, impago, pendiente) con 10 días de gracia; regla de morosidad compartida con la reserva.</td><td>Completo</td></tr>
+  <tr><td>6. Notificaciones</td><td>Confirmación, cancelación, recordatorio 24 h antes y avisos de deuda y suspensión, por la API de Brevo, con un reintento y alerta en el panel del ADMIN si falla.</td><td>Completo</td></tr>
+  <tr><td>Panel "Hoy en el centro"</td><td>Inicio del ADMIN: quién está en el gimnasio, turnos y consultas del día, ocupación por franja, socios que requieren atención y notificaciones fallidas.</td><td>Completo (cambio de alcance)</td></tr>
+</tbody></table>
+<p>Además, la interfaz sigue el prototipo de diseño elaborado para el proyecto: shell común con barra lateral en escritorio y barra de pestañas en el celular, modo oscuro persistente, pantalla de inicio del socio y pantalla de Ingreso al gimnasio. Los desvíos deliberados respecto del prototipo están documentados con su motivo en <code>docs/02-diseno/wireframes.md</code>.</p>
+<p>Todo cambio de alcance se registró en el RFC-001 mediante Pull Request, como se había acordado con la tutora. "Operar como" quedó asentado como <b>Decisión de dominio 12</b>, con su fundamento y sus límites (ver sección 4.5).</p>
+
+<h2>2.4. Funcionalidades que quedaron fuera y motivo del recorte</h2>
+<table>
+  <thead><tr><th style="width:30%">Funcionalidad</th><th>Motivo</th></tr></thead><tbody>
+  <tr><td>Ficha clínica digital</td><td>Implica almacenar datos de salud (Ley 25.326) con exigencias de resguardo, retención y acceso que exceden un trabajo académico. Por minimización, el sistema no guarda diagnósticos ni motivos de consulta.</td></tr>
+  <tr><td>Pasarela de pago y débito automático</td><td>El relevamiento mostró que el cobro real es automático (hallazgo 8), pero integrar un procesador de pagos es un módulo en sí mismo. Los cobros se registran a mano con su medio, y el tipo <code>medio_pago</code> admite sumar Mercado Pago con una migración propia.</td></tr>
+  <tr><td>Pagos parciales, packs y planes</td><td>Introducen saldos, imputación y estados intermedios de deuda; el objetivo del MVP es la trazabilidad del pago, no una cuenta corriente (Decisión 6).</td></tr>
+  <tr><td>Actividad dentro del turno de gimnasio y clases grupales</td><td>El turno de gimnasio modela una franja con cupo (hallazgo 9). Agregar actividades exige otro modelo de cupos.</td></tr>
+  <tr><td>Reportes de ingresos y ocupación</td><td>Estaban como "nice to have" y se descartaron para priorizar los seis módulos. El panel "Hoy en el centro" cubre la información operativa del día.</td></tr>
+  <tr><td>Recuperación de contraseña por email</td><td>Ningún requerimiento la contemplaba. La pantalla existe y lo informa con claridad; la contraseña se restablece en el centro.</td></tr>
+  <tr><td>Varios roles por usuario</td><td>Un profesional que además es socio necesita dos cuentas. Es una limitación de diseño documentada (Decisión 8): el caso no apareció como frecuente.</td></tr>
+  <tr><td>Aplicaciones nativas</td><td>La aplicación web es responsive y cubre el uso desde el celular.</td></tr>
+  <tr><td>Listados generales de pagos</td><td>Los endpoints <code>GET /api/pagos</code> y <code>GET /api/pagos/{id}</code> se difirieron: el estado de cuenta por persona cubre la consulta necesaria.</td></tr>
+</tbody></table>
+
+<!-- ============================ 3. MODELO ============================ -->
+<h1 id="s3">3. Análisis y modelo del dominio</h1>
+
+<h2>3.1. Principales entidades y relaciones</h2>
+<table>
+  <thead><tr><th style="width:26%">Entidad (tabla)</th><th>Responsabilidad</th></tr></thead><tbody>
+  <tr><td><code>usuarios</code></td><td>Credenciales (email y hash bcrypt), rol único y estado habilitado.</td></tr>
+  <tr><td><code>personas</code></td><td>Identidad única del socio/paciente: DNI único, estado ACTIVO/INACTIVO con fecha de baja, si es socio del gimnasio y desde cuándo.</td></tr>
+  <tr><td><code>profesionales</code></td><td>Especialidad, duración del turno por profesional y baja lógica.</td></tr>
+  <tr><td><code>disponibilidad_profesional</code></td><td>Franjas semanales (día, hora de inicio y de fin) de cada profesional.</td></tr>
+  <tr><td><code>turnos</code></td><td>Reservas de gimnasio y de consultorio en una sola tabla, con tipo, inicio, fin, estado, quién reservó, quién y cuándo canceló, y hora real del check-in.</td></tr>
+  <tr><td><code>pagos</code></td><td>Cuota mensual (con período) o sesión de consultorio (con turno), monto, medio de pago y quién lo registró.</td></tr>
+  <tr><td><code>excepciones_morosidad</code></td><td>Autorizaciones puntuales del ADMIN para que un socio suspendido pueda reservar el gimnasio.</td></tr>
+  <tr><td><code>notificaciones</code></td><td>Registro de cada correo: tipo, destinatario, resultado y, en los avisos de deuda, el período avisado.</td></tr>
+  <tr><td><code>feriados</code> y <code>configuracion_gym</code></td><td>Días en que el gimnasio no abre (sincronizados con el calendario oficial) y parámetros: cupo por franja y meses de tolerancia de morosidad.</td></tr>
+  <tr><td><code>auditoria_operar_como</code></td><td>Inicio, fin y cada reserva o cancelación hechas durante "Operar como". Solo se inserta.</td></tr>
+</tbody></table>
+<figure>
+  <img class="diag" src="img/diagrama-01-er.png" alt="Diagrama entidad-relación simplificado">
+  <figcaption>Figura 1. Modelo entidad-relación simplificado (atributos principales). El modelo completo está en <code>docs/02-diseno/diagrama-er.mermaid</code> y el detalle de cada columna en el diccionario de datos.</figcaption>
+</figure>
+
+<h2>3.2. Reglas de negocio relevantes</h2>
+<table>
+  <thead><tr><th style="width:9%">Regla</th><th style="width:58%">Descripción</th><th>Dónde se garantiza</th></tr></thead><tbody>
+  <tr><td>RN-01</td><td><b>Morosidad del gimnasio.</b> Se recorren mes a mes los períodos desde el inicio de la membresía; cada período cuenta como impago si pasaron 10 días de su vencimiento sin cuota, aunque se hayan pagado meses posteriores. Con al menos un impago el socio queda "con deuda" pero conserva el acceso; al alcanzar el umbral configurable (6) queda suspendido y no puede reservar el gimnasio. Nunca bloquea un turno de consultorio.</td><td>Servicio (<code>MorosidadService</code>), compartido por la reserva y el estado de cuenta</td></tr>
+  <tr><td>RN-02 / RN-03</td><td><b>Cancelación y ocupación del lugar.</b> El estado registra la anticipación del aviso (24 h en consultorio, 2 h en gimnasio). Lo que decide si el lugar se libera es el momento: toda cancelación anterior al inicio libera el lugar; una vez iniciada la franja, queda ocupado. La cancelación tardía no se cobra.</td><td>Base de datos (<code>fn_turno_ocupa_lugar</code>) y servicio</td></tr>
+  <tr><td>RN-22</td><td><b>Sin superposiciones.</b> Un profesional no puede tener dos turnos que se pisen, y una persona tampoco, aunque sean de distinto tipo.</td><td>Base de datos (restricciones <code>EXCLUDE USING GIST</code>)</td></tr>
+  <tr><td>RN-14 a RN-17</td><td><b>Gimnasio.</b> Franjas de 60 minutos en punto (lunes a viernes de 7 a 21, sábados de 9 a 12), cupo por franja, un turno por persona y por día, solo socios activos y sin feriados.</td><td>Base de datos (trigger con bloqueo) y servicio</td></tr>
+  <tr><td>RN-18</td><td><b>Anticipación de la reserva de gimnasio:</b> como máximo 7 días antes y como mínimo 1 hora antes.</td><td>Servicio (depende de la hora actual)</td></tr>
+  <tr><td>RN-05 a RN-07, RN-20</td><td><b>Pagos.</b> Una cuota por persona y período; un pago por turno; la cuota lleva período y la sesión lleva turno; solo se paga una sesión de consultorio a nombre de la persona del turno.</td><td>Base de datos (índices únicos parciales, CHECK y trigger)</td></tr>
+  <tr><td>RN-08 / RN-19 / RN-28</td><td><b>Asistencia.</b> El profesional marca atendido desde 15 minutos antes del inicio y ausente desde el inicio. En el gimnasio lo hace Recepción en el check-in, y si nadie lo marca el turno pasa a ausente al cerrar la franja. Se guarda la hora real del ingreso.</td><td>Servicio y tarea programada</td></tr>
+  <tr><td>RN-09 / RN-23</td><td><b>Excepciones de morosidad</b> autorizadas por el ADMIN, de un solo uso o por período, solo para socios suspendidos.</td><td>Servicio y base de datos</td></tr>
+  <tr><td>RN-24 / RN-25</td><td><b>Reducción de disponibilidad o baja del profesional:</b> los turnos futuros que quedan afuera se cancelan en cascada, con vista previa del impacto, confirmación explícita y aviso al paciente.</td><td>Servicio</td></tr>
+  <tr><td>RN-26 / RN-27</td><td><b>Operar como:</b> credencial acotada y revocable; toda escritura queda auditada en la misma transacción.</td><td>Filtro de seguridad, servicio y base de datos</td></tr>
+</tbody></table>
+
+<h2>3.3. Decisiones de modelado importantes</h2>
+<ul>
+  <li><b>Identidad única socio-paciente.</b> Una persona es una sola fila de <code>personas</code>, vinculada a un usuario, con su historial completo de cuotas y turnos. Es el núcleo de la propuesta de valor y el relevamiento lo confirmó como un caso frecuente.</li>
+  <li><b>Separación entre usuario y ficha.</b> <code>usuarios</code> guarda la autenticación; <code>personas</code> y <code>profesionales</code> guardan los datos del dominio. Esto permite que alguien se registre solo y que luego Recepción vincule su ficha por email, sin crear credenciales nuevas (RF-31).</li>
+  <li><b>Una sola tabla de turnos para dos circuitos distintos.</b> El turno de gimnasio no tiene profesional (<code>profesional_id</code> nulo) y se rige por cupo; el de consultorio depende de la disponibilidad del profesional. Compartir la tabla permite que una misma restricción impida que una persona tenga dos turnos superpuestos de distinto tipo, mientras que las validaciones propias de cada circuito siguen separadas.</li>
+  <li><b>Baja lógica en todo el modelo.</b> Personas y profesionales nunca se borran: el historial de pagos y turnos debe sobrevivir y una persona dada de baja suele volver.</li>
+  <li><b>Reglas críticas en el motor de base de datos.</b> Las restricciones de exclusión, los índices únicos parciales y los triggers son la defensa real: aunque el código tuviera un error, la base no acepta un estado inválido. La capa de servicio traduce esos rechazos a respuestas 409 o 422 con mensajes claros.</li>
+  <li><b>Tipos enumerados nativos de PostgreSQL</b> para roles, estados, especialidades, conceptos y medios de pago, de modo que un valor fuera de dominio sea imposible de guardar.</li>
+  <li><b>El período de una cuota es el primer día del mes</b>, controlado por una restricción, lo que hace inequívoca la unicidad de la cuota mensual.</li>
+  <li><b>Esquema versionado.</b> El esquema evolucionó con 17 migraciones de Flyway (V1 a V17) sin modificar las anteriores, lo que permite reconstruir la base desde cero en cualquier entorno.</li>
+</ul>
+
+<h2>3.4. Diagramas del dominio</h2>
+<figure>
+  <img class="diag" src="img/diagrama-02-estados.png" alt="Diagrama de estados del turno">
+  <figcaption>Figura 2. Diagrama de estados del turno: cada estado final indica si ocupa o libera el lugar.</figcaption>
+</figure>
+<p>El repositorio incluye además el diagrama de casos de uso, el de clases del dominio y los diagramas de secuencia de cada flujo principal (reserva de consultorio y de gimnasio, cancelación, reducción de disponibilidad, registro público, vínculo de fichas, excepciones de morosidad y "Operar como") en <code>docs/02-diseno/diagramas.md</code>.</p>
+
+<!-- ============================ 4. ARQUITECTURA ============================ -->
+<h1 id="s4">4. Arquitectura y tecnologías</h1>
+
+<h2>4.1. Arquitectura final</h2>
+<p>La solución sigue una arquitectura cliente-servidor de tres capas. El frontend es una aplicación de una sola página (SPA) que consume una API REST con JSON. El backend está organizado en capas (Controller → Service → Repository): los controladores exponen los endpoints y validan la entrada, los servicios concentran las reglas de negocio y el control de acceso por rol, y los repositorios acceden a la base con Spring Data JPA. La base de datos PostgreSQL es, además de almacenamiento, la última línea de defensa de las reglas críticas.</p>
+<figure>
+  <img class="diag" src="img/diagrama-03-arquitectura.png" alt="Diagrama de arquitectura y despliegue" style="max-width:80%">
+  <figcaption>Figura 3. Arquitectura y despliegue.</figcaption>
+</figure>
+
+<h2>4.2. Componentes, responsabilidades y motivo de cada tecnología</h2>
+<table>
+  <thead><tr><th style="width:18%">Componente</th><th style="width:24%">Tecnología</th><th style="width:29%">Responsabilidad</th><th>Por qué se eligió</th></tr></thead><tbody>
+  <tr><td>Frontend</td><td>React 19 + TypeScript, Vite, React Router, Tailwind CSS</td><td>Interfaz por rol, navegación, formularios, estados de carga y error; nunca decide una regla de negocio.</td><td>Estándar de la industria, con el que el equipo ya trabajó; el tipado estático reduce errores al consumir la API.</td></tr>
+  <tr><td>Backend</td><td>Java 17, Spring Boot 3.2, Spring Web, Spring Data JPA, Bean Validation</td><td>API REST, reglas de negocio, transacciones, tareas programadas e integraciones.</td><td>Trabajado en profundidad en Programación III. Se priorizó una tecnología conocida para invertir el tiempo en el producto y no en aprender un framework con fecha de entrega fija.</td></tr>
+  <tr><td>Seguridad</td><td>Spring Security, JWT (jjwt), bcrypt</td><td>Autenticación sin estado, autorización por rol y la credencial acotada de "Operar como".</td><td>Integración nativa con Spring; JWT permite un backend sin sesión en el servidor, adecuado para un PaaS que reinicia el contenedor.</td></tr>
+  <tr><td>Base de datos</td><td>PostgreSQL (Supabase) con Flyway</td><td>Persistencia, integridad referencial, exclusión de solapamientos, cupos y unicidad.</td><td>El dominio es fuertemente relacional y transaccional. Se comparó con MongoDB en el RFC-002: las garantías que se necesitaban (exclusión por rangos de tiempo, transacciones) son nativas en PostgreSQL.</td></tr>
+  <tr><td>Documentación de la API</td><td>springdoc-openapi (Swagger UI)</td><td>Contrato navegable de todos los endpoints.</td><td>Se genera desde el código, por lo que no se desactualiza.</td></tr>
+  <tr><td>Despliegue</td><td>Render (backend en Docker), Vercel (frontend), Supabase (base)</td><td>Servir la aplicación por HTTPS con despliegue automático desde la rama principal.</td><td>Planes gratuitos suficientes para la escala del problema y sin administración de servidores. Render no ofrece un entorno nativo de Java, por eso el backend se publica como imagen Docker, la misma que se usa en local.</td></tr>
+  <tr><td>Entorno local</td><td>Docker Compose</td><td>Levantar PostgreSQL y el backend con un comando y cargar los datos de prueba.</td><td>Evita instalar Java, Maven y PostgreSQL a mano y asegura el mismo entorno para ambos integrantes.</td></tr>
+  <tr><td>Calidad e integración continua</td><td>JUnit 5, Mockito, Testcontainers, JaCoCo, Vitest, Testing Library, GitHub Actions</td><td>Pruebas unitarias y de integración contra un PostgreSQL real, umbral de cobertura y verificaciones de la documentación en cada Pull Request.</td><td>Las reglas críticas viven en la base, así que solo una base real (Testcontainers) prueba que se cumplen.</td></tr>
+</tbody></table>
+
+<h2>4.3. Integraciones realizadas</h2>
+<ul>
+  <li><b>Brevo (envío de correo por API HTTP).</b> Detrás de una interfaz <code>NotificadorEmail</code>, con una implementación que solo registra en el log para desarrollo y pruebas. Envía las confirmaciones, cancelaciones, recordatorios y avisos de deuda.</li>
+  <li><b>Calendario oficial de feriados.</b> Una tarea diaria descarga el JSON de feriados nacionales publicado en argentina.gob.ar y actualiza la tabla <code>feriados</code>; el gimnasio no abre los feriados inamovibles ni los trasladables en su fecha corrida. El ADMIN puede además cargar cierres propios y forzar la sincronización.</li>
+  <li><b>Supabase, Render y Vercel</b>, con despliegue continuo desde la rama principal de GitHub. El backend informa en <code>/api/health</code> qué commit está corriendo, lo que permite detectar un frontend nuevo hablando con un backend viejo.</li>
+  <li><b>GitHub Actions</b>, con tres trabajos: consistencia de la documentación (que incluye el control del prototipo exportado), backend (<code>mvn verify</code> con umbral de cobertura) y frontend (compilación y pruebas con umbral).</li>
+</ul>
+
+<h2>4.4. Seguridad, autenticación y autorización</h2>
+<ul>
+  <li><b>Contraseñas</b> almacenadas con hash bcrypt, nunca en texto plano.</li>
+  <li><b>Autenticación con JWT</b> de 24 horas en el encabezado <code>Authorization</code>. Todos los endpoints, salvo registro, login, health y la documentación, requieren un token válido; un token vencido, malformado o con firma inválida responde 401.</li>
+  <li><b>Autorización por rol en la capa de servicio</b> (RNF-03), además de la regla declarativa por ruta: un socio solo ve sus propios turnos y su estado de cuenta, un profesional solo su agenda, y, fuera de la administración, el DNI del paciente solo aparece en la agenda del profesional que lo atiende.</li>
+  <li><b>Registro público con rol forzado:</b> si el cuerpo de la solicitud trae un campo <code>rol</code>, se rechaza con 400 antes de crear nada.</li>
+  <li><b>Datos personales (Ley 25.326).</b> Que una persona tenga un turno de Psicología ya es un dato de salud. Se aplicó minimización (no se guarda contenido clínico), acceso por rol y transporte por HTTPS. Los datos de demostración son ficticios y los correos de prueba usan el dominio reservado <code>example.com</code>, que nunca entrega mensajes.</li>
+  <li><b>Secretos fuera del repositorio:</b> credenciales de base, clave JWT y API key de correo se cargan como variables de entorno en Render.</li>
+  <li><b>Correos seguros:</b> los nombres que se insertan en el HTML de los correos se escapan para evitar inyección de contenido.</li>
+  <li><b>CORS:</b> la API acepta solicitudes de cualquier origen. Es aceptable porque la autenticación viaja en un encabezado y no en cookies, de modo que un sitio ajeno no puede usar la sesión del usuario; restringirlo al dominio del frontend queda como mejora.</li>
+</ul>
+
+<h2>4.5. "Operar como": actuar en nombre de otra persona</h2>
+<p>Es la decisión de seguridad más sensible del proyecto, porque Recepción actúa en nombre de un socio. La Decisión 5 del RFC ya admitía que la administración reservara y cancelara por una persona; lo nuevo es la forma. En lugar de duplicar en endpoints de ADMIN las reglas del socio, el ADMIN obtiene una credencial cuyo sujeto es el socio y cuyo actor es el ADMIN (claim <code>act</code>, RFC 8693). Así el sistema le aplica exactamente las mismas reglas que al socio (morosidad, un turno por día, anticipación) y el backend sigue siendo la única autoridad. Los límites son:</p>
+<ul>
+  <li>dura 30 minutos, no se renueva y no se puede anidar; solo se puede suplantar a un socio habilitado, nunca a un ADMIN ni a un profesional;</li>
+  <li>en cada solicitud el filtro revalida al actor, al sujeto y que la sesión tenga un registro de inicio y no de fin; terminar la sesión la revoca en el servidor aunque el token no haya vencido;</li>
+  <li>todo lo exclusivo del ADMIN responde 403 y solo se permiten cuatro escrituras (reservar gimnasio, reservar consultorio, cancelar y terminar la sesión);</li>
+  <li>cada reserva o cancelación se audita en la misma transacción: si la auditoría falla, el turno no se guarda; el turno registra al ADMIN real como autor y el socio ve la marca "Reservado por Recepción".</li>
+</ul>
+<figure>
+  <img class="diag" src="img/diagrama-05-operar-como.png" alt="Secuencia de Operar como">
+  <figcaption>Figura 4. Secuencia de "Operar como": inicio, reserva auditada y fin de la sesión.</figcaption>
+</figure>
+
+<h2>4.6. Concurrencia, transacciones y sincronización</h2>
+<ul>
+  <li><b>Doble reserva del mismo horario.</b> Las restricciones <code>EXCLUDE USING GIST</code> sobre rangos de tiempo hacen imposible que dos turnos superpuestos queden confirmados: si dos personas reservan a la vez, la base acepta una y rechaza la otra (409).</li>
+  <li><b>Cupo del gimnasio.</b> Contar los turnos de una franja y luego insertar es una condición de carrera clásica: dos transacciones podían leer "19 de 20" y entrar ambas. El trigger toma un <code>pg_advisory_xact_lock</code> por franja, lo que serializa solo las reservas de esa misma franja sin bloquear al resto.</li>
+  <li><b>Unicidad bajo concurrencia</b> de cuotas, pagos por turno y avisos de deuda por período, garantizada con índices únicos parciales: el índice es la defensa real, no una consulta previa en el código.</li>
+  <li><b>Correos después del commit.</b> La notificación se guarda en la misma transacción que la reserva o la cancelación, y el envío ocurre recién después de confirmada, con un reintento. Así no se manda un correo de una reserva que luego se revirtió, y una caída del proveedor no impide reservar.</li>
+  <li><b>Tareas programadas:</b> recordatorios cada hora, avisos de deuda una vez por día, sincronización de feriados de madrugada y paso a ausente de los turnos de gimnasio sin check-in. Como el plan gratuito de Render duerme el proceso, la tarea de ausentes procesa cada vez todos los turnos vencidos, de modo que al despertar se pone al día con los que quedaron pendientes.</li>
+  <li><b>Hora y zona horaria.</b> El backend usa un <code>Clock</code> inyectado en la zona de Buenos Aires; las reglas que dependen de "ahora" se prueban de forma determinista fijando el reloj.</li>
+</ul>
+
+<!-- ============================ 5. IMPLEMENTACIÓN ============================ -->
+<h1 id="s5">5. Implementación</h1>
+
+<h2>5.1. Metodología y organización del trabajo</h2>
+<p>Se trabajó con un modelo incremental y marco Scrum, en cinco sprints de dos semanas y una etapa de cierre, según la planificación elaborada en Metodología de Sistemas I. Ambos integrantes trabajaron sobre todo el stack: cada módulo tuvo un responsable primario que lo llevó de punta a punta (modelo de datos, endpoint e interfaz) y el otro revisó el Pull Request. Ningún cambio se integró sin revisión y sin la integración continua en verde. El seguimiento se hizo con Issues y Pull Requests en GitHub, y el estado real de cada tarea está en <code>docs/metodologia/plan-sprints.md</code>.</p>
+<table>
+  <thead><tr><th style="width:14%">Sprint</th><th style="width:20%">Período</th><th>Resultado</th></tr></thead><tbody>
+  <tr><td>Sprint 1</td><td>31/08 – 13/09</td><td>Esquema inicial, proyectos Spring Boot y React, despliegue en Render y Vercel.</td></tr>
+  <tr><td>Sprint 2</td><td>14/09 – 27/09</td><td>Autenticación y roles con JWT; segunda entrega (esquema de base de datos y módulos).</td></tr>
+  <tr><td>Sprint 3</td><td>28/09 – 11/10</td><td>Personas y Profesionales con disponibilidad; relevamiento de campo y ajustes de reglas.</td></tr>
+  <tr><td>Sprint 4</td><td>12/10 – 25/10</td><td>Agenda de turnos de gimnasio y de consultorio, excepciones de morosidad.</td></tr>
+  <tr><td>Sprint 5</td><td>26/10 – 08/11</td><td>Pagos, notificaciones, avisos de deuda, panel "Hoy en el centro", interfaz según el diseño y "Operar como".</td></tr>
+  <tr><td>Cierre</td><td>09/11 – 14/11</td><td>Estabilización, prueba sobre el despliegue, informe, video y preparación de la defensa.</td></tr>
+</tbody></table>
+<p>Durante el desarrollo se utilizaron herramientas de inteligencia artificial como asistente técnico, conforme a los lineamientos de la cátedra: para revisar la consistencia del alcance, contrastar alternativas, explorar casos borde del dominio y asistir en la escritura de código y pruebas. Las decisiones de alcance, de diseño y de tecnología fueron analizadas y tomadas por el equipo, y todo el código pasó por revisión y por la integración continua.</p>
+
+<h2>5.2. Principales módulos desarrollados</h2>
+<table>
+  <thead><tr><th style="width:22%">Módulo</th><th style="width:40%">Backend (clases principales)</th><th>Frontend (pantallas)</th></tr></thead><tbody>
+  <tr><td>Autenticación</td><td><code>AuthService</code>, <code>JwtService</code>, <code>JwtAuthenticationFilter</code>, <code>SecurityConfig</code></td><td>Login, Registro, Recuperar contraseña (informativa)</td></tr>
+  <tr><td>Operar como</td><td><code>OperarComoService</code>, <code>OperarComoAutenticador</code>, <code>OperarComoInterceptor</code>, <code>AuditoriaOperarComoService</code></td><td>Acción en Personas y banner persistente en el shell</td></tr>
+  <tr><td>Personas</td><td><code>PersonaService</code>, <code>PersonaSpecifications</code></td><td>Personas (ADMIN), con filtros, cuota y menú de acciones</td></tr>
+  <tr><td>Profesionales</td><td><code>ProfesionalService</code>, <code>DisponibilidadService</code>, <code>CascadaDisponibilidadService</code>, <code>ImpactoCalculator</code></td><td>Profesionales, Disponibilidad</td></tr>
+  <tr><td>Turnos</td><td><code>TurnoService</code>, <code>MorosidadService</code>, <code>ExcepcionMorosidadService</code>, <code>JobAusentesGym</code>, <code>SincronizadorFeriados</code></td><td>Inicio del socio, Reservar gimnasio, Turno de consultorio, Mis turnos, Agenda del profesional, Ingreso al gimnasio</td></tr>
+  <tr><td>Pagos</td><td><code>PagoService</code></td><td>Pagos (ADMIN) con modal de registro, Estado de cuenta (socio)</td></tr>
+  <tr><td>Notificaciones</td><td><code>AvisosTurnoService</code>, <code>AvisosDeudaService</code>, <code>DespachadorNotificaciones</code>, <code>BrevoNotificadorEmail</code>, <code>JobRecordatorios</code>, <code>JobAvisosDeuda</code></td><td>Notificaciones fallidas en "Hoy en el centro"</td></tr>
+  <tr><td>Panel del ADMIN</td><td><code>ResumenHoyService</code></td><td>Hoy en el centro</td></tr>
+</tbody></table>
+<p>El frontend está organizado con diseño atómico (átomos, moléculas, organismos, plantillas y páginas), un cliente HTTP mínimo que adjunta el token, un contexto de autenticación, un contexto de tema y un guard de rutas por rol.</p>
+
+<h2>5.3. Recorridos y casos de uso principales</h2>
+<h3>Reserva de un turno de gimnasio</h3>
+<p>El socio elige día y franja. El servicio valida la anticipación, consulta el veredicto de morosidad y, si el socio está suspendido sin excepción vigente, responde 422 con un mensaje que explica el motivo. Si puede reservar, inserta el turno; la base valida grilla, feriados, cupo, un turno por día y superposición. Con la reserva aceptada se registra la notificación en la misma transacción y el correo de confirmación se envía después del commit.</p>
+<figure>
+  <img class="diag" src="img/diagrama-04-reserva-gym.png" alt="Secuencia de reserva de gimnasio">
+  <figcaption>Figura 5. Secuencia de la reserva de un turno de gimnasio.</figcaption>
+</figure>
+<h3>Otros recorridos</h3>
+<ul>
+  <li><b>Turno de consultorio:</b> el socio elige especialidad y ve, por profesional, el primer día con turnos libres en los próximos 21 días; luego elige día y horario según la disponibilidad real. La deuda del gimnasio nunca bloquea este circuito.</li>
+  <li><b>Cancelación:</b> el socio o el ADMIN cancela con un motivo; el estado queda "en tiempo" o "tarde" según la anticipación y el lugar se libera si la franja no empezó. Se envía el aviso de cancelación.</li>
+  <li><b>Agenda del profesional:</b> ve sus turnos del día y de los próximos días, con los huecos libres y el turno en curso, y marca atendido o ausente dentro de la ventana permitida.</li>
+  <li><b>Reducción de disponibilidad:</b> antes de guardar, el sistema muestra qué turnos futuros quedarían afuera; al confirmar, los cancela con estado "cancelado por profesional" y avisa a cada paciente.</li>
+  <li><b>Check-in del gimnasio:</b> Recepción busca a la persona en la pantalla de Ingreso y registra la hora real de entrada.</li>
+  <li><b>Pagos:</b> el ADMIN busca a la persona, registra una cuota (el sistema sugiere el primer período impago) o una sesión de consultorio, con monto y medio; el estado de cuenta se actualiza al instante.</li>
+  <li><b>Avisos de deuda:</b> una tarea diaria detecta períodos impagos nuevos y envía un único aviso por período: de deuda o, si alcanzó el umbral, de suspensión.</li>
+</ul>
+
+<h2>5.4. Capturas de la aplicación</h2>
+<p>Las siguientes capturas se tomaron de la aplicación ejecutándose con los datos de demostración del repositorio.</p>
+<figure><img class="cap" src="img/captura-login.png" alt="Pantalla de ingreso"><figcaption>Figura 6. Ingreso con email o DNI y cuentas de demostración de los tres roles.</figcaption></figure>
+<figure><img class="cap" src="img/captura-admin-hoy.png" alt="Hoy en el centro"><figcaption>Figura 7. "Hoy en el centro", inicio del ADMIN: indicadores del día, ocupación del gimnasio por franja y socios que requieren atención por deuda.</figcaption></figure>
+<figure><img class="cap" src="img/captura-admin-personas.png" alt="Personas"><figcaption>Figura 8. Personas: servicios que usa cada una, estado de la cuota y acción "Operar como".</figcaption></figure>
+<figure><img class="cap" src="img/captura-operar-como.png" alt="Operar como"><figcaption>Figura 9. Recepción operando en nombre de un socio: banner persistente y botón "Volver a Recepción". El socio tiene una excepción de morosidad vigente.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-inicio.png" alt="Inicio del socio"><figcaption>Figura 10. Inicio del socio: próximo turno, estado de la cuota y accesos a la reserva.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-gimnasio.png" alt="Reservar gimnasio"><figcaption>Figura 11. Reserva de gimnasio: días habilitados (hasta 7 días) y franjas con su cupo disponible.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-consultorio.png" alt="Turno de consultorio"><figcaption>Figura 12. Turno de consultorio: profesionales por especialidad con su próxima agenda.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-estado-cuenta.png" alt="Estado de cuenta"><figcaption>Figura 13. Estado de cuenta del socio: períodos pagados, medio de pago y explicación de la regla de suspensión.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-turnos.png" alt="Mis turnos"><figcaption>Figura 14. Mis turnos: próximos (con cancelación) e historial.</figcaption></figure>
+<figure><img class="cap" src="img/captura-profesional-agenda.png" alt="Agenda del profesional"><figcaption>Figura 15. Agenda del profesional: turnos con el DNI del paciente y ventana habilitada para marcar atendido o ausente.</figcaption></figure>
+<figure><img class="cap" src="img/captura-socio-inicio-movil.png" alt="Vista móvil" style="max-height:105mm"><figcaption>Figura 16. Vista en un celular: barra de pestañas inferior.</figcaption></figure>
+<figure><img class="cap" src="img/captura-admin-hoy-oscuro.png" alt="Modo oscuro"><figcaption>Figura 17. Modo oscuro persistente.</figcaption></figure>
+
+<h2>5.5. Dificultades técnicas relevantes y cómo se resolvieron</h2>
+<table>
+  <thead><tr><th style="width:42%">Dificultad</th><th>Solución</th></tr></thead><tbody>
+  <tr><td>Hibernate envía los enumerados como texto y PostgreSQL rechaza ese parámetro contra sus tipos ENUM nativos, por lo que el mapeo JPA fallaba.</td><td>Mapeo con <code>@JdbcTypeCode(SqlTypes.NAMED_ENUM)</code>. Se registró como riesgo (RG-13) con su solución verificada.</td></tr>
+  <tr><td>Condición de carrera en el cupo del gimnasio: dos reservas simultáneas podían superar el cupo.</td><td>Bloqueo transaccional por franja (<code>pg_advisory_xact_lock</code>) dentro del trigger.</td></tr>
+  <tr><td>La regla de ocupación del lugar era inconsistente: la base retenía el lugar de una cancelación tardía en consultorio y lo liberaba en gimnasio.</td><td>Una única función <code>fn_turno_ocupa_lugar</code>, usada por los tres controles del motor (V8), alineada con el hallazgo del relevamiento.</td></tr>
+  <tr><td>Testcontainers no lograba comunicarse con Docker en Windows a través de los named pipes; más adelante, Docker 29 rompió la compatibilidad de la versión usada.</td><td>Ejecución de las pruebas de integración dentro de WSL, documentada en <code>setup-wsl-testcontainers.md</code>; luego, actualización de Testcontainers a 1.21.4.</td></tr>
+  <tr><td>Render no tiene un entorno nativo de Java, y el backend no arrancaba en producción ("Failed to configure a DataSource").</td><td>Publicación como imagen Docker, construida desde la raíz del repositorio para incluir las migraciones, y definición explícita del perfil <code>prod</code>, que era el que leía la URL de la base.</td></tr>
+  <tr><td>Tras un merge, el frontend nuevo consumió un backend todavía no redesplegado y la pantalla de Personas quedó en blanco.</td><td>El frontend tolera respuestas sin los campos nuevos y el backend informa en <code>/api/health</code> el commit desplegado, para detectar la desincronización.</td></tr>
+  <tr><td>Las tareas programadas no corren si Render durmió el proceso (RG-14).</td><td>La tarea de ausentes procesa todos los turnos vencidos cada vez que corre, así que al despertar se pone al día; además se precalienta el servicio antes de las demostraciones.</td></tr>
+  <tr><td>Enviar el correo dentro de la transacción podía notificar reservas que luego se revertían, o bloquear la reserva si el proveedor fallaba.</td><td>La notificación se persiste en la transacción y se envía después del commit, con un reintento y alerta al ADMIN si falla definitivamente.</td></tr>
+  <tr><td>Las reglas que dependen de la fecha actual hacían que las pruebas y los datos de demostración envejecieran.</td><td>Reloj inyectado en las pruebas y datos de demostración con fechas relativas al día de la carga.</td></tr>
+  <tr><td>Los socios del seed usaban un dominio de correo real, y con el proveedor activo podían recibir mensajes personas ajenas al proyecto.</td><td>Paso al dominio reservado <code>example.com</code>, que nunca entrega correos.</td></tr>
+</tbody></table>
+
+<!-- ============================ 6. PRUEBAS ============================ -->
+<h1 id="s6">6. Pruebas y validación</h1>
+
+<h2>6.1. Estrategia y qué aspectos se probaron</h2>
+<p>El plan de pruebas (<code>docs/metodologia/definicion-pruebas.md</code>) tiene tres niveles, y cada caso tiene un identificador que también figura en el nombre del método que lo prueba (por ejemplo, <code>pi09_…</code>), para que la trazabilidad entre documento y código sea directa:</p>
+<ol>
+  <li><b>Unitarias</b> (JUnit 5 y Mockito en el backend; Vitest y Testing Library en el frontend): reglas de negocio aisladas, como el cálculo de morosidad con sus bordes, y el comportamiento de cada pantalla ante datos, errores y estados de carga.</li>
+  <li><b>De integración</b> (Spring Boot Test y Testcontainers): la API completa contra un <b>PostgreSQL real</b> con todas las migraciones aplicadas. Es el único modo de comprobar que las restricciones del motor efectivamente rechazan lo que deben.</li>
+  <li><b>Prueba de humo sobre el despliegue</b> (manual): los flujos principales de los tres roles contra Render, Vercel y Supabase, antes de cada entrega.</li>
+</ol>
+<p>Los aspectos cubiertos son: autenticación y manejo de tokens inválidos; autorización por rol; ABM de personas y profesionales; disponibilidad y cascada; reservas, cancelaciones y estados de turnos; grilla, cupo y feriados del gimnasio; morosidad y excepciones; pagos y estado de cuenta; notificaciones y reintentos; "Operar como"; el panel del ADMIN; y la carga de los datos de demostración.</p>
+
+<h2>6.2. Evidencia de funcionamiento y resultados</h2>
+<p>Las pruebas se ejecutan en GitHub Actions en cada Pull Request, y el build falla si la cobertura de líneas baja del 90 % en el backend (JaCoCo) o en el frontend (Vitest). Ningún cambio se integró con la integración continua en rojo.</p>
+<table>
+  <thead><tr><th style="width:40%">Indicador</th><th>Resultado</th></tr></thead><tbody>
+  <tr><td>Backend: pruebas unitarias y de integración</td><td>426 unitarias y 201 de integración, todas en verde (CI de la rama principal tras el PR #39).</td></tr>
+  <tr><td>Frontend: pruebas</td><td>704 pruebas en 114 archivos, todas en verde, con 99,46 % de cobertura de líneas (ejecución sobre la rama principal del 07/11/2026).</td></tr>
+  <tr><td>Umbral de cobertura</td><td>90 % de líneas en ambos proyectos, con corte del build si no se alcanza.</td></tr>
+  <tr><td>Estado de la rama principal</td><td>Integración continua en verde en el último merge (PR #40, 07/11/2026).</td></tr>
+  <tr><td>Prueba de humo sobre el despliegue</td><td>Ejecutada el 27/10/2026 con los tres roles: todo el checklist pasó (ver 6.5).</td></tr>
+</tbody></table>
+
+<h2>6.3. Casos de prueba relevantes</h2>
+<table>
+  <thead><tr><th style="width:9%">ID</th><th style="width:46%">Caso</th><th>Resultado esperado y obtenido</th></tr></thead><tbody>
+  <tr><td>PI-09</td><td>Dos reservas simultáneas del mismo horario de consultorio</td><td>Una responde 201 y la otra 409</td></tr>
+  <tr><td>PI-11 a PI-13</td><td>Cancelación en tiempo, tardía antes del inicio y con la franja ya iniciada</td><td>Las dos primeras liberan el lugar (otra persona lo reserva); la tercera lo mantiene ocupado (409)</td></tr>
+  <tr><td>PI-14 / PI-15</td><td>Cupo del gimnasio tras cancelaciones antes y después del inicio</td><td>Libera el cupo solo si se canceló antes del inicio</td></tr>
+  <tr><td>PI-10</td><td>Reserva de gimnasio de un socio suspendido sin excepción</td><td>422 con el motivo</td></tr>
+  <tr><td>PI-30 a PI-36, PI-81 a PI-83</td><td>Grilla horaria, cierre a la hora límite y feriados (inamovible, trasladable en su fecha corrida y no laborable)</td><td>422 fuera de grilla o en feriado; 201 en la última franja válida y en días no laborables</td></tr>
+  <tr><td>PU-01 a PU-05, PU-08 a PU-12</td><td>Morosidad: mes salteado con meses posteriores pagados, socio nuevo sin pagos, borde exacto del umbral, umbral leído de la configuración</td><td>Impagos y suspensión correctos en cada borde</td></tr>
+  <tr><td>PI-77 / PI-79</td><td>Segunda cuota del mismo mes; segundo pago del mismo turno</td><td>409 por los índices únicos</td></tr>
+  <tr><td>PI-93 / PI-96</td><td>Pago de sesión de un turno de gimnasio, de otra persona o cancelado</td><td>422: la cancelación tardía no genera cobro</td></tr>
+  <tr><td>PI-103</td><td>Estado de cuenta y estado de reserva del gimnasio</td><td>Coinciden siempre: es la misma regla</td></tr>
+  <tr><td>PI-18, PI-22 a PI-24</td><td>Registro con rol explícito; JWT vencido, malformado o con firma inválida</td><td>400 sin crear el usuario; 401</td></tr>
+  <tr><td>PI-117 / PI-119</td><td>Con la credencial de "Operar como", llamar a cada endpoint exclusivo del ADMIN (enumerados desde el mapeo real) o a datos de otro socio</td><td>403 en todos los casos</td></tr>
+  <tr><td>PI-120</td><td>Credencial vencida, actor o sujeto deshabilitado, credencial forjada sin inicio auditado</td><td>401</td></tr>
+  <tr><td>PI-121</td><td>Reserva suplantada cuando falla la auditoría</td><td>No queda el turno: la operación se revierte</td></tr>
+  <tr><td>PI-139</td><td>Reserva de gimnasio con menos de 1 hora o más de 7 días de anticipación</td><td>422; exactamente 1 hora y exactamente 7 días se aceptan</td></tr>
+</tbody></table>
+
+<h2>6.4. Cómo se comprueban las reglas críticas</h2>
+<ul>
+  <li><b>Concurrencia.</b> PI-09 lanza dos reservas en paralelo desde dos hilos sincronizados con <code>CountDownLatch</code> contra un PostgreSQL real, y verifica que exactamente una gana. El cupo del gimnasio se protege con el bloqueo por franja descrito en 4.6.</li>
+  <li><b>Pagos.</b> La unicidad de la cuota y del pago por turno, el concepto excluyente y la imposibilidad de cobrar un turno cancelado se prueban contra las restricciones reales de la base, no contra validaciones del código.</li>
+  <li><b>Estados.</b> Cada transición del turno y su efecto sobre la ocupación del lugar (PI-11 a PI-15), y la ventana para marcar atendido o ausente, tienen casos propios.</li>
+  <li><b>Algoritmo de morosidad.</b> PU-01 a PU-05 y PU-08 a PU-12 recorren los bordes de la regla con fechas fijas mediante el reloj inyectado.</li>
+  <li><b>Seguridad.</b> Tokens inválidos, rol insuficiente, acceso a datos ajenos y todo el circuito de "Operar como" (PI-112 a PI-123).</li>
+  <li><b>Integraciones externas.</b> El correo se prueba con una implementación que registra los envíos, incluyendo la falla del proveedor, el reintento y la alerta en el panel; la sincronización de feriados se prueba con respuestas simuladas del calendario oficial, incluida su indisponibilidad.</li>
+  <li><b>Documentación consistente.</b> La integración continua verifica que los nombres de tablas, restricciones y triggers citados en la documentación existan en la base, que las fechas coincidan con su día de la semana y que las rutas citadas en las pruebas estén declaradas.</li>
+</ul>
+
+<h2>6.5. Validación sobre el despliegue y con el caso real</h2>
+<p><b>Prueba de humo sobre el despliegue (27/10/2026).</b> Se ejecutó el checklist completo contra Render y Vercel con los tres roles: login de cada rol, alta de una persona, reserva y cancelación de un turno de consultorio (cancelado con menos de 24 horas, quedó "cancelado tarde" y el horario se liberó), registro de una cuota (la socia pasó de 2 a 1 período impago), reserva de un socio suspendido gracias a su excepción vigente, "Operar como" (403 en rutas de ADMIN, marca "Reservado por Recepción" y token revocado al terminar) y la regla de anticipación del gimnasio. Dos ítems no pudieron comprobarse con los datos de ese momento: marcar atendido un turno futuro responde 422, como corresponde, y debe verificarse el día del turno; y no había un socio suspendido sin excepción para ver el rechazo en vivo. Ese caso lo cubren las pruebas de integración y, desde entonces, los datos de demostración incluyen un socio en esa situación.</p>
+<p><b>Validación con el caso real.</b> La validación con el Centro Deportivo Jerárquicos fue sobre el dominio y las reglas, no sobre el uso del sistema: las reglas de morosidad, ocupación del lugar y ausencia del profesional se contrastaron con su operación real y se corrigieron en consecuencia (sección 1.3). <b>No se realizaron pruebas de usabilidad con usuarios del establecimiento</b>, por lo que la adecuación de la interfaz a usuarios reales queda como validación pendiente.</p>
+
+<!-- ============================ 7. CONCLUSIONES ============================ -->
+<h1 id="s7">7. Resultados y conclusiones</h1>
+
+<h2>7.1. Qué logró resolver el proyecto</h2>
+<ul>
+  <li>Cada persona existe una sola vez, con su historial de turnos de gimnasio y de consultorio y sus pagos en el mismo lugar.</li>
+  <li>Las superposiciones de turnos y los cupos excedidos son imposibles por diseño, incluso con reservas simultáneas.</li>
+  <li>La morosidad se calcula sola, con la tolerancia que usa un centro real, avisa antes de bloquear y nunca afecta la atención de salud.</li>
+  <li>El socio reserva, cancela y consulta su cuenta en cualquier momento desde el celular; el profesional ve su agenda y registra la asistencia; Recepción tiene en una pantalla lo que requiere atención en el día y puede atender en el mostrador a quien no usa la aplicación.</li>
+  <li>Toda operación crítica deja registro de quién la hizo y cuándo.</li>
+</ul>
+
+<h2>7.2. Qué cambió respecto de la situación inicial</h2>
+<table>
+  <thead><tr><th style="width:50%">Situación inicial</th><th>Con Vitalys</th></tr></thead><tbody>
+  <tr><td>Socio y paciente registrados por separado, con datos inconsistentes.</td><td>Una identidad única con DNI único y un historial unificado.</td></tr>
+  <tr><td>Agendas aisladas por profesional; superposiciones detectadas a mano.</td><td>Disponibilidad cargada por cada profesional y superposición rechazada por la base.</td></tr>
+  <tr><td>La deuda depende de que alguien la revise; el bloqueo es manual.</td><td>Cálculo automático, aviso por correo y suspensión al alcanzar el umbral, con excepciones registradas.</td></tr>
+  <tr><td>Reservar exige llamar en horario de atención.</td><td>Autoservicio las 24 horas; Recepción conserva el canal presencial con "Operar como".</td></tr>
+  <tr><td>Cancelaciones tardías que dejan franjas vacías.</td><td>Toda cancelación previa al inicio libera el lugar para otra persona.</td></tr>
+  <tr><td>Pagos sin trazabilidad.</td><td>Cada pago queda asociado a una persona, a un concepto, a un medio y a quien lo registró.</td></tr>
+</tbody></table>
+
+<h2>7.3. Limitaciones conocidas</h2>
+<ul>
+  <li><b>Infraestructura gratuita:</b> el backend en Render se suspende sin tráfico (la primera solicitud puede tardar cerca de un minuto), Supabase pausa el proyecto tras unos siete días sin actividad y no hay copias de seguridad automáticas.</li>
+  <li><b>Cierre de sesión del lado del cliente:</b> el JWT de una sesión normal sigue siendo válido hasta su vencimiento de 24 horas (Decisión 9). La credencial de "Operar como", en cambio, sí se revoca en el servidor.</li>
+  <li><b>Sin recuperación de contraseña</b> por correo y <b>un solo rol por usuario</b>.</li>
+  <li><b>Cobro manual:</b> no hay débito automático ni pasarela de pago; tampoco pagos parciales.</li>
+  <li><b>Lecturas no auditadas</b> durante "Operar como": se auditan las escrituras, no las consultas.</li>
+  <li><b>CORS abierto</b> a cualquier origen (ver 4.4).</li>
+  <li><b>Sin validación de usabilidad</b> con usuarios reales del establecimiento.</li>
+  <li>Las tareas programadas dependen de que el proceso esté activo: mientras Render lo tiene dormido, los turnos de gimnasio sin check-in siguen como reservados hasta que la tarea vuelve a correr.</li>
+</ul>
+
+<h2>7.4. Evolución futura</h2>
+<ul>
+  <li>Integración con una pasarela de pago y débito automático, que el modelo ya admite agregando un medio de pago.</li>
+  <li>Recuperación de contraseña por correo y revocación de tokens en el servidor.</li>
+  <li>Reportes de ingresos, ocupación y abandono para la dirección del centro.</li>
+  <li>Actividades y clases grupales dentro del turno de gimnasio.</li>
+  <li>Ficha clínica con el resguardo que exige la Ley 25.326, e integración de la rutina del gimnasio con la atención de salud (la necesidad que el propio establecimiento relevado señaló como pendiente).</li>
+  <li>Varios roles por usuario, auditoría de lecturas en "Operar como", CORS restringido al dominio del frontend y resolución de ausentes al leer un turno vencido, sin depender de la tarea programada.</li>
+  <li>Pruebas de usabilidad con socios, profesionales y personal de recepción.</li>
+</ul>
+
+<h2>7.5. Implementado y probado frente a lo proyectado</h2>
+<table>
+  <thead><tr><th style="width:50%">Implementado, desplegado y probado</th><th>Proyectado como trabajo futuro</th></tr></thead><tbody>
+  <tr><td>Autenticación JWT con tres roles y control en la capa de servicio</td><td>Recuperación de contraseña; varios roles por usuario</td></tr>
+  <tr><td>Personas con identidad única, baja lógica y vínculo de usuario</td><td>Ficha clínica digital</td></tr>
+  <tr><td>Profesionales, disponibilidad y cancelación en cascada</td><td>—</td></tr>
+  <tr><td>Turnos de gimnasio y de consultorio con todas sus reglas, feriados oficiales y check-in</td><td>Actividades y clases grupales</td></tr>
+  <tr><td>Pagos manuales con medio de pago, estado de cuenta y morosidad con excepciones</td><td>Pasarela de pago, débito automático y pagos parciales</td></tr>
+  <tr><td>Notificaciones por correo con reintento y avisos de deuda</td><td>—</td></tr>
+  <tr><td>Panel "Hoy en el centro" y "Operar como" auditado</td><td>Reportes de gestión; auditoría de lecturas</td></tr>
+  <tr><td>Pruebas unitarias y de integración con umbral del 90 % y prueba de humo sobre el despliegue</td><td>Pruebas de usabilidad con usuarios reales</td></tr>
+</tbody></table>
+
+<h2>7.6. Aprendizajes y decisiones relevantes</h2>
+<ul>
+  <li><b>El relevamiento cambia el diseño, no solo lo confirma.</b> Las dos reglas más importantes del sistema (la tolerancia de morosidad y la liberación del lugar al cancelar) se reescribieron a partir de lo que mostró un establecimiento real.</li>
+  <li><b>Poner las reglas críticas en la base de datos</b> resultó la decisión más rentable: la concurrencia y la integridad se resuelven donde realmente pueden garantizarse, y el código queda más simple.</li>
+  <li><b>Una prueba que pasa no siempre prueba algo.</b> Se encontró un caso que daba verde contra una ruta inexistente, porque el filtro rechazaba antes de llegar al controlador. Desde entonces la integración continua verifica que las rutas citadas en las pruebas existan.</li>
+  <li><b>La documentación también se prueba.</b> Los scripts que contrastan los nombres citados con el catálogo real de PostgreSQL detectaron inconsistencias que una lectura no encontraba.</li>
+  <li><b>Los cambios de alcance se registran.</b> Llevar cada cambio al RFC mediante Pull Request mantuvo alineados al equipo y a la tutora, y obliga a justificar decisiones sensibles como "Operar como".</li>
+  <li><b>Trabajar ambos sobre todo el stack</b>, con revisión cruzada de cada Pull Request, evitó que el conocimiento quedara concentrado en una persona y prepara a los dos integrantes para responder por todo el proyecto en la defensa.</li>
+</ul>
+
+<!-- ============================ ANEXO ============================ -->
+<h1 id="s8">Anexo. Documentación de referencia en el repositorio</h1>
+<table>
+  <thead><tr><th style="width:45%">Documento</th><th>Contenido</th></tr></thead><tbody>
+  <tr><td><code>docs/01-propuesta/propuesta-proyecto-rfc.md</code></td><td>RFC-001: propuesta, relevamiento, decisiones de dominio y cambios de alcance</td></tr>
+  <tr><td><code>docs/01-propuesta/relevamiento/</code></td><td>Guía de entrevista, registro del relevamiento de campo y perfiles sintéticos</td></tr>
+  <tr><td><code>docs/02-diseno/rfc-002-motor-base-de-datos.md</code></td><td>Comparación PostgreSQL / MongoDB y decisión</td></tr>
+  <tr><td><code>docs/02-diseno/requerimientos.md</code></td><td>Requerimientos funcionales y no funcionales, reglas de negocio, historias de usuario y criterios de aceptación</td></tr>
+  <tr><td><code>docs/02-diseno/modulos.md</code></td><td>Módulos y endpoints con sus permisos</td></tr>
+  <tr><td><code>docs/02-diseno/diccionario-datos.md</code> y <code>diagrama-er.mermaid</code></td><td>Modelo de datos completo</td></tr>
+  <tr><td><code>docs/02-diseno/diagramas.md</code></td><td>Casos de uso, estados, secuencias, clases y arquitectura</td></tr>
+  <tr><td><code>docs/02-diseno/wireframes.md</code> y <code>design-system/</code></td><td>Pantallas, prototipo y desvíos documentados</td></tr>
+  <tr><td><code>docs/03-despliegue/</code></td><td>Despliegue en la nube, entorno local con Docker y pruebas en Windows</td></tr>
+  <tr><td><code>docs/metodologia/</code></td><td>Plan de sprints con el estado real, matriz de riesgos y definición de pruebas</td></tr>
+  <tr><td><code>db/migration/</code></td><td>Migraciones V1 a V17 del esquema</td></tr>
+</tbody></table>
+
+</body>
+</html>

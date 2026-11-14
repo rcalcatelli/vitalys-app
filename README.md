@@ -95,8 +95,7 @@ vitalys-app/
     │   ├── entorno-local-docker.md         → Cómo levantar el backend local con Docker y Flyway
     │   └── setup-wsl-testcontainers.md     → Tests de integración con Testcontainers en Windows/WSL
     ├── metodologia/  → Planificación Scrum, riesgos y pruebas
-    ├── 04-informe-final/  → Informe final (PDF y DOCX editable) y su fuente
-    └── 05-presentacion/   → Guion del video (ES/EN) y guía de estudio para el coloquio
+    └── 04-informe-final/  → Informe final (PDF y DOCX editable) y su fuente
 ```
 
 ---

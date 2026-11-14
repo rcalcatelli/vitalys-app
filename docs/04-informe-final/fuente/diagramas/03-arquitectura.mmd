@@ -1,0 +1,26 @@
+flowchart TB
+    NAV["Navegador<br/>(escritorio o móvil)"]
+    subgraph VERCEL["Vercel"]
+        FE["Frontend SPA<br/>React 19 + TypeScript<br/>Vite · Tailwind CSS"]
+    end
+    subgraph RENDER["Render (contenedor Docker)"]
+        API["API REST<br/>Spring Boot 3.2 · Java 17<br/>Controller → Service → Repository"]
+        SEC["Spring Security<br/>filtro JWT · roles"]
+        JOBS["Tareas programadas<br/>recordatorios · avisos de deuda<br/>ausentes de gym · feriados"]
+    end
+    subgraph SUPABASE["Supabase"]
+        DB[("PostgreSQL<br/>migraciones Flyway V1–V17<br/>EXCLUDE · triggers · índices únicos")]
+    end
+    BREVO["Brevo<br/>API HTTP de email"]
+    FER["argentina.gob.ar<br/>feriados nacionales (JSON)"]
+    GH["GitHub<br/>PRs + Actions (CI)"]
+
+    NAV -- HTTPS --> FE
+    FE -- "HTTPS · JSON<br/>Authorization: Bearer JWT" --> SEC
+    SEC --> API
+    API -- "JDBC / SSL<br/>JPA + Flyway" --> DB
+    JOBS --> API
+    API -- "HTTPS (después del commit)" --> BREVO
+    JOBS -- "HTTPS diario" --> FER
+    GH -. "deploy automático<br/>desde main" .-> FE
+    GH -. "deploy automático<br/>desde main" .-> API

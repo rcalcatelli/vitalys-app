@@ -1,0 +1,26 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "arial", "fontSize": "24px", "primaryColor": "#e8f1fb", "primaryBorderColor": "#1f4e79", "primaryTextColor": "#000000", "lineColor": "#333333", "actorBkg": "#e8f1fb", "actorBorder": "#1f4e79", "noteBkgColor": "#fff7e0", "noteBorderColor": "#c9a227", "labelBoxBkgColor": "#f2f2f2", "labelBoxBorderColor": "#666666"}, "sequence": {"actorFontSize": 24, "messageFontSize": 24, "noteFontSize": 22, "actorMargin": 70, "width": 200, "height": 64, "boxMargin": 10, "messageMargin": 46, "mirrorActors": false}}}%%
+sequenceDiagram
+    participant FE as Frontend (socio)
+    participant TS as TurnoService
+    participant MS as Morosidad
+    participant DB as PostgreSQL
+
+    FE->>TS: POST /api/turnos/gym<br/>{día y franja}
+    TS->>TS: anticipación<br/>1 h a 7 días (RN-18)
+    TS->>MS: veredicto(persona)
+    MS->>DB: períodos y<br/>cuotas pagadas
+    MS-->>TS: impagos, umbral,<br/>excepción vigente
+    alt suspendido sin excepción
+        TS-->>FE: 422 morosidad (RN-01)
+    else puede reservar
+        TS->>DB: INSERT turno GYM
+        Note over DB: trigger con lock<br/>por franja: grilla,<br/>feriados, cupo,<br/>un turno por día.<br/>EXCLUDE: sin<br/>superposición
+        alt la base rechaza
+            DB-->>TS: error de restricción
+            TS-->>FE: 409 / 422 con mensaje
+        else aceptado
+            TS->>DB: INSERT notificación<br/>(misma transacción)
+            TS-->>FE: 201 Created
+            Note over TS: después del commit:<br/>email por Brevo<br/>(1 reintento)
+        end
+    end

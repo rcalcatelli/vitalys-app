@@ -1,0 +1,21 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "arial", "fontSize": "24px", "primaryColor": "#e8f1fb", "primaryBorderColor": "#1f4e79", "primaryTextColor": "#000000", "lineColor": "#333333", "actorBkg": "#e8f1fb", "actorBorder": "#1f4e79", "noteBkgColor": "#fff7e0", "noteBorderColor": "#c9a227"}, "sequence": {"actorFontSize": 24, "messageFontSize": 24, "noteFontSize": 22, "actorMargin": 40, "width": 190, "height": 64, "boxMargin": 10, "messageMargin": 46, "mirrorActors": false}}}%%
+sequenceDiagram
+    participant FE as Frontend (ADMIN)
+    participant F as Filtro JWT
+    participant OC as OperarComo
+    participant TS as TurnoService
+    participant AU as Auditoría
+
+    FE->>OC: POST /api/admin/<br/>operar-como
+    OC->>AU: INSERT INICIO
+    OC-->>FE: JWT 30 min<br/>sub = socio<br/>act = ADMIN
+    Note over FE: reserva como el socio
+    FE->>F: POST /api/turnos/gym
+    F->>F: revalida actor,<br/>sujeto y sesión
+    F->>TS: principal = socio
+    TS->>AU: INSERT RESERVA_GYM<br/>(misma transacción)
+    TS-->>FE: 201 "Reservado<br/>por Recepción"
+    Note over FE: "Volver a Recepción"
+    FE->>OC: POST /api/<br/>operar-como/fin
+    OC->>AU: INSERT FIN
+    OC-->>FE: 204 · token revocado

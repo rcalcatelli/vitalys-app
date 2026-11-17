@@ -36,6 +36,9 @@ services:
         sync: false
       - key: JWT_EXPIRATION_MS
         value: "86400000"
+      # Orígenes que CorsConfig acepta (lista separada por comas). No es secreto.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://vitalys-app-ayk2.vercel.app
       - key: EMAIL_PROVEEDOR
         value: brevo
       - key: BREVO_API_KEY

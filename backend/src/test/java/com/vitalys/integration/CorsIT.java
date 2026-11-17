@@ -12,7 +12,8 @@ import org.springframework.http.ResponseEntity;
 /**
  * PI-27: preflight CORS sobre una ruta pública ({@code /api/health}) refleja el origen del
  * request y permite el método solicitado, tal como configura {@code CorsConfig}
- * ({@code allowedOriginPatterns("*")}, {@code allowedMethods(...)} sobre {@code /api/**}).
+ * ({@code allowedOrigins} desde {@code vitalys.cors.allowed-origins}, {@code allowedMethods(...)}
+ * sobre {@code /api/**}). Un origen fuera de la lista recibe 403.
  *
  * <p>PI-28 cubre el caso que de verdad importa en producción: el preflight sobre una ruta
  * PROTEGIDA. El navegador nunca manda el header {@code Authorization} en un preflight, así que
@@ -55,5 +56,21 @@ class CorsIT extends IntegrationTestBase {
         assertThat(response.getHeaders().getAccessControlAllowOrigin())
                 .isEqualTo("https://vitalys-frontend.vercel.app");
         assertThat(response.getHeaders().getAccessControlAllowMethods()).contains(HttpMethod.GET);
+    }
+
+    @Test
+    void preflightDesdeOrigenNoPermitido_esRechazado() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setOrigin("https://sitio-malicioso.example.com");
+        headers.set(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response =
+                restTemplate.exchange(urlBase() + "/api/health", HttpMethod.OPTIONS, request, String.class);
+
+        // CorsFilter rechaza el preflight con 403 y sin Access-Control-Allow-Origin: el navegador
+        // nunca llega a mandar la request real.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getHeaders().getAccessControlAllowOrigin()).isNull();
     }
 }

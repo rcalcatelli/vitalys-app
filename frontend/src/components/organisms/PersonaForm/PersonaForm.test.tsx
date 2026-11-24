@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { unaPersona } from "../../../test/personaFixture";
@@ -43,9 +43,43 @@ describe("PersonaForm", () => {
 
     await completarAlta(user);
     await user.click(screen.getByLabelText("Socio del gimnasio"));
+    fireEvent.change(screen.getByLabelText("Inicio de la membresía"), { target: { value: "" } });
     await user.click(screen.getByRole("button", { name: "Dar de alta" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("fecha de inicio de membresía");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("al marcar socio del gimnasio propone el 1° del mes actual", async () => {
+    const user = userEvent.setup();
+    render(<PersonaForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    await user.click(screen.getByLabelText("Socio del gimnasio"));
+
+    const hoy = new Date();
+    const esperado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`;
+    expect(screen.getByLabelText("Inicio de la membresía")).toHaveValue(esperado);
+  });
+
+  it.each([
+    ["anterior al nacimiento", "1990-01-01", "anterior a la fecha de nacimiento"],
+    ["de hace más de 1 año", "2000-01-01", "más de 1 año"],
+  ])("rechaza un inicio de membresía %s", async (_caso, inicio, mensaje) => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<PersonaForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    await completarAlta(user);
+    fireEvent.change(screen.getByLabelText("Fecha de nacimiento"), {
+      target: { value: "1990-07-22" },
+    });
+    await user.click(screen.getByLabelText("Socio del gimnasio"));
+    fireEvent.change(screen.getByLabelText("Inicio de la membresía"), {
+      target: { value: inicio },
+    });
+    await user.click(screen.getByRole("button", { name: "Dar de alta" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(mensaje);
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

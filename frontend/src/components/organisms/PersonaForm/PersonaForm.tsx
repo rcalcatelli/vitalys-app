@@ -33,11 +33,31 @@ function vacioANull(valor: string): string | null {
   return limpio === "" ? null : limpio;
 }
 
+/** Fecha local en formato `YYYY-MM-DD` (el de `<input type="date">`), comparable como string. */
+function aIso(fecha: Date): string {
+  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dd = String(fecha.getDate()).padStart(2, "0");
+  return `${fecha.getFullYear()}-${mm}-${dd}`;
+}
+
+/** 1° del mes actual: el inicio de membresía más común en un alta. */
+function primeroDelMes(): string {
+  const hoy = new Date();
+  return aIso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+}
+
+/** Mismo tope que el backend: un inicio nuevo o modificado no puede ser de hace más de 1 año. */
+function haceUnAnio(): string {
+  const hoy = new Date();
+  return aIso(new Date(hoy.getFullYear() - 1, hoy.getMonth(), hoy.getDate()));
+}
+
 /**
  * Contenido del modal de alta/edición/vínculo de Personas (el título lo pone el `Modal`). Valida en el cliente lo mismo que el backend
  * (DNI de 7 a 9 dígitos, contraseña ≥ 8, fecha de membresía obligatoria para
- * socios del gimnasio) para dar el error al lado del campo; el servidor sigue
- * siendo quien decide, en particular la unicidad del DNI.
+ * socios del gimnasio, no anterior al nacimiento ni —si cambia— de hace más de 1 año)
+ * para dar el error al lado del campo; el servidor sigue siendo quien decide, en
+ * particular la unicidad del DNI.
  */
 export function PersonaForm({
   persona,
@@ -71,7 +91,20 @@ export function PersonaForm({
     if (!DNI_VALIDO.test(dni)) return "El DNI tiene que tener entre 7 y 9 dígitos, sin puntos.";
     if (esSocioGym && !fechaInicioMembresia)
       return "Un socio del gimnasio necesita fecha de inicio de membresía.";
+    if (esSocioGym && fechaNacimiento && fechaInicioMembresia < fechaNacimiento)
+      return "El inicio de la membresía no puede ser anterior a la fecha de nacimiento.";
+    if (
+      esSocioGym &&
+      fechaInicioMembresia !== persona?.fechaInicioMembresia &&
+      fechaInicioMembresia < haceUnAnio()
+    )
+      return "El inicio de la membresía no puede ser de hace más de 1 año.";
     return null;
+  }
+
+  function cambiarSocioGym(marcado: boolean) {
+    setEsSocioGym(marcado);
+    if (marcado && !fechaInicioMembresia) setFechaInicioMembresia(primeroDelMes());
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -157,7 +190,7 @@ export function PersonaForm({
         <input
           type="checkbox"
           checked={esSocioGym}
-          onChange={(e) => setEsSocioGym(e.target.checked)}
+          onChange={(e) => cambiarSocioGym(e.target.checked)}
           className="h-5 w-5 accent-gym"
         />
         Socio del gimnasio

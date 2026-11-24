@@ -262,6 +262,46 @@ class PersonaServiceTest {
     }
 
     @Test
+    void crear_inicioMembresiaAnteriorAlNacimiento_lanza400() {
+        // datos() nace el 1999-01-01: es el error típico de cargar la fecha de nacimiento como inicio.
+        assertThatThrownBy(() -> service.crear(
+                        admin,
+                        new PersonaAltaRequest("x@mail.com", "Clave1234", datos("40000020", true, LocalDate.of(1998, 12, 1)))))
+                .isInstanceOf(DatosInvalidosException.class)
+                .hasMessageContaining("nacimiento");
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void crear_inicioMembresiaDeHaceMasDeUnAnio_lanza400() {
+        assertThatThrownBy(() -> service.crear(
+                        admin,
+                        new PersonaAltaRequest("x@mail.com", "Clave1234", datos("40000021", true, HOY.minusYears(1).minusDays(1)))))
+                .isInstanceOf(DatosInvalidosException.class)
+                .hasMessageContaining("más de 1 año");
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_conservaInicioAntiguo_noLoRechaza() {
+        Persona antigua = persona(10L, socio);
+        antigua.definirMembresiaGym(true, LocalDate.of(2020, 3, 1));
+        when(personaRepository.findById(10L)).thenReturn(Optional.of(antigua));
+
+        PersonaResponse r = service.actualizar(admin, 10L, datos("38100099", true, LocalDate.of(2020, 3, 1)));
+
+        assertThat(r.fechaInicioMembresia()).isEqualTo(LocalDate.of(2020, 3, 1));
+    }
+
+    @Test
+    void actualizar_cambiaInicioAUnoDeHaceMasDeUnAnio_lanza400() {
+        when(personaRepository.findById(10L)).thenReturn(Optional.of(persona(10L, socio)));
+
+        assertThatThrownBy(() -> service.actualizar(admin, 10L, datos("38100099", true, LocalDate.of(2020, 3, 1))))
+                .isInstanceOf(DatosInvalidosException.class);
+    }
+
+    @Test
     void crear_dniRepetido_lanza409SinCrearUsuario() {
         when(personaRepository.existsByDni("38100001")).thenReturn(true);
 

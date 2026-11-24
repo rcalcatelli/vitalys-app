@@ -41,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PersonaService {
 
     private static final Sort ORDEN = Sort.by("apellido", "nombre");
+    /** Antigüedad máxima de un inicio de membresía nuevo o modificado. */
+    private static final int MAX_ANTIGUEDAD_INICIO_ANIOS = 1;
 
     private final PersonaRepository personaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -109,7 +111,7 @@ public class PersonaService {
     public PersonaResponse crear(Usuario actor, PersonaAltaRequest request) {
         exigirAdmin(actor);
         PersonaDatosRequest datos = request.datos();
-        validarMembresia(datos);
+        validarMembresia(datos, null);
         if (personaRepository.existsByDni(datos.dni())) {
             throw new ConflictoException("Ya existe una persona con el DNI " + datos.dni());
         }
@@ -145,7 +147,7 @@ public class PersonaService {
             throw new ReglaDeNegocioException("Solo se vinculan usuarios con rol SOCIO_PACIENTE");
         }
         PersonaDatosRequest datos = request.datos();
-        validarMembresia(datos);
+        validarMembresia(datos, null);
         if (personaRepository.existsByDni(datos.dni())) {
             throw new ConflictoException("Ya existe una persona con el DNI " + datos.dni());
         }
@@ -158,7 +160,7 @@ public class PersonaService {
     public PersonaResponse actualizar(Usuario actor, Long id, PersonaDatosRequest datos) {
         exigirAdmin(actor);
         Persona persona = buscar(id);
-        validarMembresia(datos);
+        validarMembresia(datos, persona.getFechaInicioMembresia());
         if (personaRepository.existsByDniAndIdNot(datos.dni(), id)) {
             throw new ConflictoException("Ya existe otra persona con el DNI " + datos.dni());
         }
@@ -197,10 +199,26 @@ public class PersonaService {
         persona.definirMembresiaGym(datos.esSocioGym(), datos.fechaInicioMembresia());
     }
 
-    /** {@code chk_fecha_inicio_membresia}: se valida antes para responder 400 y no un 409 genérico. */
-    private void validarMembresia(PersonaDatosRequest datos) {
-        if (datos.esSocioGym() && datos.fechaInicioMembresia() == null) {
+    /**
+     * {@code chk_fecha_inicio_membresia}: se valida antes para responder 400 y no un 409 genérico.
+     * La deuda se cuenta desde el inicio, así que una fecha absurda genera años de cuotas impagas.
+     * El tope de antigüedad solo aplica si la fecha cambia ({@code actual}: la guardada, o null en
+     * un alta): editar otro dato de un socio antiguo no debe fallar.
+     */
+    private void validarMembresia(PersonaDatosRequest datos, LocalDate actual) {
+        if (!datos.esSocioGym()) {
+            return;
+        }
+        LocalDate inicio = datos.fechaInicioMembresia();
+        if (inicio == null) {
             throw new DatosInvalidosException("Un socio del gimnasio necesita fecha de inicio de membresía");
+        }
+        if (datos.fechaNacimiento() != null && inicio.isBefore(datos.fechaNacimiento())) {
+            throw new DatosInvalidosException("El inicio de la membresía no puede ser anterior a la fecha de nacimiento");
+        }
+        if (!inicio.equals(actual) && inicio.isBefore(hoy().minusYears(MAX_ANTIGUEDAD_INICIO_ANIOS))) {
+            throw new DatosInvalidosException(
+                    "El inicio de la membresía no puede ser de hace más de " + MAX_ANTIGUEDAD_INICIO_ANIOS + " año");
         }
     }
 
